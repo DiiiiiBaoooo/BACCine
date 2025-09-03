@@ -91,7 +91,7 @@ export async function updateProfile(req, res) {
   try {
     const connection = await connectMySqlDB();
     const userID = req.user.id; // sửa lại
-    const { name, province_code, district_code, phone } = req.body;
+    const { name, province_code, district_code, phone,profilePicture } = req.body;
 
     // Validate input
     if (!name || !province_code || !district_code || !phone) {
@@ -109,9 +109,9 @@ export async function updateProfile(req, res) {
     // Update user
     const [result] = await connection.execute(
       `UPDATE users 
-       SET name = ?, province_code = ?, district_code = ?, phone = ? 
+       SET name = ?, province_code = ?, district_code = ?, phone = ? ,profilePicture=?,isUpdateProfile= ?
        WHERE id = ?`,
-      [name, province_code, district_code, phone, userID]
+      [name, province_code, district_code, phone,profilePicture,1, userID]
     );
 
     if (result.affectedRows === 0) {
@@ -120,7 +120,7 @@ export async function updateProfile(req, res) {
 
     // Lấy lại user đã update để return
     const [rows] = await connection.execute(
-      `SELECT id, name, province_code, district_code, phone, email 
+      `SELECT id, name, province_code, district_code, phone, email ,profilePicture
        FROM users 
        WHERE id = ?`,
       [userID]
@@ -145,3 +145,8 @@ export async function updateProfile(req, res) {
 //     }
     
 // }
+// Logout
+export async function logout(req, res) {
+  res.clearCookie("jwt");
+  res.status(200).json({ success: true, message: "Logout successful" });
+}

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { assets } from '../assets/assets';
 import { MenuIcon, SearchIcon, XIcon } from 'lucide-react';
 import useAuthUser from '../hooks/useAuthUser'; // ✅ hook lấy user login
-
+import useLogout from '../hooks/useLogout';
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Header = () => {
 
   const { authUser, isLoading } = useAuthUser(); 
   const isAuthenticated = Boolean(authUser);
+  const { logoutMutation } = useLogout();
 
   // Handle dropdown visibility with a delay
   useEffect(() => {
@@ -100,10 +101,7 @@ const Header = () => {
                     <Link to="/admin" className="block px-6 py-3 hover:bg-gray-700">Trang Admin</Link>
                   )}
                   <button
-                    onClick={() => {
-                      // call API logout ở đây
-                      navigate("/login");
-                    }}
+                    onClick={logoutMutation}
                     className="block w-full text-left px-6 py-3 text-red-400 hover:bg-gray-700"
                   >
                     Đăng xuất

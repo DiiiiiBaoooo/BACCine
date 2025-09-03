@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { Route, Routes, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import Home from './pages/Home';
@@ -18,22 +18,71 @@ import SignUp from './pages/SignUp';
 import Login from './pages/Login';
 import UpdateProfile from './pages/UpdateProfile';
 import useAuthUser from './hooks/useAuthUser';
+import Profile from './pages/Account/Profile';
+
+// ProtectedRoute component to enforce authentication and role-based access
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const { isLoading, authUser } = useAuthUser();
+  const isAuthenticated = Boolean(authUser);
+  const isUpdateProfile = authUser?.isUpdateProfile;
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Optional: Add a loading state
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isUpdateProfile === 0) {
+    return <Navigate to="/update-profile" replace />;
+  }
+
+  if (requiredRole && authUser.role !== requiredRole) {
+    const message = requiredRole === "admin" ? "Chỉ Admin được truy cập" : "Chỉ Manager được truy cập";
+    toast.error(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: "dark",
+    });
+    return <Navigate to="/" replace />; // Redirect to home if role doesn't match
+  }
+
+  return children;
+};
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
   const isManagerRoute = useLocation().pathname.startsWith('/manager');
-
+  const location = useLocation();
   const navigate = useNavigate();
   const { isLoading, authUser } = useAuthUser();
   const isAuthenticated = Boolean(authUser);
-  const isUpdateProfile = authUser?.isUpdateProfile; // 0 hoặc 1
+  const isUpdateProfile = authUser?.isUpdateProfile;
 
-  // Redirect to Home after login, regardless of isUpdateProfile
+  // Redirect to appropriate page after login
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      navigate('/', { replace: true }); // Always redirect to Home
+      if (location.pathname === "/login" || location.pathname === "/signup") {
+        if (isUpdateProfile === 0) {
+          navigate("/update-profile", { replace: true });
+          return;
+        }
+
+        if (authUser.role === "admin") {
+          navigate("/admin", { replace: true });
+        } else if (authUser.role === "manager") {
+          navigate("/manager", { replace: true });
+        } else {
+          navigate("/", { replace: true }); // role = user
+        }
+      }
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, isUpdateProfile, navigate, location.pathname, authUser]);
 
   return (
     <>
@@ -54,7 +103,15 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/admin/*" element={<AdminLayout />}>
+        {/* Admin Routes */}
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Dashboard />} />
           <Route path="qlphim" element={<QuanLyPhim />} />
           <Route path="qlrap" element={<QuanLyRapPhim />} />
@@ -62,7 +119,15 @@ const App = () => {
           <Route path="qlttv" element={<QuanLyTheTV />} />
         </Route>
 
-        <Route path="/manager/*" element={<ManagerLayout />}>
+        {/* Manager Routes */}
+        <Route
+          path="/manager/*"
+          element={
+            <ProtectedRoute requiredRole="manager">
+              <ManagerLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<ManagerDashboard />} />
           <Route path="qlgv" element={<QuanLyGiaVe cinemaId={5} />} />
         </Route>
@@ -70,6 +135,7 @@ const App = () => {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </>
   );

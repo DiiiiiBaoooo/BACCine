@@ -17,7 +17,7 @@ export const protectRoute = async (req, res, next) => {
     // connect DB
     const connection = await connectMySqlDB();
     const [rows] = await connection.query(
-      "SELECT id, name, email, role, profilePicture FROM users WHERE id = ?",
+      "SELECT id, name,phone,province_code,district_code, email, role, profilePicture, isUpdateProfile FROM users WHERE id = ?",
       [decoded.id]
     );
 
@@ -32,3 +32,19 @@ export const protectRoute = async (req, res, next) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+export async function isAdmin(req, res, next) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized - no user in request" });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden - require admin role" });
+    }
+
+    next(); // cho qua nếu đúng admin
+  } catch (error) {
+    console.error("Error in isAdmin middleware:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
