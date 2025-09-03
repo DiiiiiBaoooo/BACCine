@@ -9,8 +9,8 @@ export const getAllCinemas = async (req, res) => {
       SELECT 
         cc.id,
         cc.name AS cinema_name,
-        province_code,
-        district_code,
+        cc.province_code,
+        cc.district_code,
         cc.address,
         cc.description,
         cc.phone AS cinema_phone,
@@ -73,8 +73,8 @@ export const addCinemaCluster = async (req, res) => {
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
-        province_code,
-        district_code,
+        cc.province_code,
+        cc.district_code,
         cc.address,
         cc.description,
         cc.phone AS cinema_phone,
@@ -155,8 +155,8 @@ export const updateCinemaCluster = async (req, res) => {
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
-        province_code,
-        district_code,
+        cc.province_code,
+        cc.district_code,
         cc.address,
         cc.description,
         cc.phone AS cinema_phone,
@@ -216,8 +216,8 @@ export const updateManagerCinema = async (req, res) => {
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
-        province_code,
-        district_code,
+       cc.province_code,
+        cc.district_code,
         cc.address,
         cc.description,
         cc.phone AS cinema_phone,
