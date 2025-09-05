@@ -19,6 +19,7 @@ import Login from './pages/Login';
 import UpdateProfile from './pages/UpdateProfile';
 import useAuthUser from './hooks/useAuthUser';
 import Profile from './pages/Account/Profile';
+import Recruiments from './pages/Recruiments';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -102,6 +103,7 @@ const App = () => {
 
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path='/recruiments' element={<Recruiments />} />
 
         {/* Admin Routes */}
         <Route

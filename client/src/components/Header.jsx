@@ -73,6 +73,7 @@ const Header = () => {
 
         <Link onClick={() => { window.scrollTo(0, 0); setIsOpen(false); }} to="/" className="px-4 py-2 hover:text-red-500">Home</Link>
         <Link onClick={() => { window.scrollTo(0, 0); setIsOpen(false); }} to="/movies" className="px-4 py-2 hover:text-red-500">Movies</Link>
+        <Link onClick={() => { window.scrollTo(0, 0); setIsOpen(false); }} to="/recruiments" className="px-4 py-2 hover:text-red-500">Tuyen dung</Link>
         <Link onClick={() => { window.scrollTo(0, 0); setIsOpen(false); }} to="/theaters" className="px-4 py-2 hover:text-red-500">Theater</Link>
         <Link onClick={() => { window.scrollTo(0, 0); setIsOpen(false); }} to="/releases" className="px-4 py-2 hover:text-red-500">Releases</Link>
       </div>
@@ -89,6 +90,7 @@ const Header = () => {
                 <img
                   src={authUser.profilePicture || "https://via.placeholder.com/40"}
                   alt="avatar"
+                   referrerPolicy="no-referrer"
                   className="w-10 h-10 rounded-full cursor-pointer border-2 border-red-500"
                 />
                 <div

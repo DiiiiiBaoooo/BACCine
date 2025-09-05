@@ -8,24 +8,24 @@ export const protectRoute = async (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized - no token provided" });
     }
 
-    // verify token
+    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (!decoded) {
-      return res.status(401).json({ message: "Unauthorized - invalid token" });
-    }
+    console.log("Decoded JWT:", decoded); // Log decoded token
 
-    // connect DB
+    // Connect DB
     const connection = await connectMySqlDB();
     const [rows] = await connection.query(
-      "SELECT id, name,phone,province_code,district_code, email, role, profilePicture, isUpdateProfile FROM users WHERE id = ?",
+      "SELECT id, name, phone, province_code, district_code, email, role, profilePicture, isUpdateProfile FROM users WHERE id = ?",
       [decoded.id]
     );
+
+    console.log("Database query result:", rows); // Log query result
 
     if (rows.length === 0) {
       return res.status(401).json({ message: "Unauthorized - user not found" });
     }
 
-    req.user = rows[0]; // gán user vào request
+    req.user = rows[0]; // Assign user to request
     next();
   } catch (error) {
     console.error("Error in protectRoute middleware:", error);

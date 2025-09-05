@@ -11,6 +11,7 @@ import CinemasRoute from "./routes/Cinemas.js";
 import ticketPriceRoute from "./routes/TicketPriceRoute.js";
 import AuthRoute from "./routes/AuthRoute.js";
 import cookieParser from "cookie-parser"
+import RecruimentRoute from "./routes/RecruimentRoute.js";
 
 const app = express();
 const port = 3000;
@@ -34,6 +35,7 @@ app.use("/api/membershiptiers", membershiptiersRoute);
 app.use("/api/cinemas",CinemasRoute)
 app.use("/api/ticketprice",ticketPriceRoute)
 app.use('/api/auth', AuthRoute)
+app.use("/api/recruitments",RecruimentRoute)
 
 // Tạo HTTP server thay vì app.listen
 const server = http.createServer(app);
