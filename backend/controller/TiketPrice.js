@@ -1,9 +1,8 @@
-import connectMySqlDB from "../config/mysqldb.js";
+import connection from "../config/mysqldb.js";
 
 // GET ticket prices for a cinema (unchanged)
 export const getTicketPriceCinema = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
     const { cinema_id } = req.params;
 
     // Validate cinema_id exists in cinema_clusters
@@ -47,7 +46,6 @@ export const getTicketPriceCinema = async (req, res) => {
 // POST/UPDATE ticket prices for a cinema
 export const saveTicketPrices = async (req, res) => {
     try {
-      const connection = await connectMySqlDB();
       const { cinema_id, prices } = req.body;
   
       // Validate input

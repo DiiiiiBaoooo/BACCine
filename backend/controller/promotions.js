@@ -1,4 +1,4 @@
-import connectMySqlDB from "../config/mysqldb.js";
+import connection from "../config/mysqldb.js";
 
 const getStatistics = async (connection) => {
   const [total] = await connection.query("SELECT COUNT(*) as count FROM promotions");
@@ -20,7 +20,6 @@ const getStatistics = async (connection) => {
 
 export const getAllPromotions = async (req,res) =>{
   try {
-    const connection = await connectMySqlDB();
     const [rows] = await connection.query("SELECT * FROM promotions ");
     res.status(200).json({success:true,promotions:rows})
   } catch (error) {
@@ -30,7 +29,6 @@ export const getAllPromotions = async (req,res) =>{
 
 export const addPromotion = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
     const {
       code, name, description, discount_type,
       discount_value, min_order, max_discount,
@@ -67,7 +65,6 @@ export const addPromotion = async (req, res) => {
 
 export const deletePromotion = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
     const { id } = req.params;
     const [rows] = await connection.query("SELECT * FROM promotions WHERE id = ?", [id]);
     if (rows.length === 0) {
@@ -89,7 +86,6 @@ export const deletePromotion = async (req, res) => {
 
 export const updatePromotion = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
     const { id } = req.params;
     const {
       code, name, description, discount_type,
@@ -134,7 +130,6 @@ export const updatePromotion = async (req, res) => {
 
 export const getPromotionStatistics = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
     const statistics = await getStatistics(connection);
     res.json({ success: true, statistics });
   } catch (error) {

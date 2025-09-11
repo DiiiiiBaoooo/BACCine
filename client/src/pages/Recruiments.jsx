@@ -1,14 +1,95 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FilmIcon } from "lucide-react"; // Assuming you have this icon library
+import { FilmIcon, X } from "lucide-react";
+import emailjs from "@emailjs/browser";
+import { useCinema } from "../context/CinemaContext"; // Import useCinema
 
 const Recruiment = () => {
+  const { selectedCinema, setSelectedCinema } = useCinema(); // Use context
   const [clusters, setClusters] = useState([]);
-  const [activeCinema, setActiveCinema] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    resume: null,
+  });
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value, files } = e.target;
+    setFormData({
+      ...formData,
+      [name]: files ? files[0] : value,
+    });
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedJob) {
+      alert("Vui lòng chọn công việc để ứng tuyển.");
+      return;
+    }
+
+    try {
+      const form = new FormData();
+      form.append("applicant_name", formData.name);
+      form.append("applicant_email", formData.email);
+      form.append("applicant_phone", formData.phone);
+      if (formData.resume) {
+        form.append("resume", formData.resume);
+      }
+
+      const res = await axios.post(`/api/recruitments/apply/${selectedJob.id}`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.success) {
+        alert("Ứng tuyển thành công!");
+        setShowForm(false);
+        setFormData({ name: "", email: "", phone: "", resume: null });
+        emailjs
+          .send(
+            import.meta.env.VITE_EMAILJS_SERVICE_ID,
+            import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+            {
+              to_email: formData.email,
+              applicant_email: formData.email, // Send to applicant
+              name: formData.name,
+              time: new Date().toLocaleString("vi-VN"),
+              job_title: selectedJob.job_title,
+              cinema_name: activeCinemaName,
+              applicant_phone: formData.phone,
+            },
+            import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+          )
+          .then(() => {
+            console.log("✅ Email đã được gửi thành công!");
+          })
+          .catch((err) => {
+            console.error("❌ Lỗi gửi email:", err);
+          });
+      } else {
+        alert(res.data.message || "Ứng tuyển thất bại.");
+      }
+    } catch (err) {
+      console.error("❌ Lỗi khi gửi ứng tuyển:", err);
+      alert("Có lỗi xảy ra khi gửi ứng tuyển. Vui lòng thử lại sau.");
+    }
+  };
+
+  // Close modal when clicking outside
+  const handleCloseModal = (e) => {
+    if (e.target.id === "modal-backdrop") {
+      setShowForm(false);
+    }
+  };
 
   // Fetch cinema clusters
   useEffect(() => {
@@ -17,8 +98,8 @@ const Recruiment = () => {
       .then((res) => {
         const cinemas = res.data.cinemas || [];
         setClusters(cinemas);
-        if (cinemas.length > 0) {
-          setActiveCinema(cinemas[0].id); // Default to first cinema
+        if (cinemas.length > 0 && !selectedCinema) {
+          setSelectedCinema(cinemas[0].id); // Set initial cinema if none selected
         }
       })
       .catch((err) => {
@@ -26,36 +107,39 @@ const Recruiment = () => {
         setError("Không thể tải danh sách rạp.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedCinema, setSelectedCinema]);
 
-  // Fetch jobs for the active cinema
+  // Fetch jobs for the selected cinema
   useEffect(() => {
-    if (activeCinema) {
+    if (selectedCinema) {
       setLoading(true);
-      setError(null); // Reset error state before new request
-      setSelectedJob(null); // Reset selected job when cinema changes
+      setError(null);
+      setSelectedJob(null);
       axios
-        .get(`/api/recruitments/job/${activeCinema}`) // Corrected path
+        .get(`/api/recruitments/job/${selectedCinema}`)
         .then((res) => {
           if (res.data.success) {
             setJobs(res.data.jobs || []);
             if (res.data.jobs.length > 0) {
-              setSelectedJob(res.data.jobs[0]); // Default to first job
+              setSelectedJob(res.data.jobs[0]);
             } else if (res.data.message) {
-              setError(res.data.message); // Set specific message if provided
+              setError(res.data.message);
             }
           } else {
             setJobs([]);
-            setError("Không tìm thấy công việc cho rạp này."); // Fallback if success is false
+            setError("Không tìm thấy công việc cho rạp này.");
           }
         })
         .catch((err) => {
           console.error("Error fetching jobs:", err);
-          setError("Lỗi khi tải thông tin công việc."); // General error for network/server issues
+          setError("Lỗi khi tải thông tin công việc.");
         })
         .finally(() => setLoading(false));
     }
-  }, [activeCinema]);
+  }, [selectedCinema]);
+
+  // Get cinema name from selectedCinema id
+  const activeCinemaName = clusters.find((cluster) => cluster.id === selectedCinema)?.cinema_name || "N/A";
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 md:p-8">
@@ -67,29 +151,9 @@ const Recruiment = () => {
         </span>
       </div>
 
-      {/* Tabs Section */}
-      <div className="w-full mb-6">
-        <div className="flex flex-wrap gap-3 justify-center">
-          {loading && !clusters.length ? (
-            <p className="text-gray-400">Đang tải danh sách rạp...</p>
-          ) : clusters.length > 0 ? (
-            clusters.map((cluster) => (
-              <button
-                key={cluster.id}
-                onClick={() => setActiveCinema(cluster.id)}
-                className={`px-5 py-2 rounded-lg font-medium border transition-all duration-200 ${
-                  activeCinema === cluster.id
-                    ? "bg-red-600 text-white border-red-600"
-                    : "bg-white text-black border-gray-400 hover:bg-red-100 hover:text-red-600"
-                }`}
-              >
-                {cluster.cinema_name}
-              </button>
-            ))
-          ) : (
-            <p className="text-red-600">Không có rạp nào để hiển thị.</p>
-          )}
-        </div>
+      {/* Display Selected Cinema */}
+      <div className="mb-6 text-center">
+        <p className="text-gray-400">Rạp đang chọn: {activeCinemaName}</p>
       </div>
 
       {/* Main Content - Two-Column Layout */}
@@ -157,12 +221,97 @@ const Recruiment = () => {
               <p className="text-gray-400">
                 <strong>Hạn chót:</strong> {new Date(selectedJob.deadline).toLocaleDateString()}
               </p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="mt-4 px-5 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all duration-200"
+              >
+                Ứng Tuyển Ngay
+              </button>
             </div>
           ) : (
             <p className="text-gray-500 text-center">Vui lòng chọn một công việc.</p>
           )}
         </div>
       </div>
+
+      {/* Modal for Application Form */}
+      {showForm && (
+        <div
+          id="modal-backdrop"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={handleCloseModal}
+        >
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-red-600">Form Ứng Tuyển</h3>
+                {selectedJob && (
+                  <p className="text-sm text-gray-400">
+                    Vị trí: {selectedJob.job_title} - Rạp: {activeCinemaName}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setShowForm(false)}>
+                <X className="text-gray-400 hover:text-red-600 size-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-400 mb-1">Họ và Tên</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full p-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-red-600"
+                  placeholder="Nhập họ và tên"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full p-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-red-600"
+                  placeholder="Nhập email"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">Số điện thoại</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full p-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-red-600"
+                  placeholder="Nhập số điện thoại"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">Tệp CV (PDF)</label>
+                <input
+                  type="file"
+                  name="resume"
+                  accept=".pdf"
+                  onChange={handleInputChange}
+                  className="w-full p-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-red-600"
+                />
+              </div>
+              <button
+                onClick={handleSubmit}
+                className="w-full px-5 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all duration-200"
+              >
+                Gửi Ứng Tuyển
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Objective Section */}
       <div className="mt-6 p-6 border border-gray-700 rounded-xl bg-gray-800">

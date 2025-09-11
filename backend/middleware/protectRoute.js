@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
-import connectMySqlDB from "../config/mysqldb.js";
-
+import dbPool from "../config/mysqldb.js";
 export const protectRoute = async (req, res, next) => {
   try {
     const token = req.cookies?.jwt;
@@ -10,16 +9,15 @@ export const protectRoute = async (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Decoded JWT:", decoded); // Log decoded token
+    // console.log("Decoded JWT:", decoded); // Log decoded token
 
     // Connect DB
-    const connection = await connectMySqlDB();
-    const [rows] = await connection.query(
+    const [rows] = await dbPool.query(
       "SELECT id, name, phone, province_code, district_code, email, role, profilePicture, isUpdateProfile FROM users WHERE id = ?",
       [decoded.id]
     );
 
-    console.log("Database query result:", rows); // Log query result
+    // console.log("Database query result:", rows); // Log query result
 
     if (rows.length === 0) {
       return res.status(401).json({ message: "Unauthorized - user not found" });

@@ -1,4 +1,4 @@
-import connectMySqlDB from "../config/mysqldb.js";
+import dbPool from "../config/mysqldb.js";
 import bcrypt from "bcrypt";
 import jwt from  "jsonwebtoken"
 import { OAuth2Client } from "google-auth-library";
@@ -9,7 +9,6 @@ import { Strategy as FacebookStrategy } from "passport-facebook";
 
 export const signup = async (req, res) => {
     try {
-        const connection = await connectMySqlDB();
         const { fullName, email, password } = req.body;
         if(!fullName || !email || !password) {
             return res.status(400).json({ error: "All fields are required" });
@@ -21,14 +20,14 @@ export const signup = async (req, res) => {
         if (!emailRegex.test(email)) {
           return res.status(400).json({ message: "Invalid email format" });
         }
-        const [existRows] = await connection.query("SELECT * FROM users WHERE email = ?", [email]);
+        const [existRows] = await dbPool.query("SELECT * FROM users WHERE email = ?", [email]);
         if(existRows.length > 0) {
             return res.status(400).json({ error: "Email already exists" });
         }
         const seed = Math.random().toString(36).substring(2, 10);
         const randomAvatar = `https://robohash.org/${seed}.png`;
         const hashedPassword = await bcrypt.hash(password, 10);
-        const [rows] = await connection.query("INSERT INTO users (name, email, password,role,profilePicture) VALUES (?, ?, ?,'user',?)", [fullName, email, hashedPassword,randomAvatar]);
+        const [rows] = await dbPool.query("INSERT INTO users (name, email, password,role,profilePicture) VALUES (?, ?, ?,'user',?)", [fullName, email, hashedPassword,randomAvatar]);
         res.status(200).json({success:true, user:rows ,message:"Đăng kí thành công" });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -42,8 +41,7 @@ export async function login(req, res) {
         return res.status(400).json({ error: "Email và mật khẩu là bắt buộc" });
       }
   
-      const connection = await connectMySqlDB();
-      const [rows] = await connection.query(
+      const [rows] = await dbPool.query(
         "SELECT * FROM users WHERE email = ?",
         [email]
       );
@@ -94,7 +92,6 @@ export async function login(req, res) {
 
 export async function updateProfile(req, res) {
   try {
-    const connection = await connectMySqlDB();
     const userID = req.user.id; // sửa lại
     const { name, province_code, district_code, phone,profilePicture } = req.body;
 
@@ -112,7 +109,7 @@ export async function updateProfile(req, res) {
     }
 
     // Update user
-    const [result] = await connection.execute(
+    const [result] = await dbPool.execute(
       `UPDATE users 
        SET name = ?, province_code = ?, district_code = ?, phone = ? ,profilePicture=?,isUpdateProfile= ?
        WHERE id = ?`,
@@ -124,7 +121,7 @@ export async function updateProfile(req, res) {
     }
 
     // Lấy lại user đã update để return
-    const [rows] = await connection.execute(
+    const [rows] = await dbPool.execute(
       `SELECT id, name, province_code, district_code, phone, email ,profilePicture
        FROM users 
        WHERE id = ?`,
@@ -172,7 +169,6 @@ function generateToken(user) {
 export const googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    const connection = await connectMySqlDB();
 
     // Verify Google token
     const ticket = await client.verifyIdToken({
@@ -184,14 +180,14 @@ export const googleLogin = async (req, res) => {
     const { sub: googleId, email, name, picture } = payload;
 
     // Check user
-    const [rows] = await connection.query(
+    const [rows] = await dbPool.query(
       "SELECT * FROM users WHERE google_id = ? OR email = ?",
       [googleId, email]
     );
 
     let user;
     if (rows.length === 0) {
-      const [result] = await connection.query(
+      const [result] = await dbPool.query(
         `INSERT INTO users (name, email, profilePicture, role, isUpdateProfile, google_id) 
          VALUES (?, ?, ?, ?, ?, ?)`,
         [name, email, picture, "user", 0, googleId]
@@ -201,7 +197,7 @@ export const googleLogin = async (req, res) => {
     } else {
       user = rows[0];
       if (!user.google_id) {
-        await connection.query("UPDATE users SET google_id = ? WHERE id = ?", [googleId, user.id]);
+        await dbPool.query("UPDATE users SET google_id = ? WHERE id = ?", [googleId, user.id]);
         user.google_id = googleId;
       }
     }
@@ -227,75 +223,37 @@ export const googleLogin = async (req, res) => {
   }
 };
 
-export const facebookLogin = async (req, res) => {
+
+
+export const getAuthUser =  async (req, res) => {
   try {
-    const { accessToken } = req.body;
-    if (!accessToken) {
-      return res.status(400).json({ message: "No access token provided" });
-    }
+    const user = req.user; // { userId, role, isUpdateProfile, ... }
 
-    // Gọi Facebook Graph API để lấy thông tin user
-    const fbResponse = await fetch(
-      `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`
-    );
-    const fbUser = await fbResponse.json();
-
-    if (fbUser.error) {
-      return res.status(400).json({ message: "Invalid Facebook token", error: fbUser.error });
-    }
-
-    const { id: facebookId, name, email, picture } = fbUser;
-    const profilePicture = picture?.data?.url;
-
-    const connection = await connectMySqlDB();
-
-    // Kiểm tra user trong DB
-    const [rows] = await connection.query(
-      "SELECT * FROM users WHERE facebook_id = ? OR email = ?",
-      [facebookId, email]
-    );
-
-    let user;
-    if (rows.length === 0) {
-      const [result] = await connection.query(
-        `INSERT INTO users (name, email, profilePicture, role, isUpdateProfile, facebook_id) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [name, email || null, profilePicture, "user", 0, facebookId]
+    // If user is a manager, fetch their cinemaId
+    if (user.role === "manager") {
+      const [rows] = await dbPool.execute(
+        `SELECT id FROM cinema_clusters WHERE manager_id = ?`,
+        [user.id]
       );
 
-      user = {
-        id: result.insertId,
-        name,
-        email,
-        profilePicture,
-        role: "user",
-        facebook_id: facebookId,
-      };
-    } else {
-      user = rows[0];
-      if (!user.facebook_id) {
-        await connection.query("UPDATE users SET facebook_id = ? WHERE id = ?", [facebookId, user.id]);
-        user.facebook_id = facebookId;
+      if (rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Không tìm thấy rạp cho manager này",
+        });
       }
+
+      // Add cinemaId to user object
+      user.cinemaId = rows[0].id;
     }
 
-    // Tạo JWT
-    const jwtToken = generateToken(user);
-
-    res.cookie("jwt", jwtToken, {
-      httpOnly: true,
-      secure: false, // đổi thành true khi deploy HTTPS
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.json({
-      message: "Facebook login success",
-      user,
-      token: jwtToken,
-    });
+    res.status(200).json({ success: true, user });
   } catch (error) {
-    console.error("Facebook login error:", error);
-    res.status(500).json({ message: "Facebook login failed", error: error.message });
+    console.error("❌ Lỗi get /me:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
-};
+}

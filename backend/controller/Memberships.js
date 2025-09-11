@@ -1,9 +1,8 @@
-import connectMySqlDB from "../config/mysqldb.js";
+import dbPool from "../config/mysqldb.js";
 
 export const getAllMembershipTiers = async (req,res) => {
     try {
-        const connection = await connectMySqlDB();
-        const [rows] = await connection.query("SELECT * FROM membership_tiers");
+        const [rows] = await dbPool.query("SELECT * FROM membership_tiers");
         res.status(200).json({success:true, membershiptiers:rows})
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -14,13 +13,12 @@ export const getAllMembershipTiers = async (req,res) => {
 
 export const addMembershipTier = async(req,res) =>{
     try {
-        const connection = await connectMySqlDB();
         const {minPoints,nameTier,benefits } = req.body;
         if(!minPoints || !nameTier || !benefits){
             res.status(400).json({ success:false,message:"Chua nhap du thong tin the" });
 
         }
-        const [result] = await connection.execute(
+        const [result] = await dbPool.execute(
             `INSERT INTO membership_tiers (name, min_points, benefits) 
              VALUES (?, ?, ?)`,
             [nameTier, minPoints, benefits]
@@ -45,10 +43,9 @@ export const addMembershipTier = async(req,res) =>{
 
 export const updateMembershipTier = async (req,res) => {
     try {
-        const connection = await connectMySqlDB();
         const { id } = req.params;
         const { min_points, benefits } = req.body;
-        await connection.execute(
+        await dbPool.execute(
             `UPDATE membership_tiers 
              SET min_points=?, benefits=?
              WHERE id=?`,
@@ -67,9 +64,8 @@ export const updateMembershipTier = async (req,res) => {
 }
 export const deleteTier = async (req, res) => {
     try {
-      const connection = await connectMySqlDB();
       const { id } = req.params;
-      await connection.query("DELETE FROM membership_tiers WHERE id=?", [id]);
+      await dbPool.query("DELETE FROM membership_tiers WHERE id=?", [id]);
       global._io.emit("membershiptiers_update", {
         action: "delete",
         id,

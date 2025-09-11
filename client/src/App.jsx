@@ -20,6 +20,11 @@ import UpdateProfile from './pages/UpdateProfile';
 import useAuthUser from './hooks/useAuthUser';
 import Profile from './pages/Account/Profile';
 import Recruiments from './pages/Recruiments';
+import QuanLyUngVien from './pages/manager/QuanLyUngVien';
+import QuanLyTuyenDung from './pages/manager/QuanLyTuyenDung';
+import QuanLyBaiViet from './pages/manager/QuanLyBaiViet';
+import CreatePost from './pages/manager/CreatePost';
+import Blog from './pages/blogs/Blog';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -63,6 +68,7 @@ const App = () => {
   const navigate = useNavigate();
   const { isLoading, authUser } = useAuthUser();
   const isAuthenticated = Boolean(authUser);
+  const cinema_Id = authUser?.cinemaId;
   const isUpdateProfile = authUser?.isUpdateProfile;
 
   // Redirect to appropriate page after login
@@ -101,7 +107,7 @@ const App = () => {
       />
       {!isAdminRoute && !isManagerRoute && <Header />}
 
-      <Routes>
+      <Routes >
         <Route path="/" element={<Home />} />
         <Route path='/recruiments' element={<Recruiments />} />
 
@@ -114,7 +120,7 @@ const App = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
+          <Route  index element={<Dashboard />} />
           <Route path="qlphim" element={<QuanLyPhim />} />
           <Route path="qlrap" element={<QuanLyRapPhim />} />
           <Route path="qlkm" element={<QuanLyKhuyenMai />} />
@@ -131,13 +137,18 @@ const App = () => {
           }
         >
           <Route index element={<ManagerDashboard />} />
-          <Route path="qlgv" element={<QuanLyGiaVe cinemaId={5} />} />
+          <Route path="qlgv" element={<QuanLyGiaVe cinemaId={cinema_Id} />} />
+          <Route path ="qluv" element={<QuanLyUngVien cinemaId={cinema_Id} />} />
+          <Route path='qltd' element={<QuanLyTuyenDung cinemaId={cinema_Id} />} />
+          <Route path='qlbv' element={<QuanLyBaiViet cinemaId={cinema_Id} />} />
+          <Route path="qlbv/new" element={<CreatePost cinemaId={cinema_Id} />} />
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/blog" element={<Blog />} />
       </Routes>
     </>
   );

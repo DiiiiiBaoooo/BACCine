@@ -2,7 +2,7 @@ import React from 'react'
 import { assets } from '../assets/assets'
 
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboardIcon, TicketIcon } from 'lucide-react'
+import { Briefcase, FileUser, LayoutDashboardIcon, TicketIcon } from 'lucide-react'
 
 const ManagerSidebar = () => {
   const user = {
@@ -14,6 +14,8 @@ const ManagerSidebar = () => {
   const managerNavlinks = [
     { name: 'Dashboard', path: '/manager', icon: LayoutDashboardIcon },
     { name: 'Quản lý giá vé', path: '/manager/qlgv', icon: TicketIcon },
+    {name:'Quản lý ứng viên', path:'/manager/qluv', icon:FileUser},
+    {name:"Quản lý tuyển dụng", path:'/manager/qltd',icon:Briefcase}
     
   ]
 

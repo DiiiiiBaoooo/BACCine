@@ -1,19 +1,13 @@
 import mysql from "mysql2/promise";
 
-const connectMySqlDB = async () => {
-  try {
-    const connection = await mysql.createConnection({
-      host: "localhost",
-      user: "root",
-      password: "",
-      database: "csdl_rapphim",
-    });
-    console.log("Kết nối MySQL thành công!",+ connection.threadId);
-    
-    return connection;
-  } catch (error) {
-    console.error("Lỗi kết nối MySQL: " + error.message);
-  }
-};
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "csdl_rapphim",
+  waitForConnections: true,
+  connectionLimit: 10, // Adjust based on your needs
+  queueLimit: 0,
+});
 
-export default connectMySqlDB;
+export default pool;

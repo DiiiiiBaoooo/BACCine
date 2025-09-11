@@ -1,11 +1,11 @@
 // routes/Cinemas.js
-import connectMySqlDB from "../config/mysqldb.js";
+import dbPool from "../config/mysqldb.js";
 
 export const getAllCinemas = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
 
-    const [rows] = await connection.query(`
+
+    const [rows] = await dbPool.query(`
       SELECT 
         cc.id,
         cc.name AS cinema_name,
@@ -34,10 +34,17 @@ export const getAllCinemas = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
-
+export const getCinemas = async (req, res) => {
+  try {
+    const [rows] = await dbPool.query("SELECT id, name FROM cinemas");
+    res.status(200).json({ success: true, cinemas: rows });
+  } catch (error) {
+    console.error("Error in getCinemas:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 export const addCinemaCluster = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
     const {
       name,
       description,
@@ -51,7 +58,7 @@ export const addCinemaCluster = async (req, res) => {
     } = req.body;
 
     // Insert into DB
-    const [result] = await connection.execute(
+    const [result] = await dbPool.execute(
       `INSERT INTO cinema_clusters 
       (name, description, manager_id, phone, email, province_code, district_code, address, rooms) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -69,7 +76,7 @@ export const addCinemaCluster = async (req, res) => {
     );
 
     // Fetch the newly added cinema to include in the event
-    const [newCinema] = await connection.query(
+    const [newCinema] = await dbPool.query(
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
@@ -121,14 +128,13 @@ export const updateCinemaCluster = async (req, res) => {
       rooms,
     } = req.body;
     const { id } = req.params;
-    const connection = await connectMySqlDB();
 
-    const [idCinema] = await connection.query(`SELECT id FROM cinema_clusters WHERE id = ?`, [id]);
+    const [idCinema] = await dbPool.query(`SELECT id FROM cinema_clusters WHERE id = ?`, [id]);
     if (!idCinema.length) {
       return res.status(400).json({ success: false, message: "Chưa chọn rạp" });
     }
 
-    const [result] = await connection.execute(
+    const [result] = await dbPool.execute(
       `UPDATE cinema_clusters 
        SET name = ?, description = ?, phone = ?, email = ?, 
            province_code = ?, district_code = ?, address = ?, rooms = ?
@@ -151,7 +157,7 @@ export const updateCinemaCluster = async (req, res) => {
     }
 
     // Fetch the updated cinema to include in the event
-    const [updatedCinema] = await connection.query(
+    const [updatedCinema] = await dbPool.query(
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
@@ -193,14 +199,13 @@ export const updateManagerCinema = async (req, res) => {
   try {
     const { id } = req.params;
     const { manager_id } = req.body;
-    const connection = await connectMySqlDB();
 
-    const [manager] = await connection.query("SELECT id FROM users WHERE id = ?", [manager_id]);
+    const [manager] = await dbPool.query("SELECT id FROM users WHERE id = ?", [manager_id]);
     if (!manager.length) {
       return res.status(400).json({ success: false, message: "Không tìm thấy quản lý" });
     }
 
-    const [result] = await connection.execute(
+    const [result] = await dbPool.execute(
       `UPDATE cinema_clusters 
        SET manager_id = ?
        WHERE id = ?`,
@@ -212,7 +217,7 @@ export const updateManagerCinema = async (req, res) => {
     }
 
     // Fetch the updated cinema to include in the event
-    const [updatedCinema] = await connection.query(
+    const [updatedCinema] = await dbPool.query(
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
@@ -252,8 +257,7 @@ export const updateManagerCinema = async (req, res) => {
 
 export const getManagers = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
-    const [rows] = await connection.query("SELECT * FROM users WHERE role = 'manager'");
+    const [rows] = await dbPool.query("SELECT * FROM users WHERE role = 'manager'");
     res.status(200).json({ success: true, managers: rows });
   } catch (error) {
     console.log(error.message);
@@ -263,7 +267,6 @@ export const getManagers = async (req, res) => {
 
 export const sendMoviePlan = async (req, res) => {
   try {
-    const con = await connectMySqlDB();
     const { description, start_date, end_date, movie_id } = req.body;
     const { cinema_id } = req.params;
 
@@ -276,7 +279,7 @@ export const sendMoviePlan = async (req, res) => {
     const safeEnd = end_date || null;
 
     // 1. Thêm kế hoạch
-    const [planResult] = await con.execute(
+    const [planResult] = await dbPool.execute(
       `INSERT INTO business_plan (cinema_id, description, start_date, end_date, created_by) 
        VALUES (?, ?, ?, ?, 1)`,
       [cinema_id, description, safeStart, safeEnd]
@@ -289,7 +292,7 @@ export const sendMoviePlan = async (req, res) => {
 
     // 3. Insert phim vào bảng business_plan_movies
     const values = movies.map((mid) => [planId, mid, null]);
-    await con.query(
+    await dbPool.query(
       `INSERT INTO business_plan_movies (plan_id, movie_id, note) VALUES ?`,
       [values]
     );
@@ -307,10 +310,9 @@ export const sendMoviePlan = async (req, res) => {
 
 export const getPlanMovieByCinema = async (req, res) => {
   try {
-    const con = await connectMySqlDB();
     const { cinema_id } = req.params;
 
-    const [rows] = await con.query(
+    const [rows] = await dbPool.query(
       `SELECT 
           bl.id AS plan_id,
           bl.description,

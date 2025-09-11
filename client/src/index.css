@@ -11,6 +11,7 @@
   body{
     color:white;
     background-color: #09090B;
+    
   }
   .no-scrollbar{
     scrollbar-width: none;
@@ -70,4 +71,7 @@
   /* Staggered fade in for multiple items */
   .animate-fade-in-stagger {
     animation: fadeIn 0.6s ease-out forwards;
+  }
+  html {
+    scroll-behavior: smooth;
   }

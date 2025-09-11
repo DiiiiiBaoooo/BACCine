@@ -1,11 +1,10 @@
-import connectMySqlDB from "../config/mysqldb.js";
+import dbPool from "../config/mysqldb.js";
 import axios from "axios";
 
 // 📌 Lấy tất cả phim
 export const getAllMovies = async (req, res) => {
   try {
-    const connection = await connectMySqlDB();
-    const [rows] = await connection.query("SELECT * FROM movies ");
+    const [rows] = await dbPool.query("SELECT * FROM movies ");
     res.json({
       success: true,
       movies: rows, 
@@ -18,7 +17,6 @@ export const getAllMovies = async (req, res) => {
 
 // 📌 Thêm phim mới
   export const insert1Movie = async (req, res) => {
-    const connection = await connectMySqlDB();
   
     try {
       const {
@@ -34,7 +32,7 @@ export const getAllMovies = async (req, res) => {
       }
   
       // 1. Kiểm tra phim đã tồn tại chưa
-      const [existRows] = await connection.query(
+      const [existRows] = await dbPool.query(
         "SELECT id FROM movies WHERE id = ?",
         [movieId]
       );
@@ -60,7 +58,7 @@ export const getAllMovies = async (req, res) => {
       const movieCreditsData = movieCreditsResponse.data;
   
       // 3. Insert movies
-      await connection.query(
+      await dbPool.query(
         `INSERT INTO movies 
         (id, title, original_title, original_language, overview, poster_path, backdrop_path, release_date, popularity, vote_average, vote_count, import_cost, created_at, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
@@ -83,13 +81,13 @@ export const getAllMovies = async (req, res) => {
       // 4. Insert genres
       for (const genre of movieApiData.genres) {
         // Lưu genres nếu chưa có
-        await connection.query(
+        await dbPool.query(
           "INSERT IGNORE INTO genres (id, name) VALUES (?, ?)",
           [genre.id, genre.name]
         );
   
         // Liên kết vào movie_genres
-        await connection.query(
+        await dbPool.query(
           "INSERT INTO movie_genres (movie_id, genre_id) VALUES (?, ?)",
           [movieId, genre.id]
         );
@@ -97,12 +95,12 @@ export const getAllMovies = async (req, res) => {
   
       // 5. Insert casts (actors)
       for (const actor of movieCreditsData.cast) {
-        await connection.query(
+        await dbPool.query(
           "INSERT IGNORE INTO actors (id, name, profile_path) VALUES (?, ?, ?)",
           [actor.id, actor.name, actor.profile_path]
         );
   
-        await connection.query(
+        await dbPool.query(
           `INSERT INTO movie_casts (movie_id, actor_id, credit_id, characters,orders)
            VALUES (?, ?, ?, ?, ?)`,
           [movieId, actor.id, actor.credit_id, actor.character, actor.order]
