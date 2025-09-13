@@ -2,7 +2,7 @@ import React from 'react'
 import { assets } from '../assets/assets'
 
 import { NavLink } from 'react-router-dom'
-import { Briefcase, FileUser, LayoutDashboardIcon, TicketIcon } from 'lucide-react'
+import { Briefcase, FileUser, IdCardLanyard, LayoutDashboardIcon, StickyNote, TicketIcon } from 'lucide-react'
 
 const ManagerSidebar = () => {
   const user = {
@@ -15,7 +15,9 @@ const ManagerSidebar = () => {
     { name: 'Dashboard', path: '/manager', icon: LayoutDashboardIcon },
     { name: 'Quản lý giá vé', path: '/manager/qlgv', icon: TicketIcon },
     {name:'Quản lý ứng viên', path:'/manager/qluv', icon:FileUser},
-    {name:"Quản lý tuyển dụng", path:'/manager/qltd',icon:Briefcase}
+    {name:"Quản lý tuyển dụng", path:'/manager/qltd',icon:Briefcase},
+    {name:"Quản lý bài viết", path:'/manager/qlbv',icon:StickyNote},
+    {name:"Quản lý nhân viên", path:'/manager/qlnv',icon:IdCardLanyard}
     
   ]
 

@@ -14,6 +14,7 @@ import cookieParser from "cookie-parser";
 import RecruimentRoute from "./routes/RecruimentRoute.js";
 import ApplicationRoute from "./routes/ApplicationsRoutes.js";
 import BlogRoute from "./routes/BlogRoutes.js";
+import EmployeeRoute from "./routes/EmployeeRoutes.js";
 
 const app = express();
 const port = 3000;
@@ -39,6 +40,7 @@ app.use("/api/auth", AuthRoute);
 app.use("/api/recruitments", RecruimentRoute);
 app.use("/api/applications", ApplicationRoute);
 app.use("/api/posts", BlogRoute);
+app.use("/api/employee",EmployeeRoute)
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

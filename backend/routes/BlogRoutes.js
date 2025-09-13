@@ -1,9 +1,11 @@
 import express from "express"
-import {  createPost, getPostsInCine } from "../controller/Blog.js";
+import {  createPost, getBlog, getPostsInCine, updatePost } from "../controller/Blog.js";
 
 const BlogRoute = express.Router();
 
 BlogRoute.get("/:cinema_id",getPostsInCine)
+BlogRoute.get("/:cinema_id/:post_id",getBlog)
+BlogRoute.put("/:id", updatePost)
 BlogRoute.post("/:cinema_id",createPost)
 
 
