@@ -96,12 +96,17 @@ const EmployeeManagement = ({ cinemaId }) => {
   const handleAddEmployee = async (e) => {
     e.preventDefault();
     setLoading(true);
+  
     try {
-      await axios.post("/api/employee", newEmployee);
+      const employeeData = {
+        ...newEmployee,
+        cinema_cluster_id: cinemaId, // Explicitly set cinema_cluster_id
+      };
+      await axios.post("/api/employee", employeeData);
       setIsModalOpen(false);
       setNewEmployee({
         fullName: '', email: '', phone: '', province_code: '', district_code: '',
-        cinema_cluster_id: '', position: 'Staff', start_date: '', end_date: ''
+        cinema_cluster_id: `${cinemaId}`, position: 'Staff', start_date: '', end_date: ''
       });
       fetchEmployees();
       fetchStatistics();
