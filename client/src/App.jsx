@@ -25,6 +25,9 @@ import QuanLyTuyenDung from './pages/manager/QuanLyTuyenDung';
 import QuanLyBaiViet from './pages/manager/QuanLyBaiViet';
 import CreatePost from './pages/manager/CreatePost';
 import Blog from './pages/blogs/Blog';
+import BlogDetail from './pages/blogs/BlogDetail';
+import EditBlog from './pages/blogs/EditBlog';
+import EmployeeManagement from './pages/manager/EmployeeManagement';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -142,6 +145,7 @@ const App = () => {
           <Route path='qltd' element={<QuanLyTuyenDung cinemaId={cinema_Id} />} />
           <Route path='qlbv' element={<QuanLyBaiViet cinemaId={cinema_Id} />} />
           <Route path="qlbv/new" element={<CreatePost cinemaId={cinema_Id} />} />
+          <Route path='qlnv' element={<EmployeeManagement cinemaId={cinema_Id} />} />
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
@@ -149,6 +153,10 @@ const App = () => {
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/blog" element={<Blog />} />
+        <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
+        <Route path="/posts/edit/:id" element={<EditBlog cinemaId={cinema_Id} />} />
+
+
       </Routes>
     </>
   );

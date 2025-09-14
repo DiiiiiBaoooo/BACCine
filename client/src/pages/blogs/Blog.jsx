@@ -69,7 +69,7 @@ const Blog = () => {
                   key={post.id}
                   className="max-w-sm bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700"
                 >
-                  <Link to={`/posts/${selectedCinema}/${post.id}`}>
+                  <Link to={`/blogs/${selectedCinema}/${post.id}`}>
                     {post.image_url && (
                       <img
                         className="rounded-t-lg w-full h-48 object-cover"
@@ -79,7 +79,7 @@ const Blog = () => {
                     )}
                   </Link>
                   <div className="p-5">
-                    <Link to={`/posts/${selectedCinema}/${post.id}`}>
+                    <Link to={`/blogs/${selectedCinema}/${post.id}`}>
                       <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                         {post.title}
                       </h5>
@@ -88,7 +88,7 @@ const Blog = () => {
                       {post.description?.slice(0, 120) || "Không có mô tả..."}
                     </p>
                     <Link
-                      to={`/posts/${selectedCinema}/${post.id}`}
+                      to={`/blogs/${selectedCinema}/${post.id}`}
                       className="inline-flex items-center px-3 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                     >
                       Xem chi tiết

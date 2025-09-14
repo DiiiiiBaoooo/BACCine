@@ -65,7 +65,7 @@ const QuanLyBaiViet = ({ cinemaId }) => {
             </thead>
             <tbody>
               {posts.map((p) => (
-                <tr key={p.id} className="border-b hover:bg-gray-50">
+                <tr key={p.id} className="border-b hover:bg-gray-900">
                   <td className="px-4 py-2 font-medium">{p.title}</td>
                   <td className="px-4 py-2">
                     {p.created_at
@@ -80,7 +80,7 @@ const QuanLyBaiViet = ({ cinemaId }) => {
                     )}
                   </td>
                   <td className="px-4 py-2 text-blue-600">
-                    <a href={`/bai-viet/${p.id}`} target="_blank" rel="noopener noreferrer">
+                    <a href={`/blogs/${cinemaId}/${p.id}`} target="_blank" rel="noopener noreferrer">
                       Xem
                     </a>
                   </td>

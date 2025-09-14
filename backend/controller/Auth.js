@@ -235,18 +235,20 @@ export const getAuthUser =  async (req, res) => {
         `SELECT id FROM cinema_clusters WHERE manager_id = ?`,
         [user.id]
       );
-
-      if (rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Không tìm thấy rạp cho manager này",
-        });
-      }
-
+      
+    
       // Add cinemaId to user object
       user.cinemaId = rows[0].id;
     }
 
+    if (user.role === "employee") {
+      const [rows] = await dbPool.execute(
+        `SELECT cinema_cluster_id FROM employee_cinema_cluster  WHERE employee_id = ?`,
+        [user.id]
+      );
+      user.cinemaId = rows[0].cinema_cluster_id;
+
+    }
     res.status(200).json({ success: true, user });
   } catch (error) {
     console.error("❌ Lỗi get /me:", error);
