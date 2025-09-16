@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FilmIcon } from "lucide-react";
+import emailjs from "@emailjs/browser";
 
 const QuanLyUngTuyen = ({ cinemaId }) => {
   const [applications, setApplications] = useState([]);
@@ -13,10 +14,6 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
       setLoading(true);
       setError(null);
 
-      // Fetch cinema name
-    
-
-      // Fetch applications
       axios
         .get(`/api/applications/${cinemaId}`)
         .then((res) => {
@@ -48,13 +45,80 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
     return acc;
   }, {});
 
+  // Handle approve
+  const handleApprove = (id, app) => {
+    axios
+      .post(`/api/applications/${id}/accept`)
+      .then(() => {
+        alert("Ứng viên đã được phê duyệt!");
+        setApplications((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, status: "accepted" } : a
+          )
+        );
+
+        // Send approval email
+        emailjs
+          .send(
+            "service_uin936k",
+            "template_rz5wi6r",
+            {
+              name: app.applicant_name,
+              job_title: app.job_title,
+              applicant_email: app.applicant_email,
+              from_name: "HR Team",
+              message: `Xin chúc mừng ${app.applicant_name}, hồ sơ của bạn đã được chấp nhận cho vị trí ${app.job_title}. Chúng tôi sẽ liên hệ sớm!`,
+            },
+            import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+          )
+          .then(() => {
+            console.log("✅ Email đã gửi thành công");
+            alert("Email chấp nhận đã được gửi cho ứng viên!");
+          })
+          .catch((err) => {
+            console.error("❌ Lỗi gửi email:", err);
+            alert("Không thể gửi email cho ứng viên.");
+          });
+      })
+      .catch(() => alert("Lỗi khi phê duyệt ứng viên."));
+  };
+
+  // Handle reject
+  const handleReject = (id) => {
+    axios
+      .post(`/api/applications/${id}/reject`)
+      .then(() => {
+        alert("Ứng viên đã bị từ chối!");
+        setApplications((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, status: "rejected" } : a
+          )
+        );
+      })
+      .catch(() => alert("Lỗi khi từ chối ứng viên."));
+  };
+
+  // Function to get status text and styling
+  const getStatusDisplay = (status) => {
+    switch (status) {
+      case "accepted":
+        return <span className="text-green-600 font-semibold">Đã phê duyệt</span>;
+      case "rejected":
+        return <span className="text-red-600 font-semibold">Đã từ chối</span>;
+      case "pending":
+        return <span className="text-yellow-600 font-semibold">Đang chờ</span>;
+      default:
+        return <span className="text-gray-400">Không xác định</span>;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 md:p-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-3">
         <FilmIcon className="text-red-600 size-8" />
         <span className="text-3xl font-bold tracking-tight text-red-600">
-          Quản Lý Ứng Viên 
+          Quản Lý Ứng Viên
         </span>
       </div>
 
@@ -79,6 +143,8 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
                       <th className="p-3 text-gray-300 font-semibold">Số điện thoại</th>
                       <th className="p-3 text-gray-300 font-semibold">CV</th>
                       <th className="p-3 text-gray-300 font-semibold">Ngày nộp</th>
+                      <th className="p-3 text-gray-300 font-semibold">Trạng thái</th>
+                      <th className="p-3 text-gray-300 font-semibold">Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -102,6 +168,27 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
                         </td>
                         <td className="p-3 text-gray-400">
                           {new Date(app.applied_at).toLocaleDateString()}
+                        </td>
+                        <td className="p-3">{getStatusDisplay(app.status)}</td>
+                        <td className="p-3 space-x-2">
+                          {app.status === "pending" ? (
+                            <>
+                              <button
+                                onClick={() => handleApprove(app.id, app)}
+                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                              >
+                                Phê duyệt
+                              </button>
+                              <button
+                                onClick={() => handleReject(app.id)}
+                                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                              >
+                                Từ chối
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-gray-500">Không có hành động</span>
+                          )}
                         </td>
                       </tr>
                     ))}
