@@ -84,7 +84,7 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
   };
 
   // Handle reject
-  const handleReject = (id) => {
+  const handleReject = (id,app) => {
     axios
       .post(`/api/applications/${id}/reject`)
       .then(() => {
@@ -94,8 +94,25 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
             a.id === id ? { ...a, status: "rejected" } : a
           )
         );
+        emailjs
+          .send(
+            import.meta.env.VITE_EMAILJS_2SERVICE_ID,
+            import.meta.env.VITE_EMAILJS_TEMPLATE_REJECT_ID,
+            {
+              name: app.applicant_name,
+              job_title: app.job_title,
+              applicant_email: app.applicant_email,
+             
+            },
+            import.meta.env.VITE_EMAILJS2_PUBLIC_KEY
+          )
+          .then(() => {
+            console.log("✅ Email từ chối đã gửi thành công");
+            alert("Email từ chối đã được gửi cho ứng viên!");
+          })
       })
       .catch(() => alert("Lỗi khi từ chối ứng viên."));
+      
   };
 
   // Function to get status text and styling
@@ -180,7 +197,7 @@ const QuanLyUngTuyen = ({ cinemaId }) => {
                                 Phê duyệt
                               </button>
                               <button
-                                onClick={() => handleReject(app.id)}
+                                onClick={() => handleReject(app.id,app)}
                                 className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
                               >
                                 Từ chối
