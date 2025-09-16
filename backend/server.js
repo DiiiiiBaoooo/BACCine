@@ -15,6 +15,8 @@ import RecruimentRoute from "./routes/RecruimentRoute.js";
 import ApplicationRoute from "./routes/ApplicationsRoutes.js";
 import BlogRoute from "./routes/BlogRoutes.js";
 import EmployeeRoute from "./routes/EmployeeRoutes.js";
+import RoomRoute from "./routes/RoomRoutes.js";
+import ShowTimeRoute from "./routes/ShowTimeRoutes.js";
 
 const app = express();
 const port = 3000;
@@ -40,7 +42,9 @@ app.use("/api/auth", AuthRoute);
 app.use("/api/recruitments", RecruimentRoute);
 app.use("/api/applications", ApplicationRoute);
 app.use("/api/posts", BlogRoute);
-app.use("/api/employee",EmployeeRoute)
+app.use("/api/employee",EmployeeRoute);
+app.use("/api/rooms",RoomRoute)
+app.use("/api/showtimes",ShowTimeRoute)
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

@@ -6,7 +6,8 @@ import {
   updateManagerCinema, 
   getManagers, 
   sendMoviePlan, 
-  getPlanMovieByCinema 
+  getPlanMovieByCinema, 
+  getMoviesByCinema
 } from "../controller/Cinemas.js";
 
 import { isAdmin, protectRoute } from "../middleware/protectRoute.js";
@@ -23,5 +24,6 @@ CinemasRoute.put('/update/:id', protectRoute, isAdmin, updateCinemaCluster);
 CinemasRoute.put('/updateManager/:id', protectRoute, isAdmin, updateManagerCinema);
 CinemasRoute.get('/managers', protectRoute, isAdmin, getManagers);
 CinemasRoute.post('/sendPlan/:cinema_id', protectRoute, isAdmin, sendMoviePlan);
+CinemasRoute.get('/:cinemaId/movies', getMoviesByCinema);
 
 export default CinemasRoute;

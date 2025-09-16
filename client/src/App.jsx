@@ -28,6 +28,10 @@ import Blog from './pages/blogs/Blog';
 import BlogDetail from './pages/blogs/BlogDetail';
 import EditBlog from './pages/blogs/EditBlog';
 import EmployeeManagement from './pages/manager/EmployeeManagement';
+import ProjectionistLayout from './pages/projectionist/ProjectionistLayout';
+import ProjectionistDashboard from './pages/projectionist/ProjectionistDashboard';
+import QuanLyPhongChieu from './pages/projectionist/QuanLyPhongChieu';
+import QuanLyLichChieu from './pages/projectionist/QuanLyLichChieu';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -63,10 +67,46 @@ const ProtectedRoute = ({ children, requiredRole }) => {
 
   return children;
 };
+// ProtectedRoute component to enforce authentication and role-based access
+const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => {
+  const { isLoading, authUser } = useAuthUser();
+  const isAuthenticated = Boolean(authUser);
+  const isUpdateProfile = authUser?.isUpdateProfile;
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Optional: Add a loading state
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isUpdateProfile === 0) {
+    return <Navigate to="/update-profile" replace />;
+  }
+
+  // Kiểm tra role
+  if (requiredRole && authUser.role !== requiredRole) {
+    toast.error(`Chỉ ${requiredRole} được truy cập`, { theme: "dark" });
+    return <Navigate to="/" replace />;
+  }
+
+  // Kiểm tra position (ví dụ Projectionist)
+  if (requiredPosition && authUser.position !== requiredPosition) {
+    toast.error(`Chỉ ${requiredPosition} được truy cập`, { theme: "dark" });
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+
+
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
   const isManagerRoute = useLocation().pathname.startsWith('/manager');
+  const isProjectionist = useLocation().pathname.startsWith('/projectionist');
   const location = useLocation();
   const navigate = useNavigate();
   const { isLoading, authUser } = useAuthUser();
@@ -108,7 +148,7 @@ const App = () => {
         pauseOnHover
         theme="dark"
       />
-      {!isAdminRoute && !isManagerRoute && <Header />}
+{!isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
 
       <Routes >
         <Route path="/" element={<Home />} />
@@ -156,7 +196,20 @@ const App = () => {
         <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
         <Route path="/posts/edit/:id" element={<EditBlog cinemaId={cinema_Id} />} />
 
+        <Route
+  path="/projectionist/*"
+  element={
+    <ProtecteEmployeeRoute requiredRole="employee" requiredPosition="Projectionist">
+      <ProjectionistLayout />
+    </ProtecteEmployeeRoute>
+  }
+>
+<Route index element={<ProjectionistDashboard />} />
+<Route path='qlpc' element={<QuanLyPhongChieu cinemaId={cinema_Id} />} />
+<Route path='qllc' element={<QuanLyLichChieu cinemaId={cinema_Id} />} />
 
+
+</Route>
       </Routes>
     </>
   );

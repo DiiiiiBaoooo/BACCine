@@ -1,10 +1,7 @@
-// routes/Cinemas.js
 import dbPool from "../config/mysqldb.js";
 
 export const getAllCinemas = async (req, res) => {
   try {
-
-
     const [rows] = await dbPool.query(`
       SELECT 
         cc.id,
@@ -34,6 +31,7 @@ export const getAllCinemas = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
+
 export const getCinemas = async (req, res) => {
   try {
     const [rows] = await dbPool.query("SELECT id, name FROM cinemas");
@@ -43,6 +41,7 @@ export const getCinemas = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 export const addCinemaCluster = async (req, res) => {
   try {
     const {
@@ -221,7 +220,7 @@ export const updateManagerCinema = async (req, res) => {
       `SELECT 
         cc.id,
         cc.name AS cinema_name,
-       cc.province_code,
+        cc.province_code,
         cc.district_code,
         cc.address,
         cc.description,
@@ -329,9 +328,40 @@ export const getPlanMovieByCinema = async (req, res) => {
       [cinema_id]
     );
 
-    res.status(200).json({success:true, plans: rows });
+    res.status(200).json({ success: true, plans: rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Lỗi khi lấy kế hoạch", error: error.message });
+  }
+};
+
+export const getMoviesByCinema = async (req, res) => {
+  try {
+    const { cinemaId } = req.params;
+
+    const [rows] = await dbPool.query(
+      `SELECT DISTINCT 
+        m.id,
+        m.title,
+        m.poster_path,
+        m.vote_average,
+        m.vote_count,
+        m.release_date
+       FROM movies m
+       JOIN showtimes s ON m.id = s.movie_id
+       JOIN rooms r ON s.room_id = r.id
+       WHERE r.cinema_clusters_id = ?
+       ORDER BY m.title ASC`,
+      [cinemaId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Không có phim nào đang chiếu tại cụm rạp này" });
+    }
+
+    res.status(200).json({ success: true, movies: rows });
+  } catch (error) {
+    console.error("❌ Lỗi getMoviesByCinema:", error.message);
+    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
