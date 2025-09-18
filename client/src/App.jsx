@@ -32,6 +32,8 @@ import ProjectionistLayout from './pages/projectionist/ProjectionistLayout';
 import ProjectionistDashboard from './pages/projectionist/ProjectionistDashboard';
 import QuanLyPhongChieu from './pages/projectionist/QuanLyPhongChieu';
 import QuanLyLichChieu from './pages/projectionist/QuanLyLichChieu';
+import Movies from './pages/Movies';
+import MovieDetails from './pages/MovieDetails';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -189,6 +191,9 @@ const App = () => {
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
+        <Route path ='/movies' element={<Movies />} />
+        <Route path='/movies/:id' element={<MovieDetails />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/profile" element={<Profile />} />

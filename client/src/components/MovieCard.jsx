@@ -1,44 +1,51 @@
-import React from 'react'
-import { kConverter } from "../lib/kConverter"
-import { dateFormat } from "../lib/dateFormat"
+import React from 'react';
+import { StarIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import timeFormat from '../lib/timeFormat';
+
 const MovieCard = ({ movie, isSelected, onSelect }) => {
-    const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL
+  const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
+  const navigate = useNavigate();
+
+  // Log movie data for debugging
+  console.log('MovieCard movie prop:', movie);
+  console.log('MovieCard genres:', movie?.genres);
+
+  // Ensure actors and genres are arrays, default to empty arrays if undefined or null
+  const actors = Array.isArray(movie?.actors) ? movie.actors : [];
+  const genres = Array.isArray(movie?.genres) ? movie.genres : [];
 
   return (
-    <div
-    key={movie.id}
-    onClick={onSelect}
-    className={`relative max-w-40 cursor-pointer group-hover:not-hover:opacity-40 hover:-translate-y-1 transition duration-300`}
-  >
-    {/* Poster phim */}
-    <div className="relative rounded-lg overflow-hidden">
+    <div className="flex flex-col justify-between p-3 bg-gray-800 rounded-2xl hover:-translate-y-1 transition duration-300 w-66">
       <img
-        src={image_base_url + movie.poster_path}
-        alt={movie.title}
-        className="w-full object-cover brightness-90"
+        onClick={() => {
+          navigate(`/movies/${movie.movie_id}`);
+          scrollTo(0, 0);
+        }}
+        src={movie.poster_path ? `${image_base_url}${movie.poster_path}` : '/placeholder-poster.jpg'}
+        alt={movie.title || 'Movie poster'}
+        className="rounded-lg h-52 w-full object-cover object-right-bottom cursor-pointer"
       />
-      {/* Vote + Rating */}
-      <div className="text-sm flex items-center justify-between p-2 bg-black/70 absolute bottom-0 left-0 w-full">
-        <p className="flex items-center gap-1 text-white">
-          <StarIcon className="w-4 h-4 text-primary fill-primary" />
-          {movie.vote_average.toFixed(1)}
-        </p>
-        <p className="text-gray-300">{kConverter(movie.vote_count)} Votes</p>
+      <p className="font-semibold mt-2 truncate">{movie.title || 'Unknown Title'}</p>
+      <p className='text-sm text-gray-400 mt-2'>
+{
+    new Date(movie.release_date).getFullYear()
+} ఌ︎ {genres.length > 0 ? genres.slice(0, 2).join(' | ') : 'N/A'} |{' '}ఌ︎ {timeFormat(movie.runtime)}
+
+                </p>
+      <div className="flex items-center justify-between mt-4 pb-3">
+        <button
+          onClick={() => {
+            navigate(`/movies/${movie.movie_id}`);
+            scrollTo(0, 0);
+          }}
+          className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
+        >
+          Buy Tickets
+        </button>
       </div>
     </div>
+  );
+};
 
-    {/* Icon check khi chọn */}
-    {isSelected && (
-      <div className="absolute top-2 right-2 flex items-center justify-center bg-primary h-6 w-6 rounded">
-        <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
-      </div>
-    )}
-
-    {/* Tên + ngày phát hành */}
-    <p className="font-medium truncate">{movie.title}</p>
-    <p className="text-gray-400 text-sm">{dateFormat(movie.release_date)}</p>
-  </div>
-  )
-}
-
-export default MovieCard
+export default MovieCard;

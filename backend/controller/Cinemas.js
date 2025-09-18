@@ -365,3 +365,66 @@ export const getMoviesByCinema = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
+export const getMoviePlanCinema = async (req, res) => {
+  try {
+    const { cinema_id } = req.params;
+
+    if (!cinema_id) {
+      return res.status(400).json({ success: false, message: "Thiếu cinema_id" });
+    }
+
+    // Lấy danh sách phim theo kế hoạch của 1 rạp
+    const [rows] = await dbPool.query(
+      `SELECT 
+          bl.id AS plan_id,
+          bl.description,
+          bl.start_date,
+          bl.end_date,
+          m.id AS movie_id,
+          m.title,
+          m.poster_path,
+          m.vote_average,
+          m.vote_count,
+          m.release_date,
+          bpm.note
+       FROM business_plan bl
+       JOIN business_plan_movies bpm ON bl.id = bpm.plan_id
+       JOIN movies m ON bpm.movie_id = m.id
+       WHERE bl.cinema_id = ?
+       ORDER BY bl.created_at DESC, m.title ASC`,
+      [cinema_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Không có kế hoạch phim nào cho cụm rạp này" });
+    }
+
+    // Gom nhóm phim theo plan_id
+    const plans = {};
+    rows.forEach((row) => {
+      if (!plans[row.plan_id]) {
+        plans[row.plan_id] = {
+          plan_id: row.plan_id,
+          description: row.description,
+          start_date: row.start_date,
+          end_date: row.end_date,
+          movies: [],
+        };
+      }
+      plans[row.plan_id].movies.push({
+        movie_id: row.movie_id,
+        title: row.title,
+        poster_path: row.poster_path,
+        vote_average: row.vote_average,
+        vote_count: row.vote_count,
+        release_date: row.release_date,
+        note: row.note,
+      });
+    });
+
+    res.status(200).json({ success: true, plans: Object.values(plans) });
+  } catch (error) {
+    console.error("❌ Lỗi getMoviePlanCinema:", error.message);
+    res.status(500).json({ success: false, message: "Lỗi server", error: error.message });
+  }
+};

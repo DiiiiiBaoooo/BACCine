@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { CheckIcon, DeleteIcon, StarIcon } from 'lucide-react';
+const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
 
 const QuanLyLichChieu = ({ cinemaId }) => {
   const [showtimes, setShowtimes] = useState([]);
@@ -9,8 +10,9 @@ const QuanLyLichChieu = ({ cinemaId }) => {
   const [statistics, setStatistics] = useState({
     total_showtimes: 0,
     total_ongoing: 0,
-    total_upcoming: 0,
-    total_finished: 0
+    total_scheduled: 0,
+    total_finished: 0,
+    total_cancelled: 0,
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -21,29 +23,26 @@ const QuanLyLichChieu = ({ cinemaId }) => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [dateTimeSelection, setDateTimeSelection] = useState({});
   const [dateTimeInput, setDateTimeInput] = useState('');
-  const [showPrice, setShowPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const currency = 'VND'; // Giả định currency, có thể lấy từ env
+  const [updateData, setUpdateData] = useState({ start_time: '', end_time: '', status: '' });
+  const currency = 'VND';
 
   // Tính toán thống kê từ danh sách lịch chiếu
   const calculateStatistics = (showtimeList) => {
-    const now = new Date();
     const total_showtimes = showtimeList.length;
-    const total_ongoing = showtimeList.filter(showtime => {
-      const start = new Date(showtime.start_time);
-      const end = new Date(showtime.end_time);
-      return start <= now && now <= end;
-    }).length;
-    const total_upcoming = showtimeList.filter(showtime => new Date(showtime.start_time) > now).length;
-    const total_finished = showtimeList.filter(showtime => new Date(showtime.end_time) < now).length;
+    const total_ongoing = showtimeList.filter(showtime => showtime.status === 'Ongoing').length;
+    const total_scheduled = showtimeList.filter(showtime => showtime.status === 'Scheduled').length;
+    const total_finished = showtimeList.filter(showtime => showtime.status === 'Finished').length;
+    const total_cancelled = showtimeList.filter(showtime => showtime.status === 'Cancelled').length;
 
     return {
       total_showtimes,
       total_ongoing,
-      total_upcoming,
-      total_finished
+      total_scheduled,
+      total_finished,
+      total_cancelled,
     };
   };
 
@@ -72,11 +71,12 @@ const QuanLyLichChieu = ({ cinemaId }) => {
   // Fetch danh sách phim đang chiếu tại cụm rạp
   const fetchNowPlayingMovies = async () => {
     try {
-      const response = await axios.get(`/api/cinemas/${cinemaId}/movies`);
+      const response = await axios.get(`/api/cinemas/planmovies/${cinemaId}`);
       if (response.data.success) {
-        setNowPlayingMovies(response.data.movies);
+        const movies = response.data.plans[0]?.movies || [];
+        setNowPlayingMovies(movies);
       } else {
-        toast.error(response.data.message);
+        toast.error(response.data.message || "Không thể tải danh sách phim đang chiếu");
       }
     } catch (err) {
       toast.error("Không thể tải danh sách phim đang chiếu");
@@ -88,9 +88,13 @@ const QuanLyLichChieu = ({ cinemaId }) => {
     try {
       const response = await axios.get(`/api/rooms/cinema/${cinemaId}`);
       if (response.data.success) {
-        setRooms(response.data.rooms);
+        // Only include rooms that are not 'Closed'
+        const activeAndMaintenanceRooms = response.data.rooms.filter(
+          room => room.status !== 'Closed'
+        );
+        setRooms(activeAndMaintenanceRooms);
       } else {
-        toast.error(response.data.message);
+        toast.error(response.data.message || "Không thể tải danh sách phòng chiếu");
       }
     } catch (err) {
       toast.error("Không thể tải danh sách phòng chiếu");
@@ -99,17 +103,9 @@ const QuanLyLichChieu = ({ cinemaId }) => {
 
   // Lọc lịch chiếu theo trạng thái
   const filterShowtimes = () => {
-    const now = new Date();
     let filtered = [...showtimes];
     if (statusFilter) {
-      filtered = filtered.filter(showtime => {
-        const start = new Date(showtime.start_time);
-        const end = new Date(showtime.end_time);
-        if (statusFilter === 'ONGOING') return start <= now && now <= end;
-        if (statusFilter === 'UPCOMING') return start > now;
-        if (statusFilter === 'FINISHED') return end < now;
-        return true;
-      });
+      filtered = filtered.filter(showtime => showtime.status === statusFilter);
     }
     setFilteredShowtimes(filtered);
   };
@@ -149,44 +145,68 @@ const QuanLyLichChieu = ({ cinemaId }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const price = Number(showPrice);
-      if (isNaN(price) || price <= 0) {
-        toast.error('Vui lòng nhập giá vé hợp lệ');
-        return;
-      }
       if (!selectedMovie) {
-        toast.error('Vui lòng chọn một bộ phim');
+        toast.error("Vui lòng chọn một bộ phim");
         return;
       }
       if (!selectedRoom) {
-        toast.error('Vui lòng chọn một phòng chiếu');
+        toast.error("Vui lòng chọn một phòng chiếu");
         return;
       }
       if (Object.keys(dateTimeSelection).length === 0) {
-        toast.error('Vui lòng chọn ít nhất một ngày và giờ');
+        toast.error("Vui lòng chọn ít nhất một ngày và giờ");
         return;
       }
 
-      const showsInput = Object.entries(dateTimeSelection).map(([date, times]) => ({
-        date,
-        time: times,
-        room_id: selectedRoom
-      }));
+      // Validate that the selected room is Active
+      const selectedRoomData = rooms.find(room => room.id === selectedRoom);
+      if (selectedRoomData && selectedRoomData.status === 'Maintenance') {
+        toast.error("Phòng chiếu đang bảo trì, không thể chọn");
+        return;
+      }
 
-      const payload = {
-        movieId: selectedMovie,
-        showPrice: price,
-        showsInput
-      };
+      const showtimes = [];
+      Object.entries(dateTimeSelection).forEach(([date, times]) => {
+        times.forEach((time) => {
+          const startTime = `${date} ${time}`;
+          const startDateTime = new Date(startTime);
 
-      const response = await axios.post('/api/showtimes', payload);
+          // Convert to UTC+7 (Vietnam time)
+          const vnOffset = 7 * 60; // minutes
+          const localOffset = startDateTime.getTimezoneOffset(); // minutes
+          const diff = (vnOffset + localOffset) * 60 * 1000; // convert to milliseconds
+          const startVN = new Date(startDateTime.getTime() + diff);
+          const endVN = new Date(startVN.getTime() + 2 * 60 * 60 * 1000); // Add 2 hours for end time
+
+          // Format dates to YYYY-MM-DD HH:mm:ss
+          const formatDateTime = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+          };
+
+          showtimes.push({
+            movie_id: selectedMovie,
+            room_id: selectedRoom,
+            start_time: formatDateTime(startVN),
+            end_time: formatDateTime(endVN),
+            status: 'Scheduled', // Default status for new showtimes
+          });
+        });
+      });
+
+      const response = await axios.post("/api/showtimes", showtimes);
+
       if (response.data.success) {
-        toast.success(response.data.message);
+        toast.success("Thêm lịch chiếu thành công");
         setIsModalOpen(false);
         setSelectedMovie(null);
         setSelectedRoom(null);
         setDateTimeSelection({});
-        setShowPrice('');
         fetchShowtimes();
       } else {
         setError(response.data.message);
@@ -206,7 +226,8 @@ const QuanLyLichChieu = ({ cinemaId }) => {
     setSelectedShowtime(showtime);
     setUpdateData({
       start_time: showtime.start_time.slice(0, 16),
-      end_time: showtime.end_time.slice(0, 16)
+      end_time: showtime.end_time.slice(0, 16),
+      status: showtime.status,
     });
     setIsUpdateModalOpen(true);
   };
@@ -221,7 +242,7 @@ const QuanLyLichChieu = ({ cinemaId }) => {
         toast.success(response.data.message);
         setIsUpdateModalOpen(false);
         setSelectedShowtime(null);
-        setUpdateData({ start_time: '', end_time: '' });
+        setUpdateData({ start_time: '', end_time: '', status: '' });
         fetchShowtimes();
       } else {
         setError(response.data.message);
@@ -278,6 +299,12 @@ const QuanLyLichChieu = ({ cinemaId }) => {
     fetchShowtimes();
     fetchNowPlayingMovies();
     fetchRooms();
+  }, [cinemaId]);
+
+  // Polling to refresh showtimes every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchShowtimes, 30000);
+    return () => clearInterval(interval);
   }, [cinemaId]);
 
   if (loading) {
@@ -342,8 +369,8 @@ const QuanLyLichChieu = ({ cinemaId }) => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Sắp chiếu</p>
-                <p className="text-2xl font-semibold text-white">{statistics.total_upcoming}</p>
+                <p className="text-sm font-medium text-gray-400">Đã lên lịch</p>
+                <p className="text-2xl font-semibold text-white">{statistics.total_scheduled}</p>
               </div>
             </div>
           </div>
@@ -360,6 +387,19 @@ const QuanLyLichChieu = ({ cinemaId }) => {
               </div>
             </div>
           </div>
+          <div className="bg-gray-800 p-6 rounded-lg shadow-md border border-gray-700">
+            <div className="flex items-center">
+              <div className="p-3 rounded-full bg-gray-600">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-400">Đã hủy</p>
+                <p className="text-2xl font-semibold text-white">{statistics.total_cancelled}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filter and Add Button */}
@@ -372,9 +412,10 @@ const QuanLyLichChieu = ({ cinemaId }) => {
               className="px-3 py-2 bg-gray-800 border border-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="" className="bg-gray-800">Tất cả trạng thái</option>
-              <option value="ONGOING" className="bg-gray-800">Đang diễn ra</option>
-              <option value="UPCOMING" className="bg-gray-800">Sắp chiếu</option>
-              <option value="FINISHED" className="bg-gray-800">Đã kết thúc</option>
+              <option value="Ongoing" className="bg-gray-800">Đang diễn ra</option>
+              <option value="Scheduled" className="bg-gray-800">Đã lên lịch</option>
+              <option value="Finished" className="bg-gray-800">Đã kết thúc</option>
+              <option value="Cancelled" className="bg-gray-800">Đã hủy</option>
             </select>
           </div>
           
@@ -408,58 +449,55 @@ const QuanLyLichChieu = ({ cinemaId }) => {
                     </td>
                   </tr>
                 ) : (
-                  filteredShowtimes.map((showtime) => {
-                    const now = new Date();
-                    const start = new Date(showtime.start_time);
-                    const end = new Date(showtime.end_time);
-                    const status = start <= now && now <= end ? 'ONGOING' : start > now ? 'UPCOMING' : 'FINISHED';
-                    return (
-                      <tr key={showtime.id} className="hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                          {showtime.title}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {showtime.room_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {new Date(showtime.start_time).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {new Date(showtime.end_time).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            status === 'ONGOING' 
-                              ? 'bg-green-900 text-green-300' 
-                              : status === 'UPCOMING'
-                              ? 'bg-yellow-900 text-yellow-300'
-                              : 'bg-red-900 text-red-300'
-                          }`}>
-                            {status === 'ONGOING' ? 'Đang diễn ra' : 
-                             status === 'UPCOMING' ? 'Sắp chiếu' : 'Đã kết thúc'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => openUpdateModal(showtime)}
-                              className="text-blue-400 hover:text-blue-300"
-                              disabled={start <= now}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDeleteShowtime(showtime.id)}
-                              className="text-red-400 hover:text-red-300"
-                              disabled={start <= now}
-                            >
-                              Xóa
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  filteredShowtimes.map((showtime) => (
+                    <tr key={showtime.id} className="hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                        {showtime.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {showtime.room_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {new Date(showtime.start_time).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {new Date(showtime.end_time).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          showtime.status === 'Ongoing' 
+                            ? 'bg-green-900 text-green-300' 
+                            : showtime.status === 'Scheduled'
+                            ? 'bg-yellow-900 text-yellow-300'
+                            : showtime.status === 'Finished'
+                            ? 'bg-red-900 text-red-300'
+                            : 'bg-gray-600 text-gray-300'
+                        }`}>
+                          {showtime.status === 'Ongoing' ? 'Đang diễn ra' : 
+                           showtime.status === 'Scheduled' ? 'Đã lên lịch' : 
+                           showtime.status === 'Finished' ? 'Đã kết thúc' : 'Đã hủy'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => openUpdateModal(showtime)}
+                            className="text-blue-400 hover:text-blue-300"
+                            disabled={showtime.status === 'Ongoing' || showtime.status === 'Finished'}
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => handleDeleteShowtime(showtime.id)}
+                            className="text-red-400 hover:text-red-300"
+                            disabled={showtime.status === 'Ongoing' || showtime.status === 'Finished'}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -478,35 +516,41 @@ const QuanLyLichChieu = ({ cinemaId }) => {
                   <label className="block text-sm font-medium text-gray-400 mb-2">Chọn phim đang chiếu</label>
                   <div className="overflow-x-auto pb-4">
                     <div className="group flex flex-wrap gap-4 mt-4 w-max">
-                      {nowPlayingMovies.map((movie) => (
-                        <div
-                          key={movie.id}
-                          className={`relative max-w-40 cursor-pointer group-hover:not-hover:opacity-40 hover:-translate-y-1 transition duration-300`}
-                          onClick={() => setSelectedMovie(movie.id)}
-                        >
-                          <div className="relative rounded-lg overflow-hidden">
-                            <img
-                              src={movie.poster_path}
-                              alt={movie.title}
-                              className="w-full object-cover brightness-90"
-                            />
-                            <div className="text-sm flex items-center justify-between p-2 bg-black/70 w-full absolute bottom-0 left-0">
-                              <p className="flex items-center gap-1 text-gray-400">
-                                <StarIcon className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                {movie.vote_average?.toFixed(1) || 'N/A'}
-                              </p>
-                              <p className="text-gray-300">{movie.vote_count || 0} Votes</p>
+                      {nowPlayingMovies.length === 0 ? (
+                        <p className="text-gray-400">Không có phim đang chiếu</p>
+                      ) : (
+                        nowPlayingMovies.map((movie) => (
+                          <div
+                            key={movie.movie_id}
+                            className={`relative max-w-40 cursor-pointer group-hover:not-hover:opacity-40 hover:-translate-y-1 transition duration-300`}
+                            onClick={() => setSelectedMovie(movie.movie_id)}
+                          >
+                            <div className="relative rounded-lg overflow-hidden">
+                              <img
+                                src={movie.poster_path ? `${image_base_url}${movie.poster_path}` : '/placeholder-poster.jpg'}
+                                alt={movie.title}
+                                className="w-full object-cover brightness-90"
+                              />
+                              <div className="text-sm flex items-center justify-between p-2 bg-black/70 w-full absolute bottom-0 left-0">
+                                <p className="flex items-center gap-1 text-gray-400">
+                                  <StarIcon className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                  {movie.vote_average?.toFixed(1) || 'N/A'}
+                                </p>
+                                <p className="text-gray-300">{movie.vote_count || 0} Votes</p>
+                              </div>
                             </div>
+                            {selectedMovie === movie.movie_id && (
+                              <div className="absolute top-2 right-2 flex items-center justify-center bg-blue-600 h-6 w-6 rounded">
+                                <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
+                              </div>
+                            )}
+                            <p className="font-medium truncate text-white">{movie.title}</p>
+                            <p className="text-gray-400 text-sm">
+                              {new Date(movie.release_date).toLocaleDateString('vi-VN')}
+                            </p>
                           </div>
-                          {selectedMovie === movie.id && (
-                            <div className="absolute top-2 right-2 flex items-center justify-center bg-blue-600 h-6 w-6 rounded">
-                              <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
-                            </div>
-                          )}
-                          <p className="font-medium truncate text-white">{movie.title}</p>
-                          <p className="text-gray-400 text-sm">{movie.release_date}</p>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -514,38 +558,40 @@ const QuanLyLichChieu = ({ cinemaId }) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-2">Chọn phòng chiếu</label>
                   <div className="flex flex-wrap gap-4">
-                    {rooms.map((room) => (
-                      <div
-                        key={room.id}
-                        className={`relative p-4 border rounded-lg cursor-pointer ${
-                          selectedRoom === room.id ? 'border-blue-500 bg-blue-900/50' : 'border-gray-600'
-                        } hover:border-blue-400 transition duration-300`}
-                        onClick={() => setSelectedRoom(room.id)}
-                      >
-                        <p className="font-medium text-white">{room.name}</p>
-                        <p className="text-sm text-gray-400">Sức chứa: {room.capacity} ghế</p>
-                        {selectedRoom === room.id && (
-                          <div className="absolute top-2 right-2 flex items-center justify-center bg-blue-600 h-6 w-6 rounded">
-                            <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Giá vé</label>
-                  <div className="inline-flex items-center gap-2 border border-gray-600 px-3 py-2 rounded-md">
-                    <p className="text-gray-400 text-sm">{currency}</p>
-                    <input
-                      type="number"
-                      min={0}
-                      value={showPrice}
-                      onChange={(e) => setShowPrice(e.target.value)}
-                      placeholder="Nhập giá vé"
-                      className="outline-none bg-gray-900 text-gray-200 w-full"
-                    />
+                    {rooms.length === 0 ? (
+                      <p className="text-gray-400">Không có phòng chiếu khả dụng</p>
+                    ) : (
+                      rooms.map((room) => (
+                        <div
+                          key={room.id}
+                          className={`relative p-4 border rounded-lg ${
+                            room.status === 'Maintenance'
+                              ? 'border-gray-600 opacity-50 cursor-not-allowed'
+                              : selectedRoom === room.id
+                              ? 'border-blue-500 bg-blue-900/50 cursor-pointer'
+                              : 'border-gray-600 cursor-pointer'
+                          } hover:border-blue-400 transition duration-300`}
+                          onClick={() => {
+                            if (room.status !== 'Maintenance') {
+                              setSelectedRoom(room.id);
+                            }
+                          }}
+                        >
+                          <p className="font-medium text-white">{room.name}</p>
+                          <p className="text-sm text-gray-400">Sức chứa: {room.capacity} ghế</p>
+                          {room.status === 'Maintenance' && (
+                            <div className="absolute top-2 right-2 flex items-center justify-center bg-red-600 h-6 px-2 rounded">
+                              <span className="text-white text-xs">Đang bảo trì</span>
+                            </div>
+                          )}
+                          {selectedRoom === room.id && room.status !== 'Maintenance' && (
+                            <div className="absolute top-2 right-2 flex items-center justify-center bg-blue-600 h-6 w-6 rounded">
+                              <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -596,7 +642,12 @@ const QuanLyLichChieu = ({ cinemaId }) => {
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setSelectedMovie(null);
+                      setSelectedRoom(null);
+                      setDateTimeSelection({});
+                    }}
                     className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-500"
                   >
                     Hủy
@@ -646,13 +697,28 @@ const QuanLyLichChieu = ({ cinemaId }) => {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Trạng thái *</label>
+                  <select
+                    name="status"
+                    value={updateData.status}
+                    onChange={handleUpdateChange}
+                    required
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Scheduled" className="bg-gray-900">Đã lên lịch</option>
+                    <option value="Ongoing" className="bg-gray-900">Đang diễn ra</option>
+                    <option value="Finished" className="bg-gray-900">Đã kết thúc</option>
+                    <option value="Cancelled" className="bg-gray-900">Đã hủy</option>
+                  </select>
+                </div>
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
                     onClick={() => {
                       setIsUpdateModalOpen(false);
                       setSelectedShowtime(null);
-                      setUpdateData({ start_time: '', end_time: '' });
+                      setUpdateData({ start_time: '', end_time: '', status: '' });
                     }}
                     className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-500"
                   >

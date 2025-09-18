@@ -68,7 +68,7 @@ const Header = () => {
   }, [isAuthenticated, isLoading]);
 
   return (
-    <div className="mb-8 top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5 bg-transparent">
+    <div className=" top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5 bg-transparent">
       <Link to="/" className="max-md:flex-1">
         <img src={assets.logo} alt="Logo" className="w-36 h-auto" />
       </Link>
