@@ -17,6 +17,7 @@ import BlogRoute from "./routes/BlogRoutes.js";
 import EmployeeRoute from "./routes/EmployeeRoutes.js";
 import RoomRoute from "./routes/RoomRoutes.js";
 import ShowTimeRoute from "./routes/ShowTimeRoutes.js";
+import ServiceRoute from "./routes/ServiceRoutes.js";
 
 const app = express();
 const port = 3000;
@@ -45,6 +46,7 @@ app.use("/api/posts", BlogRoute);
 app.use("/api/employee",EmployeeRoute);
 app.use("/api/rooms",RoomRoute)
 app.use("/api/showtimes",ShowTimeRoute)
+app.use("/api/services/", ServiceRoute)
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

@@ -28,6 +28,7 @@ import Blog from './pages/blogs/Blog';
 import BlogDetail from './pages/blogs/BlogDetail';
 import EditBlog from './pages/blogs/EditBlog';
 import EmployeeManagement from './pages/manager/EmployeeManagement';
+import ThongTinDatCho from './pages/ThongTinDatCho';
 import ProjectionistLayout from './pages/projectionist/ProjectionistLayout';
 import ProjectionistDashboard from './pages/projectionist/ProjectionistDashboard';
 import QuanLyPhongChieu from './pages/projectionist/QuanLyPhongChieu';
@@ -35,6 +36,7 @@ import QuanLyLichChieu from './pages/projectionist/QuanLyLichChieu';
 import Movies from './pages/Movies';
 import MovieDetails from './pages/MovieDetails';
 import SeatLayout from './pages/SeatLayout';
+import QuanLyDichVu from './pages/manager/QuanLyDichVu';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -189,13 +191,14 @@ const App = () => {
           <Route path='qlbv' element={<QuanLyBaiViet cinemaId={cinema_Id} />} />
           <Route path="qlbv/new" element={<CreatePost cinemaId={cinema_Id} />} />
           <Route path='qlnv' element={<EmployeeManagement cinemaId={cinema_Id} />} />
+          <Route path='qldv' element={<QuanLyDichVu cinemaId={cinema_Id} />} />
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
         <Route path ='/movies' element={<Movies />} />
         <Route path='/movies/:id' element={<MovieDetails />} />
         <Route path='/movies/:id/:cinemaId/:date' element={<SeatLayout />} />
-
+        <Route path='/booking' element={<ThongTinDatCho cinemaId={cinema_Id} />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/update-profile" element={<UpdateProfile />} />

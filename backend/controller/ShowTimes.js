@@ -207,6 +207,7 @@ export const getShow = async (req, res) => {
        LEFT JOIN genres g ON mg.genre_id = g.id
        LEFT JOIN movie_casts mc ON m.id = mc.movie_id
        LEFT JOIN actors a ON mc.actor_id = a.id
+      
        WHERE m.id = ?
        GROUP BY m.id, m.title, m.poster_path, m.vote_average, m.vote_count, m.release_date, m.runtime, m.overview`,
       [movie_id]

@@ -10,17 +10,24 @@ import axios from 'axios';
 import { parseISO, format } from 'date-fns';
 
 const SeatLayout = () => {
+  const navigate = useNavigate();
   const groupRows = [['A', 'B'], ['C', 'D'], ['E', 'F'], ['G', 'I'], ['H', 'J']];
   const allRows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
   const { id: movieId, cinemaId, date } = useParams();
   console.log('Raw URL Parameters:', { movieId, cinemaId, date });
-
+  
   // Validate URL parameters
   if (!movieId || !cinemaId || !date) {
     return (
       <div className="mt-20 text-center">
         <p className="text-red-500">Invalid URL parameters. Please provide valid movie ID, cinema ID, and date.</p>
         <p>Received: movieId={movieId}, cinemaId={cinemaId}, date={date}</p>
+        <button 
+          onClick={() => navigate('/')}
+          className="mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/80"
+        >
+          Về trang chủ
+        </button>
       </div>
     );
   }
@@ -31,6 +38,9 @@ const SeatLayout = () => {
   const [loading, setLoading] = useState(true);
   const [ticketPrices, setTicketPrices] = useState([]);
   const [priceLoading, setPriceLoading] = useState(false);
+  const [movieName, setMovieName] = useState('');
+  const [cinemaName, setCinemaName] = useState('');
+  const [movieimg,setMovieimg] = useState('');
 
   const getSeatType = (seatId) => {
     const row = seatId[0];
@@ -73,6 +83,49 @@ const SeatLayout = () => {
     console.log('Price breakdown:', breakdown);
     return breakdown;
   };
+
+  // Fetch movie name
+  useEffect(() => {
+    const fetchMovieName = async () => {
+      try {
+        const response = await axios.get(`/api/showtimes/movies/${movieId}`);
+        if (response.data.success) {
+          setMovieName(response.data.movie.title || 'Tên phim không có sẵn');
+          setMovieimg(response.data.movie.poster_path )
+        } else {
+          console.warn('Failed to fetch movie name:', response.data.message);
+          setMovieName('Tên phim không có sẵn');
+        }
+      } catch (error) {
+        console.error('Error fetching movie name:', error.message);
+        setMovieName('Tên phim không có sẵn');
+      }
+    };
+
+    if (movieId) fetchMovieName();
+  }, [movieId]);
+
+  // Fetch cinema name
+  useEffect(() => {
+    const fetchCinemaName = async () => {
+      try {
+        const response = await axios.get(`/api/showtimes/movies/${movieId}`);
+        if (response.data.success && response.data.dateTime && response.data.dateTime.length > 0) {
+          // Extract cinema name from the first showtime (assuming it's consistent across showtimes)
+          setCinemaName(response.data.dateTime[0].cinema_name || 'Tên rạp không có sẵn');
+          
+        } else {
+          console.warn('Failed to fetch cinema name:', response.data.message);
+          setCinemaName('Tên rạp không có sẵn');
+        }
+      } catch (error) {
+        console.error('Error fetching cinema name:', error.message);
+        setCinemaName('Tên rạp không có sẵn');
+      }
+    };
+
+    if (movieId) fetchCinemaName();
+  }, [movieId]);
 
   useEffect(() => {
     const fetchShowtimes = async () => {
@@ -327,8 +380,8 @@ const SeatLayout = () => {
         </div>
 
         {/* Selected Seats Panel - Below seats, right side */}
-       <div className="flex justify-end w-full">
-       {selectedSeats.length > 0 && (
+        <div className="flex justify-end w-full">
+          {selectedSeats.length > 0 && (
             <div className="mt-6 p-5 bg-black shadow-md rounded-xl border border-primary/30 w-full max-w-md">
               <h3 className="font-semibold mb-3 text-primary text-lg">Seats Selected</h3>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -352,16 +405,40 @@ const SeatLayout = () => {
               )}
             </div>
           )}
-
-       </div>
+        </div>
         <button
-          onClick={() => toast('Booking functionality disabled in demo mode')}
+          onClick={() => {
+            if (selectedSeats.length === 0) {
+              toast.error('Vui lòng chọn ít nhất một ghế');
+              return;
+            }
+            if (!selectedTime) {
+              toast.error('Vui lòng chọn giờ chiếu');
+              return;
+            }
+            
+            // Navigate to booking page with booking info
+            navigate('/booking', {
+              state: {
+                bookingInfo: {
+                  selectedSeats,
+                  selectedTime,
+                  cinemaId,
+                  movieId,
+                  date,
+                  total: calculateTotal(),
+                  movieName,
+                  cinemaName,
+                  movieimg
+                }
+              }
+            });
+          }}
           className="flex items-center gap-1 mt-6 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95"
         >
           Proceed to Checkout <TicketCheckIcon className="w-4 h-4" strokeWidth={3} />
         </button>
       </div>
-      
     </div>
   );
 };
