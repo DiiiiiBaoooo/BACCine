@@ -216,7 +216,7 @@ export const getShow = async (req, res) => {
       return res.status(404).json({ success: false, message: "Không tìm thấy phim" });
     }
 
-    // Fetch showtimes with cinema names
+    // Fetch showtimes with cinema and room details
     const [showtimeRows] = await dbPool.query(
       `SELECT s.*, r.name AS room_name, c.name AS cinema_name
        FROM showtimes s

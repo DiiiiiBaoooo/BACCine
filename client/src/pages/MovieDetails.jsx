@@ -22,7 +22,6 @@ const MovieDetails = () => {
   const getShow = async () => {
     try {
       const { data } = await axios.get(`/api/showtimes/movies/${id}`);
-      console.log('API Response:', data);
       if (data.success) {
         setShow(data);
       } else {
@@ -45,10 +44,43 @@ const MovieDetails = () => {
     }
   }, [id]);
 
-  // Filter showtimes for the selected cinema
-  const filteredDateTime = selectedCinema
-    ? show?.dateTime.filter((showtime) => showtime.cinema_name === selectedCinema) || []
-    : [];
+  // Filter showtimes for the selected cinema - Multiple approaches
+  const getFilteredDateTime = () => {
+    if (!selectedCinema || !show?.dateTime) return [];
+    
+    // Approach 1: Filter by cinema_id
+    let filteredById = show.dateTime.filter(showtime => 
+      (showtime.cinema_id || showtime.cinemaId) == selectedCinema.id
+    );
+    
+    // Approach 2: Filter by cinema_name (fallback)
+    let filteredByName = [];
+    if (filteredById.length === 0) {
+      filteredByName = show.dateTime.filter(showtime => 
+        showtime.cinema_name === selectedCinema.name
+      );
+    }
+    
+    // Approach 3: Try cinema reference
+    let filteredByReference = [];
+    if (filteredById.length === 0 && filteredByName.length === 0) {
+      filteredByReference = show.dateTime.filter(showtime => {
+        const showtimeCinemaId = showtime.cinema_id || showtime.cinemaId || showtime.cinema?.id;
+        const showtimeCinemaName = showtime.cinema_name || showtime.cinema?.name;
+        
+        return (
+          showtimeCinemaId == selectedCinema.id || 
+          showtimeCinemaName === selectedCinema.name
+        );
+      });
+    }
+    
+    return filteredById.length > 0 ? filteredById : 
+           filteredByName.length > 0 ? filteredByName : 
+           filteredByReference;
+  };
+
+  const filteredDateTime = getFilteredDateTime();
 
   if (error) {
     return (
@@ -116,10 +148,11 @@ const MovieDetails = () => {
           </div>
         </div>
       </div>
+      
       <p className="text-lg font-medium mt-20">Your Favorite Cast</p>
       <div className="overflow-x-auto no-scrollbar mt-8 pb-4">
         <div className="flex items-center gap-4 w-max px-4">
-          {show.movie.actors.slice(0, 12).map((actor, index) => (
+          {show.movie.actors?.slice(0, 12).map((actor, index) => (
             <div className="flex flex-col items-center text-center" key={actor.id || index}>
               <img
                 src={actor.profile_path ? `${image_base_url}${actor.profile_path}` : '/avt.jpg'}
@@ -131,8 +164,29 @@ const MovieDetails = () => {
           ))}
         </div>
       </div>
+      
       <CineSelect id={show.movie.movie_id} onSelectCinema={setSelectedCinema} />
-      {selectedCinema && <DateSelect dateTime={filteredDateTime} id={id} selectedCinema={selectedCinema} />}
+      
+      {/* Show message if no showtimes */}
+      {selectedCinema && filteredDateTime.length === 0 && (
+        <div className="pt-10">
+          <div className="p-8 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+            <p className="text-yellow-800 mb-2">No showtimes available</p>
+            <p className="text-yellow-600 text-sm">for {selectedCinema.name} on this date</p>
+          </div>
+        </div>
+      )}
+      
+      {/* DateSelect Component */}
+      {selectedCinema && filteredDateTime.length > 0 && (
+        <DateSelect 
+          dateTime={filteredDateTime} 
+          movieId={id} 
+          cinemaId={selectedCinema.id}
+          cinemaName={selectedCinema.name}
+        />
+      )}
+      
       <p className="text-lg font-medium mt-20 mb-8">You may also like</p>
       <div className="flex flex-wrap max-sm:justify-center gap-8">
         {relatedShows.slice(0, 4).map((movie) => (
