@@ -20,11 +20,11 @@ CinemasRoute.get('/', getAllCinemas);
 CinemasRoute.get('/getPlanMovie/:cinema_id', getPlanMovieByCinema);
 
 // Các route chỉ Admin mới được thao tác
-CinemasRoute.post('/add', protectRoute, isAdmin, addCinemaCluster);
-CinemasRoute.put('/update/:id', protectRoute, isAdmin, updateCinemaCluster);
-CinemasRoute.put('/updateManager/:id', protectRoute, isAdmin, updateManagerCinema);
-CinemasRoute.get('/managers', protectRoute, isAdmin, getManagers);
-CinemasRoute.post('/sendPlan/:cinema_id', protectRoute, isAdmin, sendMoviePlan);
+CinemasRoute.post('/add', addCinemaCluster);
+CinemasRoute.put('/update/:id', updateCinemaCluster);
+CinemasRoute.put('/updateManager/:id', updateManagerCinema);
+CinemasRoute.get('/managers', getManagers);
+CinemasRoute.post('/sendPlan/:cinema_id', sendMoviePlan);
 CinemasRoute.get('/:cinemaId/movies', getMoviesByCinema);
 CinemasRoute.get('/:cinemaId/plan', getPlanMovieByCinema);
 CinemasRoute.get('/planmovies/:cinema_id',getMoviePlanCinema)

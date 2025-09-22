@@ -137,3 +137,14 @@ export const getPromotionStatistics = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+export const getKM = async (req,res) => {
+  try {
+    const [rows] = await connection.query("SELECT * FROM promotions where status = 'active' ");
+    res.status(200).json({success:true,promotions:rows})
+  } catch (error) {
+    
+  }
+  
+}

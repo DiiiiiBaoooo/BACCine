@@ -115,9 +115,7 @@ export const getAllMovies = async (req, res) => {
     } catch (error) {
       console.error(error);
       res.status(500).json({ success: false, message: error.message });
-    } finally {
-      connection.end();
-    }
+    } 
   };
 // 📌 Cập nhật phim
 

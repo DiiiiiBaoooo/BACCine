@@ -55,14 +55,14 @@ export const applyJob = async (req, res) => {
           {
             resource_type: "raw",
             folder: "resumes",
-            format: "pdf", // Explicitly specify PDF format
+            format: "pdf", 
           },
           (error, result) => {
             if (error) {
               console.error("❌ Cloudinary upload error:", error);
               reject(error);
             } else {
-              console.log("✅ Cloudinary upload success:"); // Debug: Log full result
+              console.log("✅ Cloudinary upload success:"); 
               resolve(result);
             }
           }

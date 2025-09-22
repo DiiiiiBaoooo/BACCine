@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -19,6 +19,12 @@ const ThongTinDatCho = ({ cinemaId }) => {
   const [selectedServices, setSelectedServices] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [promotions, setPromotions] = useState([]);
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
+  const [selectedPromotionId, setSelectedPromotionId] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [membership, setMembership] = useState(null);
+  const [loadingMembership, setLoadingMembership] = useState(false);
 
   // Thông tin người dùng
   const [formData, setFormData] = useState({
@@ -49,6 +55,28 @@ const ThongTinDatCho = ({ cinemaId }) => {
     fetchServices();
   }, [cinemaId]);
 
+  // Fetch promotions (khuyến mãi)
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        setLoadingPromotions(true);
+        const res = await axios.get('/api/promotions/km');
+        if (res.data?.success) {
+          setPromotions(res.data.promotions || []);
+        } else {
+          setPromotions([]);
+        }
+      } catch (error) {
+        console.error('Error fetching promotions:', error);
+        toast.error('Lỗi khi tải khuyến mãi');
+      } finally {
+        setLoadingPromotions(false);
+      }
+    };
+
+    fetchPromotions();
+  }, []);
+
   // Kiểm tra thông tin booking
   useEffect(() => {
     if (!bookingInfo) {
@@ -56,6 +84,28 @@ const ThongTinDatCho = ({ cinemaId }) => {
       navigate('/');
     }
   }, [bookingInfo, navigate]);
+
+  // Fetch membership by user id
+  useEffect(() => {
+    const fetchMembership = async () => {
+      if (!authUser?.id) return;
+      try {
+        setLoadingMembership(true);
+        const res = await axios.get(`/api/membershiptiers/${authUser.id}`);
+        if (res.data?.success && Array.isArray(res.data.membership) && res.data.membership.length > 0) {
+          setMembership(res.data.membership[0]);
+        } else {
+          setMembership(null);
+        }
+      } catch (error) {
+        console.error('Error fetching membership:', error);
+      } finally {
+        setLoadingMembership(false);
+      }
+    };
+
+    fetchMembership();
+  }, [authUser?.id]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -71,7 +121,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
       const newQuantity = Math.max(0, current + change);
 
       if (newQuantity === 0) {
-        const { [serviceId]: removed, ...rest } = prev;
+        const { [serviceId]: _REMOVED, ...rest } = prev;
         return rest;
       }
 
@@ -82,7 +132,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
     });
   };
 
-  const calculateServiceTotal = () => {
+  const calculateServiceTotal = useCallback(() => {
     let total = 0;
     Object.entries(selectedServices).forEach(([serviceId, quantity]) => {
       const service = services.find((s) => s.id === parseInt(serviceId));
@@ -91,11 +141,40 @@ const ThongTinDatCho = ({ cinemaId }) => {
       }
     });
     return total;
-  };
+  }, [selectedServices, services]);
 
   const calculateGrandTotal = () => {
-    return (bookingInfo?.total || 0) + calculateServiceTotal();
+    return Math.max(0, (bookingInfo?.total || 0) + calculateServiceTotal() - (discountAmount || 0));
   };
+
+  const calculateDiscount = useCallback((subtotal) => {
+    if (!selectedPromotionId) return 0;
+    const promo = promotions.find((p) => p.id === selectedPromotionId);
+    if (!promo) return 0;
+
+    const minOrder = Number(promo.min_order || 0);
+    if (minOrder > 0 && subtotal < minOrder) return 0;
+
+    const type = String(promo.discount_type || '').toLowerCase();
+    const value = Number(promo.discount_value || 0);
+    let discount = 0;
+    if (type === 'percent') {
+      discount = (subtotal * value) / 100;
+      const maxDiscount = Number(promo.max_discount || 0);
+      if (maxDiscount > 0) {
+        discount = Math.min(discount, maxDiscount);
+      }
+    } else if (type === 'fixed') {
+      discount = value;
+    }
+    discount = Math.min(discount, subtotal);
+    return Math.max(0, Math.floor(discount));
+  }, [selectedPromotionId, promotions]);
+
+  useEffect(() => {
+    const subtotal = (bookingInfo?.total || 0) + calculateServiceTotal();
+    setDiscountAmount(calculateDiscount(subtotal));
+  }, [bookingInfo?.total, calculateServiceTotal, calculateDiscount]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,11 +203,21 @@ const ThongTinDatCho = ({ cinemaId }) => {
       };
 
       // TODO: Gọi API đặt vé
-      console.log('Booking data:', bookingData);
-      toast.success('Đặt vé thành công!');
+      console.log('Booking data:', {state:{bookingData}});
+      
 
       // Navigate to confirmation page or back to home
-      navigate('/');
+      navigate('/payment', {
+        state: {
+          bookingData: {
+            ...bookingData,
+            movieName: bookingInfo.movieName,
+            cinemaName: bookingInfo.cinemaName,
+            movieimg: bookingInfo.movieimg,
+            selectedTime: bookingInfo.selectedTime
+          }
+        }
+      });
     } catch (error) {
       console.error('Error booking:', error);
       toast.error('Lỗi khi đặt vé: ' + error.message);
@@ -324,7 +413,14 @@ const ThongTinDatCho = ({ cinemaId }) => {
                     <span className="text-gray-400 text-sm">Giờ chiếu:</span>
                     <p className="font-medium text-white">
                       {bookingInfo.selectedTime?.start_time
-                        ? format(new Date(bookingInfo.selectedTime.start_time), 'HH:mm')
+                        ? (() => {
+                            try {
+                              return format(new Date(bookingInfo.selectedTime.start_time), 'HH:mm');
+                            } catch (error) {
+                              console.error('Error formatting time:', error);
+                              return 'N/A';
+                            }
+                          })()
                         : 'N/A'}
                     </p>
                   </div>
@@ -376,8 +472,112 @@ const ThongTinDatCho = ({ cinemaId }) => {
                   </>
                 )}
 
-                <hr className="border-gray-700" />
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Giảm giá áp dụng:</span>
+                    <span>-{discountAmount.toLocaleString()} VND</span>
+                  </div>
+                )}
 
+                {/* Membership section */}
+                <div className="mt-1">
+                  <div className="mb-2 font-semibold text-primary">Thành viên</div>
+                  {loadingMembership ? (
+                    <p className="text-gray-400">Đang tải thông tin thành viên...</p>
+                  ) : !membership ? (
+                  <>
+                    <p className="text-gray-400">Bạn chưa có thẻ thành viên! Đăng kí thẻ thành viên tại </p> <a href='/membership'>đây</a></>
+                  ) : (
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-gray-400">Hạng thẻ</div>
+                          <div className="text-white font-medium">
+                            {membership.tier_name || membership.tier || membership.name || 'Thành viên'}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-400">Điểm hiện có</div>
+                          <div className="text-white font-semibold">
+                            {Number(membership.points || membership.current_points || 0).toLocaleString()} pts
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <hr className="border-gray-700" />
+                <div>
+                  <div className="mb-3 font-semibold text-primary">Khuyến mãi</div>
+                  {loadingPromotions ? (
+                    <p className="text-gray-400">Đang tải khuyến mãi...</p>
+                  ) : promotions.length === 0 ? (
+                    <p className="text-gray-400">Hiện chưa có khuyến mãi</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {promotions.map((promo) => {
+                        const isPercent = String(promo.discount_type).toLowerCase() === 'percent';
+                        const isFixed = String(promo.discount_type).toLowerCase() === 'fixed';
+                        const valueText = isPercent
+                          ? `${Number(promo.discount_value || 0)}%`
+                          : `${Number(promo.discount_value || 0).toLocaleString()} VND`;
+                        const conditions = [];
+                        if (promo.min_order && Number(promo.min_order) > 0) {
+                          conditions.push(`Đơn tối thiểu ${Number(promo.min_order).toLocaleString()} VND`);
+                        }
+                        if (promo.max_discount && Number(promo.max_discount) > 0 && isPercent) {
+                          conditions.push(`Giảm tối đa ${Number(promo.max_discount).toLocaleString()} VND`);
+                        }
+                        return (
+                          <div
+                            key={promo.id}
+                            className="bg-gray-800 border border-gray-700 hover:border-primary/60 transition-colors rounded-lg p-4"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <h4 className="text-white font-medium">{promo.name}</h4>
+                                {promo.description && (
+                                  <p className="text-sm text-gray-400 mt-1">{promo.description}</p>
+                                )}
+                                <div className="mt-2 text-sm">
+                                  <span className="text-gray-400">Giá trị:</span>
+                                  <span className="ml-2 font-semibold text-white">
+                                    {valueText} {isFixed ? '' : ''}
+                                  </span>
+                                </div>
+                                {conditions.length > 0 && (
+                                  <div className="mt-1 text-xs text-gray-400">
+                                    Điều kiện: {conditions.join(' • ')}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {selectedPromotionId === promo.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedPromotionId(null)}
+                                    className="px-3 py-1 rounded-md text-xs bg-primary text-white hover:bg-primary/80"
+                                  >
+                                    Bỏ chọn
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedPromotionId(promo.id)}
+                                    className="px-3 py-1 rounded-md text-xs bg-gray-700 text-white hover:bg-gray-600"
+                                  >
+                                    Chọn
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                 <div className="flex justify-between text-lg font-bold">
                   <span>Tổng cộng:</span>
                   <span className="text-primary">{calculateGrandTotal().toLocaleString()} VND</span>

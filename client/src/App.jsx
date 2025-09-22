@@ -37,6 +37,8 @@ import Movies from './pages/Movies';
 import MovieDetails from './pages/MovieDetails';
 import SeatLayout from './pages/SeatLayout';
 import QuanLyDichVu from './pages/manager/QuanLyDichVu';
+import Membership from './pages/Membership';
+import PaymentSelection from './pages/PaymentSelection';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -204,6 +206,8 @@ const App = () => {
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/blog" element={<Blog />} />
+        <Route path='/membership' element={<Membership />} />
+        <Route path='/payment' element={<PaymentSelection />} />
         <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
         <Route path="/posts/edit/:id" element={<EditBlog cinemaId={cinema_Id} />} />
 
