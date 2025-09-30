@@ -7,7 +7,7 @@ export const getServices = async (req, res) => {
 
   try {
     const [rows] = await dbPool.query(
-      `SELECT id, cinema_id, name, description, price, quantity, status, image_url, created_at, updated_at 
+      `SELECT  cinema_id, name, description, price, quantity, status, image_url, created_at, updated_at 
        FROM services 
        WHERE cinema_id = ? ` ,
       [cinema_id]
@@ -107,3 +107,19 @@ export const deleteService = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+export const getServiceActive = async (req,res) => {
+  const {cinema_id}= req.params;
+  try {
+    const [rows] = await dbPool.query(
+      `SELECT  cinema_id, name, description, price, quantity, image_url, created_at, updated_at 
+       FROM services 
+       WHERE cinema_id = ? AND status='active' ` ,
+      [cinema_id]
+    );
+    res.json({success:true,services:rows});
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+
+  }
+  
+}

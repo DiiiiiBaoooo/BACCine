@@ -38,7 +38,8 @@ const ThongTinDatCho = ({ cinemaId }) => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`/api/services/${cinemaId}`);
+       const cinema_id = bookingInfo.cinemaId;
+        const response = await axios.get(`/api/services/active/${cinema_id}`);
         if (response.data.success) {
           setServices(response.data.services || []);
         } else {
@@ -53,7 +54,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
     };
 
     fetchServices();
-  }, [cinemaId]);
+  }, []);
 
   // Fetch promotions (khuyến mãi)
   useEffect(() => {

@@ -432,9 +432,9 @@ const EmployeeManagement = ({ cinemaId }) => {
                     onChange={handleNewEmployeeChange}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Staff" className="bg-gray-900">Nhân viên</option>
-                    <option value="Manager" className="bg-gray-900">Quản lý</option>
-                    <option value="Supervisor" className="bg-gray-900">Giám sát</option>
+                    <option value="Staff" className="bg-gray-900">Nhân viên quầy</option>
+                    <option value="Projectionist" className="bg-gray-900">Nhân viên quản lý phòng chiếu, lịch chiếu</option>
+                    <option value="Supervisor" className="bg-gray-900">Nhân viên...</option>
                   </select>
                   <input
                     type="date"

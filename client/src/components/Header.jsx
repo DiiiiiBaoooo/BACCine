@@ -96,7 +96,7 @@ const Header = () => {
           to="/"
           className="px-4 py-2 text-white md:text-gray-800 hover:text-red-500"
         >
-          Home
+          Trang chủ
         </Link>
         <Link
           onClick={() => {
@@ -126,7 +126,7 @@ const Header = () => {
           to="/blog"
           className="px-4 py-2 text-white md:text-gray-800 hover:text-red-500"
         >
-          Blog
+          Bài viết
         </Link>
         <Link
           onClick={() => {

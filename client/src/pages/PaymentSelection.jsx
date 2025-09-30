@@ -18,6 +18,7 @@ const PaymentSelection = () => {
     { id: 1, name: 'MOMO', icon: assets.momo },
     { id: 2, name: 'Stripe', icon: assets.stripe },
     { id: 3, name: 'VNPay', icon: assets.vnpay },
+    { id: 4, name: 'QR Code', icon: assets.qr },
   ];
 
   // Validate booking data

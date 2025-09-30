@@ -75,20 +75,33 @@ export const deleteTier = async (req, res) => {
       res.status(500).json({ success: false, message: error.message });
     }
   };
-  export const getMembership = async (req,res) => {
+  export const getMembership = async (req, res) => {
     try {
-      const {user_id} = req.params
-          const [rows] =await dbPool.query("SELECT * FROM membership_cards where user_id = ?",[user_id])
-          if(rows.length<=0){
-            res.json({message:"Bạn chưa có thẻ thành viên!"})
-          }
-          res.status(200).json({success:true,membership:rows})
+      const { user_id } = req.params;
+      const [rows] = await dbPool.query(
+        "SELECT * FROM membership_cards WHERE user_id = ?",
+        [user_id]
+      );
+  
+      if (rows.length <= 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Bạn chưa có thẻ thành viên!",
+        });
+      }
+  
+      return res.status(200).json({
+        success: true,
+        membership: rows,
+      });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
     }
-    
-  }
+  };
+  
   export const registerMembership = async (req,res) => {
     try {
       const {user_id}= req.params;
