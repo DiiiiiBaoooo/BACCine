@@ -4,8 +4,8 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { PlusIcon, MinusIcon, ArrowLeftIcon } from 'lucide-react';
 import useAuthUser from '../hooks/useAuthUser';
-import { format } from 'date-fns'; // Import format function from date-fns
-const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL
+import { format } from 'date-fns';
+const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
 
 const ThongTinDatCho = ({ cinemaId }) => {
   const navigate = useNavigate();
@@ -28,6 +28,8 @@ const ThongTinDatCho = ({ cinemaId }) => {
 
   // Thông tin người dùng
   const [formData, setFormData] = useState({
+    cinema_id: bookingInfo.cinemaId,
+    user_id: authUser?.id || '',
     fullName: authUser?.name || '',
     phone: authUser?.phone || '',
     email: authUser?.email || '',
@@ -38,7 +40,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
     const fetchServices = async () => {
       try {
         setLoading(true);
-       const cinema_id = bookingInfo.cinemaId;
+        const cinema_id = bookingInfo.cinemaId;
         const response = await axios.get(`/api/services/active/${cinema_id}`);
         if (response.data.success) {
           setServices(response.data.services || []);
@@ -54,9 +56,9 @@ const ThongTinDatCho = ({ cinemaId }) => {
     };
 
     fetchServices();
-  }, []);
+  }, [bookingInfo]);
 
-  // Fetch promotions (khuyến mãi)
+  // Fetch promotions
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
@@ -116,13 +118,13 @@ const ThongTinDatCho = ({ cinemaId }) => {
     }));
   };
 
-  const handleServiceQuantityChange = (serviceId, change) => {
+  const handleServiceQuantityChange = useCallback((serviceId, change) => {
     setSelectedServices((prev) => {
       const current = prev[serviceId] || 0;
       const newQuantity = Math.max(0, current + change);
 
       if (newQuantity === 0) {
-        const { [serviceId]: _REMOVED, ...rest } = prev;
+        const { [serviceId]: _removed, ...rest } = prev;
         return rest;
       }
 
@@ -131,7 +133,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
         [serviceId]: newQuantity,
       };
     });
-  };
+  }, []);
 
   const calculateServiceTotal = useCallback(() => {
     let total = 0;
@@ -144,9 +146,10 @@ const ThongTinDatCho = ({ cinemaId }) => {
     return total;
   }, [selectedServices, services]);
 
-  const calculateGrandTotal = () => {
-    return Math.max(0, (bookingInfo?.total || 0) + calculateServiceTotal() - (discountAmount || 0));
-  };
+  const calculateGrandTotal = useCallback(() => {
+    const subtotal = (bookingInfo?.total || 0) + calculateServiceTotal();
+    return Math.max(0, subtotal - discountAmount);
+  }, [bookingInfo?.total, calculateServiceTotal, discountAmount]);
 
   const calculateDiscount = useCallback((subtotal) => {
     if (!selectedPromotionId) return 0;
@@ -172,6 +175,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
     return Math.max(0, Math.floor(discount));
   }, [selectedPromotionId, promotions]);
 
+  // Cập nhật discountAmount khi selectedServices hoặc bookingInfo.total thay đổi
   useEffect(() => {
     const subtotal = (bookingInfo?.total || 0) + calculateServiceTotal();
     setDiscountAmount(calculateDiscount(subtotal));
@@ -187,41 +191,40 @@ const ThongTinDatCho = ({ cinemaId }) => {
 
     setSubmitting(true);
     try {
+      // Chuẩn bị dữ liệu cho trang PaymentSelection
       const bookingData = {
-        ...formData,
-        seats: bookingInfo.selectedSeats,
-        showtimeId: bookingInfo.selectedTime.id,
-        cinemaId: bookingInfo.cinemaId,
-        movieId: bookingInfo.movieId,
-        date: bookingInfo.date,
-        ticketTotal: bookingInfo.total,
-        services: Object.entries(selectedServices).map(([serviceId, quantity]) => ({
-          serviceId: parseInt(serviceId),
-          quantity,
+        cinema_id: bookingInfo.cinemaId,
+        user_id: formData.user_id,
+        showtime_id: bookingInfo.selectedTime.id,
+        tickets: bookingInfo.selectedSeats.map(seat => ({
+          seat_id: seat,
+          ticket_price: bookingInfo.total / bookingInfo.selectedSeats.length // Giả định giá vé trung bình
         })),
-        serviceTotal: calculateServiceTotal(),
-        grandTotal: calculateGrandTotal(),
+        services: Object.entries(selectedServices).map(([serviceId, quantity]) => ({
+          service_id: parseInt(serviceId),
+          quantity
+        })),
+        promotion_id: selectedPromotionId || null,
+        ticket_total: bookingInfo.total,
+        service_total: calculateServiceTotal(),
+        discount_amount: discountAmount,
+        grand_total: calculateGrandTotal(),
+        movieName: bookingInfo.movieName,
+        cinemaName: bookingInfo.cinemaName,
+        movieimg: bookingInfo.movieimg,
+        selectedTime: bookingInfo.selectedTime,
+        date: bookingInfo.date
       };
 
-      // TODO: Gọi API đặt vé
-      console.log('Booking data:', {state:{bookingData}});
-      
-
-      // Navigate to confirmation page or back to home
+      // Chuyển hướng sang trang PaymentSelection
       navigate('/payment', {
         state: {
-          bookingData: {
-            ...bookingData,
-            movieName: bookingInfo.movieName,
-            cinemaName: bookingInfo.cinemaName,
-            movieimg: bookingInfo.movieimg,
-            selectedTime: bookingInfo.selectedTime
-          }
+          bookingData
         }
       });
     } catch (error) {
-      console.error('Error booking:', error);
-      toast.error('Lỗi khi đặt vé: ' + error.message);
+      console.error('Error preparing booking:', error);
+      toast.error('Lỗi khi chuẩn bị đặt vé: ' + error.message);
     } finally {
       setSubmitting(false);
     }
@@ -303,7 +306,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
               </form>
             </div>
 
-            {/* Dịch vụ - Hiển thị tất cả dịch vụ với bảng */}
+            {/* Dịch vụ */}
             <div className="bg-gray-900 rounded-xl p-6">
               <h2 className="text-xl font-semibold mb-4 text-primary">Dịch vụ bổ sung</h2>
 
@@ -389,27 +392,22 @@ const ThongTinDatCho = ({ cinemaId }) => {
               </div>
               
               {/* Thông tin chi tiết */}
-              <div className="grid grid-cols-2 gap-6 ">
-                {/* Cột 1: Tên phim và Rạp */}
+              <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3 ml-12">
                   <div>
                     <span className="text-gray-400 text-sm">Tên phim:</span>
                     <p className="font-medium text-white text-lg">{bookingInfo.movieName || 'Tên phim'}</p>
                   </div>
-                  
                   <div>
                     <span className="text-gray-400 text-sm">Rạp chiếu:</span>
                     <p className="font-medium text-white">{bookingInfo.cinemaName || 'Tên rạp'}</p>
                   </div>
                 </div>
-                
-                {/* Cột 2: Ngày và Giờ chiếu */}
                 <div className="space-y-3 ml-8">
                   <div>
                     <span className="text-gray-400 text-sm">Ngày chiếu:</span>
                     <p className="font-medium text-white">{bookingInfo.date}</p>
                   </div>
-                  
                   <div>
                     <span className="text-gray-400 text-sm">Giờ chiếu:</span>
                     <p className="font-medium text-white">
@@ -480,14 +478,15 @@ const ThongTinDatCho = ({ cinemaId }) => {
                   </div>
                 )}
 
-                {/* Membership section */}
                 <div className="mt-1">
                   <div className="mb-2 font-semibold text-primary">Thành viên</div>
                   {loadingMembership ? (
                     <p className="text-gray-400">Đang tải thông tin thành viên...</p>
                   ) : !membership ? (
-                  <>
-                    <p className="text-gray-400">Bạn chưa có thẻ thành viên! Đăng kí thẻ thành viên tại </p> <a href='/membership'>đây</a></>
+                    <>
+                      <p className="text-gray-400">Bạn chưa có thẻ thành viên! Đăng ký thẻ thành viên tại </p>
+                      <a href='/membership'>đây</a>
+                    </>
                   ) : (
                     <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
                       <div className="flex items-center justify-between">
@@ -508,7 +507,6 @@ const ThongTinDatCho = ({ cinemaId }) => {
                   )}
                 </div>
 
-                <hr className="border-gray-700" />
                 <div>
                   <div className="mb-3 font-semibold text-primary">Khuyến mãi</div>
                   {loadingPromotions ? (

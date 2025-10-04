@@ -37,7 +37,7 @@ export const createShowTime = async (req, res) => {
         return res.status(400).json({ success: false, message: "Thiếu thông tin bắt buộc cho một suất chiếu" });
       }
 
-      // Kiểm tra trùng suất chiếu trong cùng phòng
+      // Check for conflicting showtimes in the same room
       const [exist] = await dbPool.query(
         `SELECT * FROM showtimes 
          WHERE room_id = ?
@@ -54,22 +54,54 @@ export const createShowTime = async (req, res) => {
           .json({ success: false, message: `Phòng đã có suất chiếu trong khoảng thời gian ${start_time}` });
       }
 
+      // Insert the showtime
       const [result] = await dbPool.query(
         `INSERT INTO showtimes (movie_id, room_id, start_time, end_time) 
          VALUES (?, ?, ?, ?)`,
         [movie_id, room_id, start_time, end_time]
       );
 
-      insertedIds.push(result.insertId);
+      const showtimeId = result.insertId;
+      insertedIds.push(showtimeId);
+
+      // Generate seat entries for rows A-H (1-9) and I-J (1-4) with specific seat_type_id
+      const seatEntries = [];
+      const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+
+      for (const row of rows) {
+        const maxSeats = row <= 'H' ? 9 : 4; // Rows A-H have 1-9, I-J have 1-4
+        const seatTypeId = row === 'A' || row === 'B' ? 1 : row === 'I' || row === 'J' ? 3 : 2; // A,B: 1; I,J: 3; C-H: 2
+
+        for (let seatNum = 1; seatNum <= maxSeats; seatNum++) {
+          seatEntries.push([
+            showtimeId,
+            `${row}${seatNum}`, // e.g., "A1", "B2", etc.
+            'available',
+            seatTypeId,
+            'NOW()',
+            'NOW()'
+          ]);
+        }
+      }
+
+      // Insert all seat entries in a single query
+      if (seatEntries.length > 0) {
+        await dbPool.query(
+          `INSERT INTO show_seats (showtime_id, seat_number, status, seat_type_id, created_at, updated_at)
+           VALUES ?`,
+          [seatEntries]
+        );
+      } else {
+        return res.status(400).json({ success: false, message: "Không có ghế nào được tạo" });
+      }
     }
 
-    res.status(201).json({ success: true, ids: insertedIds, message: "Thêm lịch chiếu thành công" });
+    res.status(201).json({ success: true, ids: insertedIds, message: "Thêm lịch chiếu và ghế thành công" });
   } catch (error) {
     console.error("❌ Lỗi createShowTime:", error);
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
-
 // Cập nhật lịch chiếu
 export const updateShowTime = async (req, res) => {
   try {
@@ -285,5 +317,38 @@ export const getCinemaByMovie = async (req, res) => {
   } catch (error) {
     console.error("❌ Lỗi getCinemaByMovie:", error);
     res.status(500).json({ success: false, message: "Lỗi server" });
+  }
+};
+
+
+export const getOccupieSeat = async (req, res) => {
+  try {
+    const { showtimeId } = req.params;
+
+    // Validate showtimeId
+    if (!showtimeId || isNaN(showtimeId)) {
+      return res.status(400).json({ error: 'Invalid showtimeId' });
+    }
+
+    // Query to fetch occupied seats (status = 'reserved' or 'booked')
+    const query = `
+      SELECT seat_id, seat_number, status, reservation_id, expiry_time, seat_type_id
+      FROM show_seats 
+      WHERE showtime_id = ? AND status IN ('reserved', 'booked')
+    `;
+    
+    // Assuming you have a MySQL connection pool (e.g., mysql2/promise)
+    const [rows] = await dbPool.query(query, [showtimeId]);
+
+    // If no occupied seats found, return an empty array
+    if (rows.length === 0) {
+      return res.status(200).json({ occupiedSeats: [] });
+    }
+
+    // Return the list of occupied seats
+    return res.status(200).json({ occupiedSeats: rows });
+  } catch (error) {
+    console.error('Error fetching occupied seats:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };

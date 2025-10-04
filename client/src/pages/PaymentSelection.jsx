@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { ArrowLeftIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { assets } from '../assets/assets';
+import axios from 'axios';
 const image_base_url = import.meta.env.VITE_TMDB_IMAGE_BASE_URL;
 
 const PaymentSelection = () => {
@@ -12,6 +13,7 @@ const PaymentSelection = () => {
   const bookingData = location.state?.bookingData;
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Static payment methods
   const paymentMethods = [
@@ -29,7 +31,7 @@ const PaymentSelection = () => {
     }
   }, [bookingData, navigate]);
 
-  const handlePaymentSubmit = (e) => {
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
 
     if (!selectedPaymentMethod) {
@@ -37,14 +39,55 @@ const PaymentSelection = () => {
       return;
     }
 
-    // Simulate payment success
-    toast.success('Thanh toán thành công!');
-    navigate('/confirmation', {
+    setSubmitting(true);
+    try {
+      // Chuẩn bị dữ liệu cho API createBooking
+      const payload = {
+        cinema_id: bookingData.cinema_id,
+        user_id: bookingData.user_id,
+        showtime_id: bookingData.showtime_id,
+        tickets: bookingData.tickets,
+        services: bookingData.services,
+        payment_method: paymentMethods.find((pm) => pm.id === selectedPaymentMethod).name.toLowerCase(),
+        promotion_id: bookingData.promotion_id
+      };
+console.log(payload);
+// nếu method = qr thì gọi api create-booking sau đó chuyển sang trang QRPayMEnt với data trả Về
+if (paymentMethods.find((pm) => pm.id === selectedPaymentMethod).name.toLowerCase() === 'qr code') {
+  const response = await axios.post('/api/bookings/create-booking', payload);
+  if (response.data.success) {
+    navigate('/qr-payment', {
       state: {
-        bookingData,
-        paymentMethod: paymentMethods.find((pm) => pm.id === selectedPaymentMethod),
-      },
+        bookingData: response.data.data
+      }
     });
+  }
+  else{
+    toast.error(response.data.message);
+  }}
+
+      // Gọi API createBooking
+      // const response = await axios.post('/api/bookings', payload);
+      // if (response.data.success) {
+      //   toast.success('Đặt vé thành công!');
+      //   navigate('/confirmation', {
+      //     state: {
+      //       bookingData: {
+      //         ...bookingData,
+      //         order_id: response.data.data.order_id,
+      //         payment_method: payload.payment_method
+      //       }
+      //     }
+      //   });
+      // } else {
+      //   throw new Error(response.data.message || 'Không thể tạo đơn hàng');
+      // }
+    } catch (error) {
+      console.error('Error booking:', error);
+      toast.error('Lỗi khi đặt vé: ' + error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!bookingData) {
@@ -160,49 +203,47 @@ const PaymentSelection = () => {
                 <div>
                   <span className="text-gray-400">Ghế đã chọn:</span>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {bookingData.seats.map((seat) => (
-                      <span key={seat} className="px-2 py-1 bg-primary text-white rounded text-sm">
-                        {seat}
+                    {bookingData.tickets.map((ticket) => (
+                      <span key={ticket.seat_id} className="px-2 py-1 bg-primary text-white rounded text-sm">
+                        {ticket.seat_id}
                       </span>
                     ))}
                   </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Số vé:</span>
-                  <span className="font-medium">{bookingData.seats.length}</span>
+                  <span className="font-medium">{bookingData.tickets.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Tiền vé:</span>
-                  <span className="font-medium">{bookingData.ticketTotal.toLocaleString()} VND</span>
+                  <span className="font-medium">{bookingData.ticket_total.toLocaleString()} VND</span>
                 </div>
-                {bookingData.serviceTotal > 0 && (
+                {bookingData.service_total > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-400">Dịch vụ:</span>
-                    <span className="font-medium">{bookingData.serviceTotal.toLocaleString()} VND</span>
+                    <span className="font-medium">{bookingData.service_total.toLocaleString()} VND</span>
                   </div>
                 )}
-                {bookingData.grandTotal < bookingData.ticketTotal + bookingData.serviceTotal && (
+                {bookingData.discount_amount > 0 && (
                   <div className="flex justify-between text-green-400">
                     <span>Giảm giá áp dụng:</span>
-                    <span>
-                      -{(bookingData.ticketTotal + bookingData.serviceTotal - bookingData.grandTotal).toLocaleString()} VND
-                    </span>
+                    <span>-{bookingData.discount_amount.toLocaleString()} VND</span>
                   </div>
                 )}
                 <hr className="border-gray-700" />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Tổng cộng:</span>
-                  <span className="text-primary">{bookingData.grandTotal.toLocaleString()} VND</span>
+                  <span className="text-primary">{bookingData.grand_total.toLocaleString()} VND</span>
                 </div>
               </div>
 
               {/* Submit Button */}
               <button
                 onClick={handlePaymentSubmit}
-                disabled={!selectedPaymentMethod}
+                disabled={submitting || !selectedPaymentMethod}
                 className="w-full mt-6 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Thanh toán
+                {submitting ? 'Đang xử lý...' : 'Thanh toán'}
               </button>
             </div>
           </div>

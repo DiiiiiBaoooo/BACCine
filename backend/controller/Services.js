@@ -111,7 +111,7 @@ export const getServiceActive = async (req,res) => {
   const {cinema_id}= req.params;
   try {
     const [rows] = await dbPool.query(
-      `SELECT  cinema_id, name, description, price, quantity, image_url, created_at, updated_at 
+      `SELECT id, cinema_id, name, description, price, quantity, image_url, created_at, updated_at 
        FROM services 
        WHERE cinema_id = ? AND status='active' ` ,
       [cinema_id]

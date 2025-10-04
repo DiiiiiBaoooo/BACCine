@@ -39,7 +39,10 @@ import SeatLayout from './pages/SeatLayout';
 import QuanLyDichVu from './pages/manager/QuanLyDichVu';
 import Membership from './pages/Membership';
 import PaymentSelection from './pages/PaymentSelection';
-
+import QRPayment from './pages/Payment/QRPayment';
+import MyTicket from './pages/MyTicket';
+import TicketDetails from './pages/TicketDetails';
+import PrintTicket from './pages/PrintTicket';
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isLoading, authUser } = useAuthUser();
@@ -112,6 +115,8 @@ const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => 
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
+  const Inve = useLocation().pathname.startsWith('/inve');
+
   const isManagerRoute = useLocation().pathname.startsWith('/manager');
   const isProjectionist = useLocation().pathname.startsWith('/projectionist');
   const location = useLocation();
@@ -155,7 +160,7 @@ const App = () => {
         pauseOnHover
         theme="dark"
       />
-{!isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
+{!Inve  &&!isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
 
       <Routes >
         <Route path="/" element={<Home />} />
@@ -209,7 +214,11 @@ const App = () => {
         <Route path='/membership' element={<Membership />} />
         <Route path='/payment' element={<PaymentSelection />} />
         <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
+        <Route path="/qr-payment" element={<QRPayment />} />
         <Route path="/posts/edit/:id" element={<EditBlog cinemaId={cinema_Id} />} />
+<Route path='/tickets' element={<MyTicket />} />
+<Route path="/ticket-details/:orderId" element={<TicketDetails />} />
+<Route path="/inve/:order_id/:user_id" element={<PrintTicket />} />
 
         <Route
   path="/projectionist/*"

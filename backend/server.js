@@ -18,6 +18,11 @@ import EmployeeRoute from "./routes/EmployeeRoutes.js";
 import RoomRoute from "./routes/RoomRoutes.js";
 import ShowTimeRoute from "./routes/ShowTimeRoutes.js";
 import ServiceRoute from "./routes/ServiceRoutes.js";
+import BookingRoute from "./routes/BookingRoutes.js";
+import webhookrouter from "./routes/WebhookRoutes.js";
+import UserRoute from "./routes/UserRoutes.js";
+import { serve } from "inngest/express";
+import { inngest, functions } from "./inggest/index.js"
 
 const app = express();
 const port = 3000;
@@ -31,6 +36,7 @@ app.use(
     credentials: true,
   })
 );
+
 
 // Routes
 app.get("/", (req, res) => res.send("Server is live"));
@@ -47,6 +53,10 @@ app.use("/api/employee",EmployeeRoute);
 app.use("/api/rooms",RoomRoute)
 app.use("/api/showtimes",ShowTimeRoute)
 app.use("/api/services/", ServiceRoute)
+app.use("/api/bookings", BookingRoute)
+app.use("/api/webhook",webhookrouter)
+app.use("/api/user", UserRoute)
+app.use("/api/inngest",serve({ client: inngest, functions }))
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

@@ -22,3 +22,7 @@ export const logout = async () =>{
   const response = await axiosInstance.post("/auth/logout");
   return response.data;
 }
+export const getMyTickets = async () => {
+  const response = await axiosInstance.get('/user/tickets');
+  return response.data;
+};

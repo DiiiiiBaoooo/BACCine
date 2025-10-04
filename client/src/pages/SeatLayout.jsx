@@ -15,14 +15,14 @@ const SeatLayout = () => {
   const allRows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
   const { id: movieId, cinemaId, date } = useParams();
   console.log('Raw URL Parameters:', { movieId, cinemaId, date });
-  
+
   // Validate URL parameters
   if (!movieId || !cinemaId || !date) {
     return (
       <div className="mt-20 text-center">
         <p className="text-red-500">Invalid URL parameters. Please provide valid movie ID, cinema ID, and date.</p>
         <p>Received: movieId={movieId}, cinemaId={cinemaId}, date={date}</p>
-        <button 
+        <button
           onClick={() => navigate('/')}
           className="mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/80"
         >
@@ -40,7 +40,8 @@ const SeatLayout = () => {
   const [priceLoading, setPriceLoading] = useState(false);
   const [movieName, setMovieName] = useState('');
   const [cinemaName, setCinemaName] = useState('');
-  const [movieimg,setMovieimg] = useState('');
+  const [movieimg, setMovieimg] = useState('');
+  const [occupiedSeats, setOccupiedSeats] = useState([]); // Array of seat_number strings, e.g., ['I3']
 
   const getSeatType = (seatId) => {
     const row = seatId[0];
@@ -63,13 +64,13 @@ const SeatLayout = () => {
       console.log('No ticket prices available for total calculation');
       return 0;
     }
-    
+
     let total = 0;
     selectedSeats.forEach((seat) => {
       const seatPrice = getSeatPrice(seat);
       total += seatPrice;
     });
-    
+
     console.log('Calculated total:', total, 'for seats:', selectedSeats);
     return total;
   };
@@ -84,6 +85,37 @@ const SeatLayout = () => {
     return breakdown;
   };
 
+  // Fetch occupied seats for the selected showtime
+  const fetchOccupiedSeats = async (showtimeId) => {
+    try {
+      console.log('Fetching occupied seats for showtimeId:', showtimeId);
+      const response = await axios.get(`/api/showtimes/seat/${showtimeId}`);
+      console.log('Occupied Seats API Response:', JSON.stringify(response.data, null, 2));
+      if (response.data && Array.isArray(response.data.occupiedSeats)) {
+        // Normalize seat_number to uppercase and extract as array of strings
+        const occupiedList = response.data.occupiedSeats.map(seat => seat.seat_number.toUpperCase());
+        setOccupiedSeats(occupiedList);
+        console.log('Set occupied seats:', occupiedList);
+      } else {
+        console.warn('No occupied seats or invalid response:', response.data);
+        setOccupiedSeats([]);
+        toast.warn('Không có thông tin ghế đã đặt hoặc lỗi API.');
+      }
+    } catch (error) {
+      console.error('Error fetching occupied seats:', error.message, error.response?.data);
+      toast.error('Lỗi khi lấy thông tin ghế đã đặt: ' + error.message);
+      setOccupiedSeats([]);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTime) {
+      fetchOccupiedSeats(selectedTime.id);
+    } else {
+      setOccupiedSeats([]);
+    }
+  }, [selectedTime]);
+
   // Fetch movie name
   useEffect(() => {
     const fetchMovieName = async () => {
@@ -91,7 +123,7 @@ const SeatLayout = () => {
         const response = await axios.get(`/api/showtimes/movies/${movieId}`);
         if (response.data.success) {
           setMovieName(response.data.movie.title || 'Tên phim không có sẵn');
-          setMovieimg(response.data.movie.poster_path )
+          setMovieimg(response.data.movie.poster_path);
         } else {
           console.warn('Failed to fetch movie name:', response.data.message);
           setMovieName('Tên phim không có sẵn');
@@ -111,9 +143,7 @@ const SeatLayout = () => {
       try {
         const response = await axios.get(`/api/showtimes/movies/${movieId}`);
         if (response.data.success && response.data.dateTime && response.data.dateTime.length > 0) {
-          // Extract cinema name from the first showtime (assuming it's consistent across showtimes)
           setCinemaName(response.data.dateTime[0].cinema_name || 'Tên rạp không có sẵn');
-          
         } else {
           console.warn('Failed to fetch cinema name:', response.data.message);
           setCinemaName('Tên rạp không có sẵn');
@@ -263,26 +293,32 @@ const SeatLayout = () => {
   };
 
   const handleSeatClick = (seatId) => {
+    const normalizedSeatId = seatId.toUpperCase();
+
+    // Check if seat is occupied
+    if (occupiedSeats.includes(normalizedSeatId)) {
+      toast.warn('Ghế này đã được đặt hoặc đặt chỗ, không thể chọn.');
+      return;
+    }
+
     if (!selectedTime) {
       return toast('Please select Time first');
     }
-    if (!selectedSeats.includes(seatId) && selectedSeats.length >= 5) {
+    if (!selectedSeats.includes(normalizedSeatId) && selectedSeats.length >= 5) {
       return toast('Only select up to 5 seats');
     }
 
-    const normalizedSeatId = seatId.toUpperCase();
-    const row = normalizedSeatId[0];
-    const bookedSeats = selectedTime?.bookedSeats || [];
+    const bookedSeats = occupiedSeats;
 
     if (!selectedSeats.includes(normalizedSeatId)) {
       const currentRows = [...new Set(selectedSeats.map((seat) => seat[0]))];
-      const newRows = [...new Set([...currentRows, row])];
+      const newRows = [...new Set([...currentRows, normalizedSeatId[0]])];
       if (!areRowsAdjacent(newRows)) {
         return toast('Please select seats in two adjacent rows only (e.g., A-B or B-C)');
       }
 
-      const adjacentRowIndex = allRows.indexOf(row);
-      const adjacentRows = [row];
+      const adjacentRowIndex = allRows.indexOf(normalizedSeatId[0]);
+      const adjacentRows = [normalizedSeatId[0]];
       if (adjacentRowIndex > 0) adjacentRows.push(allRows[adjacentRowIndex - 1]);
       if (adjacentRowIndex < allRows.length - 1) adjacentRows.push(allRows[adjacentRowIndex + 1]);
 
@@ -310,12 +346,25 @@ const SeatLayout = () => {
         <div className="flex flex-wrap items-center justify-center gap-2">
           {Array.from({ length: count }, (_, i) => {
             const seatId = `${row}${i + 1}`;
+            const normalizedSeatId = seatId.toUpperCase();
+            const isOccupied = occupiedSeats.includes(normalizedSeatId);
+            const isSelected = selectedSeats.includes(normalizedSeatId);
+
+            const buttonClass = `rounded border cursor-pointer ${sizeClass} 
+              ${isOccupied
+                ? 'bg-gray-500 text-gray-300 border-gray-400 cursor-not-allowed opacity-50'
+                : isSelected
+                  ? 'bg-primary text-white border-primary'
+                  : 'border-primary/60 hover:border-primary/80'
+              }`;
+
             return (
               <button
                 key={seatId}
-                onClick={() => handleSeatClick(seatId)}
-                className={`rounded border border-primary/60 cursor-pointer ${sizeClass} 
-                  ${selectedSeats.includes(seatId) && 'bg-primary text-white'}`}
+                onClick={() => !isOccupied && handleSeatClick(seatId)}
+                disabled={isOccupied}
+                className={buttonClass}
+                title={isOccupied ? 'Ghế đã được đặt' : 'Chọn ghế'}
               >
                 {seatId}
               </button>
@@ -416,8 +465,7 @@ const SeatLayout = () => {
               toast.error('Vui lòng chọn giờ chiếu');
               return;
             }
-            
-            // Navigate to booking page with booking info
+
             navigate('/booking', {
               state: {
                 bookingInfo: {
