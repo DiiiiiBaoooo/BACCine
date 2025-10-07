@@ -105,6 +105,7 @@ export const handleSepayWebhook = async (req, res) => {
           'UPDATE orders SET status = "confirmed", updated_at = NOW() WHERE order_id = ?',
           [order_id]
         );
+     
         await connection.query(
           'UPDATE show_seats SET status = "booked", reservation_id = NULL, updated_at = NOW() WHERE reservation_id = ?',
           [order_id]

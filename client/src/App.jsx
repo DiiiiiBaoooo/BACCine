@@ -43,6 +43,9 @@ import QRPayment from './pages/Payment/QRPayment';
 import MyTicket from './pages/MyTicket';
 import TicketDetails from './pages/TicketDetails';
 import PrintTicket from './pages/PrintTicket';
+import EmployeeLayout from './pages/Employee/EmployeeLayout';
+import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
+import DatVe from './pages/Employee/DatVe';
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isLoading, authUser } = useAuthUser();
@@ -116,6 +119,7 @@ const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
   const Inve = useLocation().pathname.startsWith('/inve');
+  const IsEmployee = useLocation().pathname.startsWith('/employee');
 
   const isManagerRoute = useLocation().pathname.startsWith('/manager');
   const isProjectionist = useLocation().pathname.startsWith('/projectionist');
@@ -139,6 +143,9 @@ const App = () => {
           navigate("/admin", { replace: true });
         } else if (authUser.role === "manager") {
           navigate("/manager", { replace: true });
+        }
+        else if(authUser.role==='employee'){
+          navigate("/employee", { replace: true });
         } else {
           navigate("/", { replace: true }); // role = user
         }
@@ -160,7 +167,7 @@ const App = () => {
         pauseOnHover
         theme="dark"
       />
-{!Inve  &&!isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
+{!Inve && !IsEmployee &&!isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
 
       <Routes >
         <Route path="/" element={<Home />} />
@@ -180,6 +187,18 @@ const App = () => {
           <Route path="qlrap" element={<QuanLyRapPhim />} />
           <Route path="qlkm" element={<QuanLyKhuyenMai />} />
           <Route path="qlttv" element={<QuanLyTheTV />} />
+        </Route>
+        <Route
+          path="/employee/*"
+          element={
+            <ProtectedRoute requiredRole="employee" requiredPosition="staff">
+              <EmployeeLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path='datve' element={<DatVe cinemaId={cinema_Id} /> } />
+          <Route  index element={<EmployeeDashboard />} />
+      
         </Route>
 
         {/* Manager Routes */}

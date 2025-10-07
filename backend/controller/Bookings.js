@@ -23,7 +23,7 @@ export const createBooking = async (req, res) => {
     } = req.body;
 
     // 1. Kiểm tra dữ liệu đầu vào
-    if (!user_id || !showtime_id || !tickets || !Array.isArray(tickets) || tickets.length === 0 || !payment_method) {
+    if ( !showtime_id || !tickets || !Array.isArray(tickets) || tickets.length === 0 || !payment_method) {
       return res.status(400).json({ success: false, message: "Thiếu thông tin bắt buộc" });
     }
 
@@ -44,11 +44,11 @@ export const createBooking = async (req, res) => {
       }
     }
 
-    // 2. Kiểm tra user và showtime
-    const [userRows] = await connection.query("SELECT id FROM users WHERE id = ?", [user_id]);
-    if (userRows.length === 0) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
-    }
+    // // 2. Kiểm tra user và showtime
+    // const [userRows] = await connection.query("SELECT id FROM users WHERE id = ?", [user_id]);
+    // if (userRows.length === 0) {
+    //   return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+    // }
 
     const [showtimeRows] = await connection.query("SELECT id FROM showtimes WHERE id = ?", [showtime_id]);
     if (showtimeRows.length === 0) {
@@ -147,7 +147,7 @@ export const createBooking = async (req, res) => {
         user_id, showtime_id, order_date, status, payment_method, total_amount
       ) VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        user_id,
+        user_id || null,
         showtime_id,
         new Date(),
         'pending',
@@ -196,6 +196,7 @@ export const createBooking = async (req, res) => {
         [promotion_id]
       );
     }
+  
 
     // 14. Commit transaction
     await connection.commit();

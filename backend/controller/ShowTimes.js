@@ -352,3 +352,87 @@ export const getOccupieSeat = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const getShowTimeByCine = async (req, res) => {
+  try {
+    const { cinema_Id, date } = req.params;
+
+    if (!cinema_Id || !date) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu cinema_Id hoặc date",
+      });
+    }
+
+    // Query movies
+    const [movieRows] = await dbPool.query(
+      `
+      SELECT DISTINCT
+        m.id AS movie_id,
+        m.title,
+        m.poster_path,
+        m.runtime
+      FROM showtimes s
+      JOIN movies m ON s.movie_id = m.id
+      JOIN rooms r ON s.room_id = r.id
+      WHERE r.cinema_clusters_id = ?
+        AND DATE(s.start_time) = ?
+        AND s.status IN ('Ongoing', 'Scheduled')
+      ORDER BY m.title ASC;
+      `,
+      [cinema_Id, date]
+    );
+
+    if (movieRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Không có suất chiếu nào cho ngày này tại rạp",
+      });
+    }
+
+    // Fetch showtimes for each movie
+    const movies = [];
+    for (const movie of movieRows) {
+      const [showtimeRows] = await dbPool.query(
+        `
+        SELECT 
+          s.id AS showtime_id,
+          r.name AS room_name,
+          s.start_time,
+          s.end_time,
+          s.status
+        FROM showtimes s
+        JOIN rooms r ON s.room_id = r.id
+        WHERE s.movie_id = ?
+          AND r.cinema_clusters_id = ?
+          AND DATE(s.start_time) = ?
+          AND s.status IN ('Ongoing', 'Scheduled');
+        `,
+        [movie.movie_id, cinema_Id, date]
+      );
+
+      movies.push({
+        movie_id: movie.movie_id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        runtime: movie.runtime,
+        showtimes: showtimeRows,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      cinema_id: cinema_Id,
+      date,
+      movies,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi getShowTimeByCine:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
