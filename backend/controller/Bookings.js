@@ -19,12 +19,19 @@ export const createBooking = async (req, res) => {
       tickets,
       services,
       payment_method,
-      promotion_id
+      promotion_id,
+      phone,
+      status
     } = req.body;
 
     // 1. Kiểm tra dữ liệu đầu vào
-    if ( !showtime_id || !tickets || !Array.isArray(tickets) || tickets.length === 0 || !payment_method) {
+    if (!showtime_id || !tickets || !Array.isArray(tickets) || tickets.length === 0 || !payment_method) {
       return res.status(400).json({ success: false, message: "Thiếu thông tin bắt buộc" });
+    }
+
+    // Kiểm tra status
+    if (!status || !['pending', 'confirmed'].includes(status)) {
+      return res.status(400).json({ success: false, message: "Trạng thái đơn hàng không hợp lệ, phải là 'pending' hoặc 'confirmed'" });
     }
 
     // Kiểm tra định dạng tickets
@@ -43,12 +50,6 @@ export const createBooking = async (req, res) => {
         return res.status(400).json({ success: false, message: "Dữ liệu service không hợp lệ" });
       }
     }
-
-    // // 2. Kiểm tra user và showtime
-    // const [userRows] = await connection.query("SELECT id FROM users WHERE id = ?", [user_id]);
-    // if (userRows.length === 0) {
-    //   return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
-    // }
 
     const [showtimeRows] = await connection.query("SELECT id FROM showtimes WHERE id = ?", [showtime_id]);
     if (showtimeRows.length === 0) {
@@ -150,7 +151,7 @@ export const createBooking = async (req, res) => {
         user_id || null,
         showtime_id,
         new Date(),
-        'pending',
+        status, // Use status from request body
         payment_method,
         grand_total
       ]
@@ -196,7 +197,6 @@ export const createBooking = async (req, res) => {
         [promotion_id]
       );
     }
-  
 
     // 14. Commit transaction
     await connection.commit();
@@ -216,7 +216,8 @@ export const createBooking = async (req, res) => {
           ticket_total,
           service_total,
           discount_amount,
-          grand_total
+          grand_total,
+          status
         }
       },
       {
@@ -242,7 +243,8 @@ export const createBooking = async (req, res) => {
         ticket_total,
         service_total,
         discount_amount,
-        grand_total
+        grand_total,
+        status
       }
     });
   } catch (error) {

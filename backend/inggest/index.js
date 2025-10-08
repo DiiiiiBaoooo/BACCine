@@ -26,7 +26,7 @@ export const releaseSeatsAndDeleteOrder = inngest.createFunction(
     const { order_id } = event.data;
 
     // Chờ 15 phút
-    const fifteenMinutes = new Date(Date.now() + 15 * 60 * 1000);
+    const fifteenMinutes = new Date(Date.now() + 1 * 60 * 1000);
     await step.sleepUntil('wait-to-15-minute', fifteenMinutes);
 
     // Kết nối database

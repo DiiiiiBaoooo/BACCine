@@ -46,6 +46,9 @@ import PrintTicket from './pages/PrintTicket';
 import EmployeeLayout from './pages/Employee/EmployeeLayout';
 import EmployeeDashboard from './pages/Employee/EmployeeDashboard';
 import DatVe from './pages/Employee/DatVe';
+import ChonGhe from './pages/Employee/ChonGhe';
+import ChonDichVu from './pages/Employee/ChonDichVu';
+import ThanhToan from './pages/Employee/ThanhToan';
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isLoading, authUser } = useAuthUser();
@@ -120,7 +123,6 @@ const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
   const Inve = useLocation().pathname.startsWith('/inve');
   const IsEmployee = useLocation().pathname.startsWith('/employee');
-
   const isManagerRoute = useLocation().pathname.startsWith('/manager');
   const isProjectionist = useLocation().pathname.startsWith('/projectionist');
   const location = useLocation();
@@ -197,6 +199,10 @@ const App = () => {
           }
         >
           <Route path='datve' element={<DatVe cinemaId={cinema_Id} /> } />
+          <Route path="chon-ghe" element={<ChonGhe />} />
+  <Route path="chon-dich-vu" element={<ChonDichVu />} />
+  <Route path="thanh-toan" element={<ThanhToan />} />
+
           <Route  index element={<EmployeeDashboard />} />
       
         </Route>

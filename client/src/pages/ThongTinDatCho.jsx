@@ -196,6 +196,8 @@ const ThongTinDatCho = ({ cinemaId }) => {
         cinema_id: bookingInfo.cinemaId,
         user_id: formData.user_id,
         showtime_id: bookingInfo.selectedTime.id,
+        payment_method:'qr code',
+        status:'pending',
         tickets: bookingInfo.selectedSeats.map(seat => ({
           seat_id: seat,
           ticket_price: bookingInfo.total / bookingInfo.selectedSeats.length // Giả định giá vé trung bình
@@ -208,6 +210,7 @@ const ThongTinDatCho = ({ cinemaId }) => {
         ticket_total: bookingInfo.total,
         service_total: calculateServiceTotal(),
         discount_amount: discountAmount,
+      
         grand_total: calculateGrandTotal(),
         movieName: bookingInfo.movieName,
         cinemaName: bookingInfo.cinemaName,
@@ -215,6 +218,8 @@ const ThongTinDatCho = ({ cinemaId }) => {
         selectedTime: bookingInfo.selectedTime,
         date: bookingInfo.date
       };
+      console.log(bookingData);
+      
 
       // Chuyển hướng sang trang PaymentSelection
       navigate('/payment', {

@@ -46,6 +46,7 @@ const PaymentSelection = () => {
         cinema_id: bookingData.cinema_id,
         user_id: bookingData.user_id,
         showtime_id: bookingData.showtime_id,
+          status:'pending',
         tickets: bookingData.tickets,
         services: bookingData.services,
         payment_method: paymentMethods.find((pm) => pm.id === selectedPaymentMethod).name.toLowerCase(),

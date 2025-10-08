@@ -2,6 +2,7 @@ import React from 'react'
 import{Bell,User} from 'lucide-react'
 import { assets } from '../assets/assets'
 const AdminNavbar = () => {
+
   return (
     <header className="w-full bg-gray-900 text-white  shadow-md px-6 py-3 flex items-center justify-between">
     {/* Logo bên trái */}
