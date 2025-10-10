@@ -13,11 +13,13 @@ export const CinemaProvider = ({ children }) => {
       try {
         const response = await axios.get('/api/cinemas');
         if (response.data.success) {
-          setCinemas(response.data.cinemas);
-          // Set a default cinema if none is selected
-          if (response.data.cinemas.length > 0 && !selectedCinema) {
-            setSelectedCinema(response.data.cinemas[0]);
-            console.log('Set default cinema:', response.data.cinemas[0]);
+          const list = response.data.cinemas;
+          setCinemas(list);
+  
+          // Nếu chưa chọn rạp thì set mặc định là cái đầu tiên
+          if (list.length > 0 && !selectedCinema) {
+            setSelectedCinema(list[0].id); // ✅ chỉ lưu id
+            console.log('Set default cinema:', list[0].id);
           }
         } else {
           console.error('Failed to fetch cinemas:', response.data.message);
@@ -28,6 +30,7 @@ export const CinemaProvider = ({ children }) => {
     };
     fetchCinemas();
   }, []);
+  
 
   return (
     <CinemaContext.Provider value={{ selectedCinema, setSelectedCinema, cinemas }}>

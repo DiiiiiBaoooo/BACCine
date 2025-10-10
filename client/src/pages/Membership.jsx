@@ -126,7 +126,7 @@ const Membership = () => {
             <div className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg p-4">
               <div>
                 <div className="text-sm text-gray-400">Hạng thẻ</div>
-                <div className="text-white font-semibold text-lg">{membership.tier_name || membership.tier || membership.name || 'Thành viên'}</div>
+                <div className="text-white font-semibold text-lg">{  membership.name }</div>
               </div>
               <div className="text-right">
                 <div className="text-sm text-gray-400">Điểm</div>

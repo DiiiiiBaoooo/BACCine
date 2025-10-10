@@ -79,7 +79,7 @@ export const deleteTier = async (req, res) => {
     try {
       const { user_id } = req.params;
       const [rows] = await dbPool.query(
-        "SELECT * FROM membership_cards WHERE user_id = ?",
+        "SELECT * FROM membership_cards mc join membership_tiers mt  on mt.id=mc.tier_id WHERE user_id = ?",
         [user_id]
       );
   

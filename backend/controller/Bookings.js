@@ -7,7 +7,7 @@ export const createBooking = async (req, res) => {
     if (!process.env.INNGEST_EVENT_KEY || !process.env.INNGEST_SIGNING_KEY) {
       console.error('Missing Inngest keys:', {
         eventKey: process.env.INNGEST_EVENT_KEY,
-        signingKey: process.env.INNGEST_SIGNING_KEY
+        signingKey: process.env.INNGEST_SIGNING_KEY,
       });
       return res.status(500).json({ success: false, message: 'Cấu hình Inngest không đầy đủ' });
     }
@@ -21,12 +21,12 @@ export const createBooking = async (req, res) => {
       payment_method,
       promotion_id,
       phone,
-      status
+      status,
     } = req.body;
 
     // 1. Kiểm tra dữ liệu đầu vào
     if (!showtime_id || !tickets || !Array.isArray(tickets) || tickets.length === 0 || !payment_method) {
-      return res.status(400).json({ success: false, message: "Thiếu thông tin bắt buộc" });
+      return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc' });
     }
 
     // Kiểm tra status
@@ -37,27 +37,27 @@ export const createBooking = async (req, res) => {
     // Kiểm tra định dạng tickets
     for (const ticket of tickets) {
       if (!ticket.seat_id || !ticket.ticket_price || typeof ticket.ticket_price !== 'number') {
-        return res.status(400).json({ success: false, message: "Dữ liệu ticket không hợp lệ" });
+        return res.status(400).json({ success: false, message: 'Dữ liệu ticket không hợp lệ' });
       }
     }
 
     // Kiểm tra định dạng services
     if (services && !Array.isArray(services)) {
-      return res.status(400).json({ success: false, message: "Dữ liệu services phải là một mảng" });
+      return res.status(400).json({ success: false, message: 'Dữ liệu services phải là một mảng' });
     }
     for (const service of services || []) {
       if (!service.service_id || !service.quantity || typeof service.quantity !== 'number' || service.quantity <= 0 || !Number.isInteger(service.quantity)) {
-        return res.status(400).json({ success: false, message: "Dữ liệu service không hợp lệ" });
+        return res.status(400).json({ success: false, message: 'Dữ liệu service không hợp lệ' });
       }
     }
 
-    const [showtimeRows] = await connection.query("SELECT id FROM showtimes WHERE id = ?", [showtime_id]);
+    const [showtimeRows] = await connection.query('SELECT id FROM showtimes WHERE id = ?', [showtime_id]);
     if (showtimeRows.length === 0) {
-      return res.status(400).json({ success: false, message: "Suất chiếu không tồn tại" });
+      return res.status(400).json({ success: false, message: 'Suất chiếu không tồn tại' });
     }
 
     // 3. Kiểm tra trạng thái ghế
-    const seatNumbers = tickets.map(ticket => ticket.seat_id);
+    const seatNumbers = tickets.map((ticket) => ticket.seat_id);
     const [seatRows] = await connection.query(
       `SELECT seat_id, seat_number, status, reservation_id, tp.base_price as ticket_price
        FROM show_seats s 
@@ -68,7 +68,7 @@ export const createBooking = async (req, res) => {
     );
 
     if (seatRows.length !== seatNumbers.length) {
-      return res.status(400).json({ success: false, message: "Một hoặc nhiều ghế không tồn tại" });
+      return res.status(400).json({ success: false, message: 'Một hoặc nhiều ghế không tồn tại' });
     }
     for (const seat of seatRows) {
       if (seat.status !== 'available' || seat.reservation_id !== null) {
@@ -82,14 +82,11 @@ export const createBooking = async (req, res) => {
     // 5. Kiểm tra và tính tổng tiền dịch vụ
     let service_total = 0;
     if (services && services.length > 0) {
-      const serviceIds = services.map(s => s.service_id);
-      const [serviceRows] = await connection.query(
-        'SELECT id, price, quantity AS stock FROM services WHERE id IN (?)',
-        [serviceIds]
-      );
+      const serviceIds = services.map((s) => s.service_id);
+      const [serviceRows] = await connection.query('SELECT id, price, quantity AS stock FROM services WHERE id IN (?)', [serviceIds]);
 
       for (const service of services) {
-        const serviceData = serviceRows.find(s => s.id === service.service_id);
+        const serviceData = serviceRows.find((s) => s.id === service.service_id);
         if (!serviceData) {
           return res.status(404).json({ success: false, message: `Không tìm thấy dịch vụ ${service.service_id}` });
         }
@@ -108,12 +105,12 @@ export const createBooking = async (req, res) => {
         [promotion_id]
       );
       if (promotionRows.length === 0) {
-        return res.status(404).json({ success: false, message: "Không tìm thấy khuyến mãi" });
+        return res.status(404).json({ success: false, message: 'Không tìm thấy khuyến mãi' });
       }
       const promotion = promotionRows[0];
 
       if (promotion.usage_limit !== null && promotion.used_count >= promotion.usage_limit) {
-        return res.status(400).json({ success: false, message: "Khuyến mãi đã hết lượt sử dụng" });
+        return res.status(400).json({ success: false, message: 'Khuyến mãi đã hết lượt sử dụng' });
       }
 
       const subtotal = ticket_total + service_total;
@@ -147,21 +144,14 @@ export const createBooking = async (req, res) => {
       `INSERT INTO orders (
         user_id, showtime_id, order_date, status, payment_method, total_amount
       ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        user_id || null,
-        showtime_id,
-        new Date(),
-        status, // Use status from request body
-        payment_method,
-        grand_total
-      ]
+      [user_id || null, showtime_id, new Date(), status, payment_method, grand_total]
     );
     const bookingId = bookingResult.insertId;
 
     // 10. Lưu tickets
     for (const seatrow of seatRows) {
       await connection.query(
-        "INSERT INTO orderticket (order_id, showtime_id, seat_id, ticket_price) VALUES (?, ?, ?, ?)",
+        'INSERT INTO orderticket (order_id, showtime_id, seat_id, ticket_price) VALUES (?, ?, ?, ?)',
         [bookingId, showtime_id, seatrow.seat_id, seatrow.ticket_price]
       );
     }
@@ -172,13 +162,13 @@ export const createBooking = async (req, res) => {
         const [serviceData] = await connection.query('SELECT price FROM services WHERE id = ?', [service.service_id]);
         const price = serviceData[0].price;
         await connection.query(
-          "INSERT INTO orderservice (order_id, service_id, quantity, service_price) VALUES (?, ?, ?, ?)",
+          'INSERT INTO orderservice (order_id, service_id, quantity, service_price) VALUES (?, ?, ?, ?)',
           [bookingId, service.service_id, service.quantity, price]
         );
-        await connection.query(
-          "UPDATE services SET quantity = quantity - ? WHERE id = ?",
-          [service.quantity, service.service_id]
-        );
+        await connection.query('UPDATE services SET quantity = quantity - ? WHERE id = ?', [
+          service.quantity,
+          service.service_id,
+        ]);
       }
     }
 
@@ -192,16 +182,44 @@ export const createBooking = async (req, res) => {
 
     // 13. Cập nhật promotion
     if (promotion_id) {
-      await connection.query(
-        "UPDATE promotions SET used_count = used_count + 1 WHERE id = ?",
-        [promotion_id]
-      );
+      await connection.query('UPDATE promotions SET used_count = used_count + 1 WHERE id = ?', [promotion_id]);
     }
 
-    // 14. Commit transaction
+    // 14. Kiểm tra membership và cộng điểm
+    let membershipUpdated = false;
+    let pointsAdded = 0;
+    if (user_id || phone) {
+      let membershipQuery = 'SELECT id, points FROM membership_cards WHERE user_id = ?';
+      let queryParams = [user_id];
+
+      // If user_id is not provided but phone is, look up user_id via users table
+      if (!user_id && phone) {
+        const [userRows] = await connection.query('SELECT id FROM users WHERE phone = ?', [phone]);
+        if (userRows.length > 0) {
+          queryParams = [userRows[0].id];
+        } else {
+          queryParams = [null]; // No user found, skip membership check
+        }
+      }
+
+      if (queryParams[0]) {
+        const [membershipRows] = await connection.query(membershipQuery, queryParams);
+        if (membershipRows.length > 0) {
+          // Calculate points to add (example: 1 point per $10 of grand_total)
+          pointsAdded = Math.floor(grand_total / 10); // Adjust this logic as needed
+          await connection.query(
+            'UPDATE membership_cards SET points = points + ?, updated_at = NOW() WHERE id = ?',
+            [pointsAdded, membershipRows[0].id]
+          );
+          membershipUpdated = true;
+        }
+      }
+    }
+
+    // 15. Commit transaction
     await connection.commit();
 
-    // 15. Gửi sự kiện Inngest
+    // 16. Gửi sự kiện Inngest
     await inngest.send([
       {
         name: 'booking/created',
@@ -217,21 +235,22 @@ export const createBooking = async (req, res) => {
           service_total,
           discount_amount,
           grand_total,
-          status
-        }
+          status,
+          points_added: pointsAdded, // Include points added in the event
+        },
       },
       {
         name: 'app/checkpayment',
         data: {
-          order_id: bookingId
-        }
-      }
+          order_id: bookingId,
+        },
+      },
     ]);
 
-    // 16. Trả về phản hồi
+    // 17. Trả về phản hồi
     return res.status(201).json({
       success: true,
-      message: "Đặt vé thành công",
+      message: 'Đặt vé thành công',
       data: {
         order_id: bookingId,
         user_id,
@@ -244,8 +263,9 @@ export const createBooking = async (req, res) => {
         service_total,
         discount_amount,
         grand_total,
-        status
-      }
+        status,
+        points_added: pointsAdded, // Include points added in the response
+      },
     });
   } catch (error) {
     await connection.rollback();

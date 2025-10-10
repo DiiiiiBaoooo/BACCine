@@ -49,6 +49,8 @@ import DatVe from './pages/Employee/DatVe';
 import ChonGhe from './pages/Employee/ChonGhe';
 import ChonDichVu from './pages/Employee/ChonDichVu';
 import ThanhToan from './pages/Employee/ThanhToan';
+import InVe from './pages/Employee/InVe';
+import QuanLyLichLamViec from './pages/manager/QuanLyLichLamViec';
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isLoading, authUser } = useAuthUser();
@@ -202,6 +204,7 @@ const App = () => {
           <Route path="chon-ghe" element={<ChonGhe />} />
   <Route path="chon-dich-vu" element={<ChonDichVu />} />
   <Route path="thanh-toan" element={<ThanhToan />} />
+  <Route path="inve" element={<InVe />} />
 
           <Route  index element={<EmployeeDashboard />} />
       
@@ -224,6 +227,8 @@ const App = () => {
           <Route path="qlbv/new" element={<CreatePost cinemaId={cinema_Id} />} />
           <Route path='qlnv' element={<EmployeeManagement cinemaId={cinema_Id} />} />
           <Route path='qldv' element={<QuanLyDichVu cinemaId={cinema_Id} />} />
+          <Route path='qlllv' element={<QuanLyLichLamViec cinemaClusterId={cinema_Id} />} />
+
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
@@ -243,7 +248,7 @@ const App = () => {
         <Route path="/posts/edit/:id" element={<EditBlog cinemaId={cinema_Id} />} />
 <Route path='/tickets' element={<MyTicket />} />
 <Route path="/ticket-details/:orderId" element={<TicketDetails />} />
-<Route path="/inve/:order_id/:user_id" element={<PrintTicket />} />
+<Route path="/inve/:order_id" element={<PrintTicket />} />
 
         <Route
   path="/projectionist/*"

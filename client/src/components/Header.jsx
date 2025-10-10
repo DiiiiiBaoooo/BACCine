@@ -22,13 +22,20 @@ const Header = () => {
     const fetchCinemas = async () => {
       try {
         const res = await axios.get('/api/cinemas');
-        setCinemas(res.data.cinemas || []);
+        const cinemasData = res.data.cinemas || [];
+        setCinemas(cinemasData);
+  
+        // ✅ Đặt giá trị mặc định là rạp đầu tiên nếu chưa có selectedCinema
+        if (cinemasData.length > 0 && !selectedCinema) {
+          setSelectedCinema(cinemasData[0]);
+        }
       } catch (err) {
         console.error('Lỗi khi tải danh sách rạp:', err);
       }
     };
     fetchCinemas();
-  }, []);
+  }, [selectedCinema, setSelectedCinema]);
+  
 
   // Handle avatar dropdown
   useEffect(() => {
@@ -155,7 +162,7 @@ const Header = () => {
           onChange={(e) => setSelectedCinema(e.target.value)}
           className="px-3 py-1.5 border rounded-full bg-white text-gray-800 font-medium shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 max-md:bg-gray-800 max-md:text-white max-md:border-gray-600"
         >
-          <option value="">Chọn rạp</option>
+   
           {cinemas.map((cinema) => (
             <option key={cinema.id} value={cinema.id}>
               {cinema.cinema_name}

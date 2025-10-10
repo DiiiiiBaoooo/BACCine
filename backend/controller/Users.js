@@ -16,6 +16,8 @@ export const getMyTickets = async (req, res) => {
   }
 
   const userId = req.user.id;
+  console.log(userId);
+  
 
   try {
     const [rows] = await dbPool.query(
@@ -77,7 +79,9 @@ export const getMyTickets = async (req, res) => {
           seats: [],
         };
       }
+       
       ticketsByOrder[ticket.order_id].seats.push({
+
         seat_number: ticket.seat_number,
         ticket_id: ticket.ticket_id,
         ticket_price: ticket.ticket_price,
@@ -87,7 +91,7 @@ export const getMyTickets = async (req, res) => {
     // Generate QR code for each order
     const ticketsWithQR = await Promise.all(
       Object.values(ticketsByOrder).map(async (order) => {
-        const validationUrl = `http://localhost:5173/inve/${order.order_id}/${userId}`;
+        const validationUrl = `http://localhost:5173/inve/${order.order_id}`;
         const qrBase64 = await QRCode.toDataURL(validationUrl, {
           errorCorrectionLevel: 'H', // High error correction
           type: 'image/png',
@@ -120,3 +124,11 @@ export const getMyTickets = async (req, res) => {
   }
 };
 
+
+export const Inve = async (req,res) => {
+  try {
+    
+  } catch (error) {
+    
+  }
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -27,19 +27,42 @@ const TicketDetails = () => {
   console.log('ticketData:', ticketData);
 
   if (isAuthLoading || isTicketsLoading) {
-    return <div className="text-center py-8 text-white">Đang tải...</div>;
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center py-8">Đang tải...</div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-red-500">
-        Lỗi: {error.message || 'Không thể tải chi tiết vé'}
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center py-8 text-red-500">
+          Lỗi: {error.message || 'Không thể tải chi tiết vé'}
+        </div>
       </div>
     );
   }
 
   if (!ticketData?.success || ticketData?.count === 0) {
-    return <div className="text-center py-8 text-white">Không tìm thấy vé.</div>;
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-6xl font-bold text-red-500 mb-4">404</h1>
+          <h2 className="text-2xl font-semibold mb-4">Không tìm thấy vé</h2>
+          <p className="text-gray-400 mb-8">Vé bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+          <Link
+            to="/tickets"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Quay lại trang chủ
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // Find order with type-safe comparison
@@ -47,8 +70,21 @@ const TicketDetails = () => {
 
   if (!order) {
     return (
-      <div className="text-center py-8 text-white">
-        Vé không tồn tại. Kiểm tra orderId: {orderId}, tickets: {JSON.stringify(ticketData.tickets.map(t => t.order_id))}
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-6xl font-bold text-red-500 mb-4">404</h1>
+          <h2 className="text-2xl font-semibold mb-4">Không tìm thấy vé</h2>
+          <p className="text-gray-400 mb-8">Vé bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+          <Link
+            to="/tickets"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Quay lại trang chủ
+          </Link>
+        </div>
       </div>
     );
   }
@@ -56,94 +92,207 @@ const TicketDetails = () => {
   // QR code is already in the response
   const qrData = order.qrCode;
 
+  // Format functions similar to Next.js
+  const formatDateTime = (dateString, formatType) => {
+    const date = parseISO(dateString);
+    if (formatType === "time") {
+      return format(date, "HH:mm", { locale: vi });
+    }
+    if (formatType === "date") {
+      return format(date, "dd/MM/yyyy HH:mm", { locale: vi });
+    }
+    return format(date, "dd/MM/yyyy HH:mm", { locale: vi });
+  };
+
   return (
-    <div className="container mx-auto p-6 bg-black min-h-screen text-white">
-      <h1 className="text-3xl font-bold mb-6 text-red-500">Chi tiết vé</h1>
-      <div className="bg-gray-900 p-6 rounded-lg border border-red-500 shadow-lg">
-        {/* Movie Section */}
-        <div className="border-b border-red-500 pb-4 mb-4">
-          <h2 className="text-2xl font-semibold">{order.movie_title}</h2>
-          <img
-            src={
-              order.poster_path.startsWith('http')
-                ? order.poster_path
-                : `https://image.tmdb.org/t/p/w200${order.poster_path}`
-            }
-            alt={order.movie_title}
-            className="w-48 h-72 object-cover rounded-md mt-4 shadow-lg shadow-red-700/40"
-            onError={(e) => (e.target.src = '/placeholder.png')}
-          />
-        </div>
-
-        {/* Cinema and Showtime Section */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="border border-gray-700 p-2 rounded">
-            <p className="text-gray-400">Rạp</p>
-            <p className="text-white">{order.RapChieu}</p>
-          </div>
-          <div className="border border-gray-700 p-2 rounded">
-            <p className="text-gray-400">Phòng</p>
-            <p className="text-white">{order.PhongChieu}</p>
-          </div>
-          <div className="border border-gray-700 p-2 rounded">
-            <p className="text-gray-400">Suất chiếu</p>
-            <p className="text-white">
-              {format(parseISO(order.GioBatDau), 'HH:mm dd/MM/yyyy', { locale: vi })} -{' '}
-              {format(parseISO(order.GioKetThuc), 'HH:mm', { locale: vi })}
-            </p>
+    <div className="min-h-screen bg-black text-white py-8 px-4">
+      <div className="container mx-auto max-w-6xl">
+        <div className="mb-8 flex items-center gap-4">
+          <Link
+            to="/tickets"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-900 hover:bg-red-500 border border-gray-700 hover:border-red-500 transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Vé của bạn</h1>
+            <p className="text-gray-400 text-sm mt-1">Mã đơn hàng: {order.order_id}</p>
           </div>
         </div>
 
-        {/* Seats Section */}
-        <div className="border border-gray-700 p-2 rounded mb-4">
-          <p className="text-gray-400">Ghế</p>
-          <div className="text-white">
-            {order.seats.map((seat, index) => (
-              <span key={seat.ticket_id}>
-                {seat.seat_number} (ID: {seat.ticket_id}, {seat.ticket_price.toLocaleString('vi-VN')} VND)
-                {index < order.seats.length - 1 ? ', ' : ''}
-              </span>
-            ))}
-          </div>
-        </div>
+        <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden shadow-2xl shadow-red-500/20 border border-red-500/30">
+          <div className="grid md:grid-cols-[1fr_auto_400px] gap-0">
+            {/* Left Section - Main Ticket Info */}
+            <div className="p-8 space-y-6">
+              {/* Movie Title and Poster */}
+              <div className="flex gap-6">
+                <div className="relative w-32 h-48 rounded-lg overflow-hidden shadow-lg shadow-red-700/40 flex-shrink-0">
+                  <img
+                    src={
+                      order.poster_path.startsWith('http')
+                        ? order.poster_path
+                        : `https://image.tmdb.org/t/p/w200${order.poster_path}`
+                    }
+                    alt={order.movie_title}
+                    className="object-cover w-full h-full"
+                    onError={(e) => (e.target.src = '/placeholder.svg')}
+                  />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-3xl font-bold text-white mb-2">{order.movie_title}</h2>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        order.order_status === "confirmed"
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                      }`}
+                    >
+                      {order.order_status === "confirmed" ? "Đã thanh toán" : "Chờ thanh toán"}
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <svg
+                        className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-gray-400">Rạp chiếu</p>
+                        <p className="text-white font-medium">{order.RapChieu}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-        {/* Payment Section */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="border border-gray-700 p-2 rounded">
-            <p className="text-gray-400">Tổng tiền</p>
-            <p className="text-red-400 font-semibold">{order.total_amount.toLocaleString('vi-VN')} VND</p>
-          </div>
-          <div className="border border-gray-700 p-2 rounded">
-            <p className="text-gray-400">Trạng thái</p>
-            <p
-              className={`font-semibold ${
-                order.order_status === 'confirmed' ? 'text-green-400' : 'text-yellow-400'
-              }`}
-            >
-              {order.order_status === 'confirmed' ? 'Đã thanh toán' : 'Chờ thanh toán'}
-            </p>
-          </div>
-        </div>
+              {/* Showtime Details */}
+              <div className="bg-black/50 rounded-lg p-4 border border-gray-800">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-400 text-xs mb-1">Ngày chiếu</p>
+                    <p className="text-white font-semibold">
+                      {format(parseISO(order.GioBatDau), 'dd/MM/yyyy', { locale: vi })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-xs mb-1">Giờ chiếu</p>
+                    <p className="text-white font-semibold">
+                      {formatDateTime(order.GioBatDau, "time")} - {formatDateTime(order.GioKetThuc, "time")}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-xs mb-1">Phòng</p>
+                    <p className="text-white font-semibold">{order.PhongChieu}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-xs mb-1">Số ghế</p>
+                    <p className="text-white font-semibold">{order.seats.length} ghế</p>
+                  </div>
+                </div>
+              </div>
 
-        {/* Order Date Section */}
-        <div className="border border-gray-700 p-2 rounded">
-          <p className="text-gray-400">Ngày đặt</p>
-          <p className="text-white">
-            {format(parseISO(order.order_date), 'dd/MM/yyyy HH:mm', { locale: vi })}
-          </p>
-        </div>
+              {/* Seats */}
+              <div>
+                <p className="text-gray-400 text-sm mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                  </svg>
+                  Ghế đã chọn
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {order.seats.map((seat) => (
+                    <div
+                      key={seat.ticket_id}
+                      className="bg-red-500/10 border border-red-500/50 rounded-lg px-4 py-2 hover:bg-red-500/20 transition-colors"
+                    >
+                      <span className="text-red-400 font-bold text-lg">{seat.seat_number}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-        {/* QR Code Section */}
-        <div className="border border-gray-700 p-4 rounded mt-6">
-          <p className="text-gray-400 mb-4">QR Code (Scan để check-in)</p>
-          {qrData ? (
-            <div className="flex justify-center">
-              <img src={qrData} alt="QR Code" className="w-64 h-64 object-contain" />
+              {/* Price Breakdown */}
+              <div className="bg-black/50 rounded-lg p-4 border border-gray-800 space-y-2">
+                {order.seats.map((seat) => (
+                  <div key={seat.ticket_id} className="flex justify-between text-sm">
+                    <span className="text-gray-400">Ghế {seat.seat_number}</span>
+                    <span className="text-white">{seat.ticket_price.toLocaleString("vi-VN")} VND</span>
+                  </div>
+                ))}
+                <div className="border-t border-gray-700 pt-2 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white font-semibold">Tổng cộng</span>
+                    <span className="text-red-400 font-bold text-xl">
+                      {order.total_amount.toLocaleString("vi-VN")} VND
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Date */}
+              <div className="text-xs text-gray-500">Đặt vé lúc: {formatDateTime(order.order_date, "date")}</div>
             </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500">Không thể tạo QR</div>
-          )}
-          <p className="text-sm text-gray-500 mt-2 text-center">Scan tại cửa rạp để check-in</p>
+
+            <div className="relative w-px bg-gradient-to-b from-transparent via-gray-700 to-transparent hidden md:block">
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col justify-around py-4">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <div key={i} className="w-2 h-2 rounded-full bg-black border border-gray-700"></div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-red-950/30 to-black p-8 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-red-500/30">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-white mb-2">Check-in</h3>
+                <p className="text-gray-400 text-sm">Quét mã để vào rạp</p>
+              </div>
+
+              {qrData ? (
+                <div className="relative w-64 h-64 bg-white rounded-xl p-4 shadow-2xl shadow-red-500/20">
+                  <img src={qrData} alt="QR Code" className="object-contain w-full h-full" />
+                </div>
+              ) : (
+                <div className="w-64 h-64 bg-gray-800 rounded-xl flex items-center justify-center">
+                  <p className="text-gray-500 text-sm">Không có QR</p>
+                </div>
+              )}
+
+              <div className="mt-6 text-center">
+                <p className="text-xs text-gray-500 mb-2">Mã đơn hàng</p>
+                <p className="text-white font-mono font-bold text-lg tracking-wider">{order.order_id}</p>
+              </div>
+
+              <div className="mt-6 w-full">
+                <div className="bg-black/50 rounded-lg p-3 border border-gray-800">
+                  <p className="text-xs text-gray-400 text-center leading-relaxed">
+                    Vui lòng xuất trình mã này tại quầy vé hoặc cổng check-in tự động
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center text-sm text-gray-500">
+          <p>Vui lòng đến rạp trước giờ chiếu 15 phút để làm thủ tục check-in</p>
         </div>
       </div>
     </div>

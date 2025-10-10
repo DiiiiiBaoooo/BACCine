@@ -41,7 +41,7 @@ const QRPayment = () => {
           if (status === 'confirmed') {
             setIsSuccess(true);
             toast.success('Thanh toán thành công!');
-            navigate('/confirmation', { state: { bookingData: res.data.data } });
+            navigate(`/ticket-details/${bookingData.order_id}`, { state: { order_id:bookingData.order_id } });
           } else if (status === 'cancelled') {
             setIsSuccess(false);
             toast.error('Thanh toán thất bại');
