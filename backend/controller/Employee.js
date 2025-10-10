@@ -77,6 +77,7 @@ export const createEmployee = async (req, res) => {
       [employeeId, cinema_cluster_id, start_date || null, end_date || null, position || "Staff"]
     );
 
+    
     res.status(201).json({
       success: true,
       message: "Thêm nhân viên thành công",
@@ -189,3 +190,4 @@ export const deleteEmployee = async (req, res) => {
     res.status(500).json({ message: "Error deleting employee", error: err.message });
   }
 };
+

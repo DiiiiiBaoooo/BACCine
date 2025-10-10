@@ -2,7 +2,7 @@ import React from 'react'
 import { assets } from '../assets/assets'
 
 import { NavLink } from 'react-router-dom'
-import { CalendarClock, Clapperboard, HouseWifi, LayoutDashboardIcon, User2Icon } from 'lucide-react'
+import { CalendarClock, Clapperboard, Clock12Icon, HouseWifi, LayoutDashboardIcon, User2Icon } from 'lucide-react'
 
 const EmployeeSidebar = () => {
   const user = {
@@ -16,6 +16,8 @@ const EmployeeSidebar = () => {
     { name: 'Đặt vé', path: '/employee/datve', icon: Clapperboard },
     { name: 'Đăng ký thẻ thành viên cho khách hàng', path: '/employee/dktv', icon: HouseWifi },
     { name: 'In vé', path: '/employee/inve', icon: CalendarClock },
+    { name: 'Xem lịch làm việc', path: '/employee/llv', icon: Clock12Icon },
+
    
 
   ]

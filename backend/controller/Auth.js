@@ -243,11 +243,12 @@ export const getAuthUser =  async (req, res) => {
 
     if (user.role === "employee") {
       const [rows] = await dbPool.execute(
-        `SELECT cinema_cluster_id,position FROM employee_cinema_cluster  WHERE employee_id = ?`,
+        `SELECT cinema_cluster_id,position,employee_id FROM employee_cinema_cluster  WHERE employee_id = ?`,
         [user.id]
       );
       user.cinemaId = rows[0].cinema_cluster_id;
       user.position=  rows[0].position;
+      user.employee_id=rows[0].employee_id;
 
     }
     res.status(200).json({ success: true, user });

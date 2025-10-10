@@ -113,8 +113,8 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
               onChange={(e) => setStatus(e.target.value)}
               className="ml-2 text-xs border rounded px-1 py-0.5"
             >
-              <option value="pending">Chờ duyệt</option>
-              <option value="confirmed">Đã duyệt</option>
+              <option value="pending">Chưa chấm công</option>
+              <option value="confirmed">Đã chấm công</option>
               <option value="cancelled">Đã hủy</option>
             </select>
           </div>
@@ -191,7 +191,6 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
                 {employee.startTime && employee.endTime
                   ? `${employee.startTime} - ${employee.endTime}`
                   : 'Chưa chấm công'}{' '}
-                ({employee.status === 'pending' ? 'Chờ duyệt' : employee.status === 'confirmed' ? 'Đã duyệt' : 'Đã hủy'})
               </div>
               <Button
                 variant="ghost"

@@ -36,6 +36,40 @@ export const getWorkScheduleInCine = async (req, res) => {
   }
 };
 
+export const getWorkScheduleofEmployee = async (req, res) => {
+  const { employeeId, cinemaClusterId } = req.params;
+  const { start, end } = req.query;
+
+  // Validate input
+  if (!employeeId || !cinemaClusterId || !start || !end) {
+    return res.status(400).json({ error: "employeeId, cinemaClusterId, start, and end are required" });
+  }
+
+  // Validate date format
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(start) || !dateRegex.test(end)) {
+    return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD" });
+  }
+
+  try {
+    const [rows] = await dbPool.query(
+      `
+      SELECT s.id, s.cinema_cluster_id, s.employee_cinema_cluster_id, ecc.employee_id, 
+             DATE_FORMAT(s.shift_date, '%Y-%m-%d') as shift_date, 
+             s.shift_type, s.status, s.start_time, s.end_time
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE ecc.employee_id = ? AND s.cinema_cluster_id = ? AND s.shift_date BETWEEN ? AND ?
+      `,
+      [employeeId, cinemaClusterId, start, end]
+    );
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching employee schedules:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 
 // Add or update work schedules for a cinema cluster
@@ -71,7 +105,7 @@ export const AddWorkScheduleInCine = async (req, res) => {
         return res.status(400).json({ error: "Invalid shift_type" });
       }
 
-      if (!["pending", "confirmed", "cancelled"].includes(status)) {
+      if (!["pending", "confirmed", "cancelled","completed"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
 
@@ -170,5 +204,201 @@ export const UpdateWorkScheduleInCine = async (req, res) => {
   } catch (error) {
     console.error("Error updating schedule:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+export const registerFaceDescriptor = async (req, res) => {
+  const { employee_id, descriptor, image_url } = req.body;
+
+  if (!employee_id || !descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+    return res.status(400).json({ error: "Invalid input: descriptor must be 128-dim array" });
+  }
+
+  try {
+    const [result] = await dbPool.query(
+      `INSERT INTO employee_face_descriptors (employee_id, descriptor, image_url) VALUES (?, ?, ?)`,
+      [employee_id, JSON.stringify(descriptor), image_url || null]
+    );
+
+    res.status(201).json({ id: result.insertId, message: "Face descriptor registered successfully" });
+  } catch (error) {
+    console.error("Error registering face:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Hàm helper so sánh Euclidean distance (từ face-api.js logic)
+const computeEuclideanDistance = (desc1, desc2) => {
+  return Math.sqrt(desc1.reduce((sum, val, i) => sum + Math.pow(val - desc2[i], 2), 0));
+};
+
+export const faceCheckin = async (req, res) => {
+  const { descriptor, cinema_cluster_id, schedule_id } = req.body; // Thêm schedule_id
+
+  if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+    return res.status(400).json({ error: "Invalid descriptor" });
+  }
+
+  const THRESHOLD = 0.6;
+
+  try {
+    // Lấy tất cả active descriptors
+    const [descriptors] = await dbPool.query(
+      `
+      SELECT efd.id, efd.employee_id, efd.descriptor
+      FROM employee_face_descriptors efd
+      JOIN employee_cinema_cluster ecc ON efd.employee_id = ecc.employee_id
+      WHERE ecc.cinema_cluster_id = ? AND efd.is_active = 1
+      `,
+      [cinema_cluster_id]
+    );
+
+    let matchedEmployee = null;
+    let minDistance = Infinity;
+
+    for (const descRow of descriptors) {
+      const storedDesc = JSON.parse(descRow.descriptor);
+      const distance = computeEuclideanDistance(descriptor, storedDesc);
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        matchedEmployee = descRow.employee_id;
+      }
+    }
+
+    if (minDistance > THRESHOLD) {
+      return res.status(404).json({ error: "No matching employee found" });
+    }
+
+    // Kiểm tra xem schedule_id có thuộc về employee này không
+    const [scheduleCheck] = await dbPool.query(
+      `
+      SELECT s.id, s.status, ecc.employee_id
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE s.id = ? AND s.cinema_cluster_id = ?
+      `,
+      [schedule_id, cinema_cluster_id]
+    );
+
+    if (scheduleCheck.length === 0) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+
+    if (scheduleCheck[0].employee_id !== matchedEmployee) {
+      return res.status(403).json({ error: "Schedule does not belong to matched employee" });
+    }
+
+    // Cập nhật attendance cho schedule cụ thể
+    const now = new Date().toTimeString().slice(0, 8);
+    await dbPool.query(
+      `UPDATE schedule SET start_time = ?, status = 'confirmed' WHERE id = ?`,
+      [now, schedule_id]
+    );
+
+    res.status(200).json({ 
+      employee_id: matchedEmployee, 
+      distance: minDistance, 
+      message: "Check-in successful" 
+    });
+  } catch (error) {
+    console.error("Error in face checkin:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const faceCheckout = async (req, res) => {
+  const { descriptor, cinema_cluster_id, schedule_id } = req.body; // Thêm schedule_id
+
+  if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+    return res.status(400).json({ error: "Invalid descriptor" });
+  }
+
+  const THRESHOLD = 0.6;
+
+  try {
+    // Lấy tất cả active descriptors
+    const [descriptors] = await dbPool.query(
+      `
+      SELECT efd.id, efd.employee_id, efd.descriptor
+      FROM employee_face_descriptors efd
+      JOIN employee_cinema_cluster ecc ON efd.employee_id = ecc.employee_id
+      WHERE ecc.cinema_cluster_id = ? AND efd.is_active = 1
+      `,
+      [cinema_cluster_id]
+    );
+
+    let matchedEmployee = null;
+    let minDistance = Infinity;
+
+    for (const descRow of descriptors) {
+      const storedDesc = JSON.parse(descRow.descriptor);
+      const distance = computeEuclideanDistance(descriptor, storedDesc);
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        matchedEmployee = descRow.employee_id;
+      }
+    }
+
+    if (minDistance > THRESHOLD) {
+      return res.status(404).json({ error: "No matching employee found" });
+    }
+
+    // Kiểm tra xem schedule_id có thuộc về employee này không
+    const [scheduleCheck] = await dbPool.query(
+      `
+      SELECT s.id, s.status, ecc.employee_id
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE s.id = ? AND s.cinema_cluster_id = ?
+      `,
+      [schedule_id, cinema_cluster_id]
+    );
+
+    if (scheduleCheck.length === 0) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+
+    if (scheduleCheck[0].employee_id !== matchedEmployee) {
+      return res.status(403).json({ error: "Schedule does not belong to matched employee" });
+    }
+
+    // Cập nhật attendance cho schedule cụ thể
+    const now = new Date().toTimeString().slice(0, 8);
+    await dbPool.query(
+      `UPDATE schedule SET end_time = ?, status ='completed' WHERE id = ?`,
+      [now, schedule_id]
+    );
+
+    res.status(200).json({ 
+      employee_id: matchedEmployee, 
+      distance: minDistance, 
+      message: "Check-in successful" 
+    });
+  } catch (error) {
+    console.error("Error in face checkin:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+// Kiểm tra xem nhân viên đã đăng ký face descriptor chưa
+export const checkFaceDescriptor = async (req, res) => {
+  const { employeeId } = req.params;
+
+  if (!employeeId) {
+    return res.status(400).json({ error: 'employeeId is required' });
+  }
+
+  try {
+    const [rows] = await dbPool.query(
+      `SELECT id FROM employee_face_descriptors WHERE employee_id = ? AND is_active = 1`,
+      [employeeId]
+    );
+
+    res.status(200).json({ hasFaceDescriptor: rows.length > 0 });
+  } catch (error) {
+    console.error('Error checking face descriptor:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

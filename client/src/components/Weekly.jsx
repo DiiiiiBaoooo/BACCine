@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import ShiftCell from './ShiftCell';
+import Shift from './Shift';
 
 const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
 const SHIFTS = [
@@ -9,7 +10,7 @@ const SHIFTS = [
   { key: 'evening', label: 'Tối' },
 ];
 
-const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaClusterId, showAllSchedules }) => {
+const Weekly = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaClusterId, showAllSchedules }) => {
   // Parse date string to get day without timezone issues
   const parseDateString = (dateStr) => {
     if (!dateStr) return new Date();
@@ -81,7 +82,7 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
                 <div className="text-sm font-medium text-gray-900">{shift.label}</div>
               </div>
               {DAYS.map((_, dayIndex) => (
-                <ShiftCell
+                <Shift
                   key={`${dayIndex}-${shift.key}`}
                   date={getDateString(dayIndex)}
                   shift={shift.key}
@@ -99,7 +100,7 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
   );
 };
 
-WeeklySchedule.propTypes = {
+Weekly.propTypes = {
   schedule: PropTypes.arrayOf(
     PropTypes.shape({
       date: PropTypes.string.isRequired,
@@ -112,7 +113,7 @@ WeeklySchedule.propTypes = {
           position: PropTypes.string.isRequired,
           startTime: PropTypes.string,
           endTime: PropTypes.string,
-          status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled','completed']).isRequired,
+          status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled']).isRequired,
           scheduleId: PropTypes.string,
         })
       ).isRequired,
@@ -125,4 +126,4 @@ WeeklySchedule.propTypes = {
   showAllSchedules: PropTypes.bool.isRequired,
 };
 
-export default WeeklySchedule;
+export default Weekly;

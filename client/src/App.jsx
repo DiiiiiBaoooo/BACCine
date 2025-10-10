@@ -49,8 +49,15 @@ import DatVe from './pages/Employee/DatVe';
 import ChonGhe from './pages/Employee/ChonGhe';
 import ChonDichVu from './pages/Employee/ChonDichVu';
 import ThanhToan from './pages/Employee/ThanhToan';
+import LichLamViec from './pages/Employee/LichLamViec';
+
 import InVe from './pages/Employee/InVe';
 import QuanLyLichLamViec from './pages/manager/QuanLyLichLamViec';
+import FaceRegister from './components/FaceRegister';
+import FaceCheckin from './pages/Employee/FaceCheckin';
+import FaceCheckOut from './pages/Employee/FaceCheckOut'
+
+
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isLoading, authUser } = useAuthUser();
@@ -205,6 +212,11 @@ const App = () => {
   <Route path="chon-dich-vu" element={<ChonDichVu />} />
   <Route path="thanh-toan" element={<ThanhToan />} />
   <Route path="inve" element={<InVe />} />
+  <Route path="llv" element={<LichLamViec cinemaClusterId={cinema_Id} />} />
+  <Route path="face-checkin/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckin cinemaClusterId={cinema_Id} />} />
+  <Route path="face-checkout/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckOut cinemaClusterId={cinema_Id} />} />
+
+
 
           <Route  index element={<EmployeeDashboard />} />
       
@@ -249,6 +261,7 @@ const App = () => {
 <Route path='/tickets' element={<MyTicket />} />
 <Route path="/ticket-details/:orderId" element={<TicketDetails />} />
 <Route path="/inve/:order_id" element={<PrintTicket />} />
+<Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
 
         <Route
   path="/projectionist/*"
