@@ -1,0 +1,112 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - bot_challenge  # ADDED: Missing intent
+  - ask_showtimes
+  - ask_available_seats
+  - ask_cinema_info
+  - ask_movie_info
+  - book_ticket
+  - ask_payment
+  - provide_movie_name
+  - provide_cinema_name
+  - provide_date
+  - provide_showtime
+  - provide_num_tickets  # ADDED: Missing intent
+
+entities:
+  - movie_name
+  - cinema_name
+  - date
+  - showtime_id
+  - seat_numbers
+  - num_tickets
+
+slots:
+  movie_name:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: movie_name
+  
+  cinema_name:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: cinema_name
+  
+  date:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: date
+  
+  showtime_id:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: showtime_id
+  
+  seat_numbers:
+    type: list
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: seat_numbers
+  
+  num_tickets:
+    type: float
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: num_tickets
+  
+  user_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+  
+  order_id:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: custom
+
+responses:
+  utter_greet:
+    - text: "Xin chào! Tôi là trợ lý đặt vé xem phim. Tôi có thể giúp gì cho bạn?"
+  
+  utter_goodbye:
+    - text: "Tạm biệt! Chúc bạn xem phim vui vẻ!"
+  
+  utter_iamabot:
+    - text: "Tôi là chatbot hỗ trợ đặt vé xem phim. Tôi có thể giúp bạn tìm lịch chiếu, đặt vé và thanh toán!"
+  
+  utter_ask_cinema_name:
+    - text: "Bạn muốn xem tại rạp nào?"
+  
+  utter_ask_movie_name:
+    - text: "Bạn muốn xem phim gì?"
+  
+  utter_ask_num_tickets:
+    - text: "Bạn muốn đặt bao nhiêu vé?"
+actions:
+  - action_get_showtimes
+  - action_get_available_seats
+  - action_get_cinema_info
+  - action_get_movie_info
+  - action_create_booking
+  - action_redirect_to_payment
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

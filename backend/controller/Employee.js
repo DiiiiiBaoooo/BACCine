@@ -191,3 +191,30 @@ export const deleteEmployee = async (req, res) => {
   }
 };
 
+export const getEmployeeOnline = async (req,res)=>{
+  try {
+    const [rows] = await dbPool.query(`
+      SELECT 
+        e.id, 
+        e.employee_id
+      FROM 
+        employee_cinema_cluster e
+      JOIN 
+        users u ON u.id = e.employee_id
+      WHERE 
+        u.isOnline = 1
+    `);
+    
+    if (rows.length === 0) {
+      return res.status(200).json({ employees: [], message: "Không có nhân viên nào đang online" });
+    }
+
+    res.status(200).json({
+      employees: rows,
+      total: rows.length,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy danh sách nhân viên online:", error);
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
+  }
+}

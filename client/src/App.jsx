@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -50,13 +50,18 @@ import ChonGhe from './pages/Employee/ChonGhe';
 import ChonDichVu from './pages/Employee/ChonDichVu';
 import ThanhToan from './pages/Employee/ThanhToan';
 import LichLamViec from './pages/Employee/LichLamViec';
-
 import InVe from './pages/Employee/InVe';
 import QuanLyLichLamViec from './pages/manager/QuanLyLichLamViec';
 import FaceRegister from './components/FaceRegister';
 import FaceCheckin from './pages/Employee/FaceCheckin';
-import FaceCheckOut from './pages/Employee/FaceCheckOut'
+import FaceCheckOut from './pages/Employee/FaceCheckOut';
 
+// IMPORT CHAT COMPONENTS
+import ChatWidget from './components/Chat/ChatWidget';
+import './components/Chat/Chat.css';
+
+// IMPORT RASA CHATBOT
+import RasaChatbot from './components/RasaChatbot';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -65,7 +70,7 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   const isUpdateProfile = authUser?.isUpdateProfile;
 
   if (isLoading) {
-    return <div>Loading...</div>; // Optional: Add a loading state
+    return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
@@ -87,11 +92,12 @@ const ProtectedRoute = ({ children, requiredRole }) => {
       draggable: true,
       theme: "dark",
     });
-    return <Navigate to="/" replace />; // Redirect to home if role doesn't match
+    return <Navigate to="/" replace />;
   }
 
   return children;
 };
+
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => {
   const { isLoading, authUser } = useAuthUser();
@@ -99,7 +105,7 @@ const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => 
   const isUpdateProfile = authUser?.isUpdateProfile;
 
   if (isLoading) {
-    return <div>Loading...</div>; // Optional: Add a loading state
+    return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
@@ -110,13 +116,11 @@ const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => 
     return <Navigate to="/update-profile" replace />;
   }
 
-  // Kiểm tra role
   if (requiredRole && authUser.role !== requiredRole) {
     toast.error(`Chỉ ${requiredRole} được truy cập`, { theme: "dark" });
     return <Navigate to="/" replace />;
   }
 
-  // Kiểm tra position (ví dụ Projectionist)
   if (requiredPosition && authUser.position !== requiredPosition) {
     toast.error(`Chỉ ${requiredPosition} được truy cập`, { theme: "dark" });
     return <Navigate to="/" replace />;
@@ -124,9 +128,6 @@ const ProtecteEmployeeRoute = ({ children, requiredRole, requiredPosition }) => 
 
   return children;
 };
-
-
-
 
 const App = () => {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
@@ -141,6 +142,9 @@ const App = () => {
   const cinema_Id = authUser?.cinemaId;
   const isUpdateProfile = authUser?.isUpdateProfile;
 
+  // State để kiểm soát hiển thị chat
+  const [showChat, setShowChat] = useState(false);
+
   // Redirect to appropriate page after login
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -154,8 +158,7 @@ const App = () => {
           navigate("/admin", { replace: true });
         } else if (authUser.role === "manager") {
           navigate("/manager", { replace: true });
-        }
-        else if(authUser.role==='employee'){
+        } else if (authUser.role === 'employee') {
           navigate("/employee", { replace: true });
         } else {
           navigate("/", { replace: true }); // role = user
@@ -163,6 +166,49 @@ const App = () => {
       }
     }
   }, [isLoading, isAuthenticated, isUpdateProfile, navigate, location.pathname, authUser]);
+
+  // Kiểm tra xem có nên hiển thị chat widget không (cho employee/manager)
+  const shouldShowChat = isAuthenticated && 
+    !Inve && 
+    location.pathname !== '/login' && 
+    location.pathname !== '/signup' && 
+    location.pathname !== '/update-profile' &&
+    !location.pathname.startsWith('/inve/');
+
+  // Kiểm tra có nên hiển thị RASA chatbot không (chỉ cho user thường)
+  const shouldShowRasaChat = isAuthenticated && 
+    !Inve && 
+    !isAdminRoute &&
+    !isManagerRoute &&
+    !isProjectionist &&
+    !IsEmployee &&
+    authUser?.role === 'user' &&
+    location.pathname !== '/login' && 
+    location.pathname !== '/signup' && 
+    location.pathname !== '/update-profile' &&
+    !location.pathname.startsWith('/inve/');
+
+  // Xác định user type cho chat (ChatWidget - cho employee/manager)
+  const getChatUserType = () => {
+    if (!authUser) return null;
+    
+    // Employee (staff) và Manager có thể nhận chat từ khách hàng
+    if (authUser.role === 'employee' ) {
+      return 'employee';
+    }
+    if (authUser.role === 'manager') {
+      return 'employee'; // Manager cũng có thể support
+    }
+    
+    // User bình thường
+    if (authUser.role === 'user') {
+      return 'customer';
+    }
+    
+    return null; // Admin, Projectionist không dùng chat
+  };
+
+  const chatUserType = getChatUserType();
 
   return (
     <>
@@ -178,9 +224,10 @@ const App = () => {
         pauseOnHover
         theme="dark"
       />
-{!Inve && !IsEmployee &&!isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
+      
+      {!Inve && !IsEmployee && !isAdminRoute && !isManagerRoute && !isProjectionist && <Header />}
 
-      <Routes >
+      <Routes>
         <Route path="/" element={<Home />} />
         <Route path='/recruiments' element={<Recruiments />} />
 
@@ -193,12 +240,14 @@ const App = () => {
             </ProtectedRoute>
           }
         >
-          <Route  index element={<Dashboard />} />
+          <Route index element={<Dashboard />} />
           <Route path="qlphim" element={<QuanLyPhim />} />
           <Route path="qlrap" element={<QuanLyRapPhim />} />
           <Route path="qlkm" element={<QuanLyKhuyenMai />} />
           <Route path="qlttv" element={<QuanLyTheTV />} />
         </Route>
+
+        {/* Employee Routes */}
         <Route
           path="/employee/*"
           element={
@@ -207,19 +256,15 @@ const App = () => {
             </ProtectedRoute>
           }
         >
-          <Route path='datve' element={<DatVe cinemaId={cinema_Id} /> } />
+          <Route path='datve' element={<DatVe cinemaId={cinema_Id} />} />
           <Route path="chon-ghe" element={<ChonGhe />} />
-  <Route path="chon-dich-vu" element={<ChonDichVu />} />
-  <Route path="thanh-toan" element={<ThanhToan />} />
-  <Route path="inve" element={<InVe />} />
-  <Route path="llv" element={<LichLamViec cinemaClusterId={cinema_Id} />} />
-  <Route path="face-checkin/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckin cinemaClusterId={cinema_Id} />} />
-  <Route path="face-checkout/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckOut cinemaClusterId={cinema_Id} />} />
-
-
-
-          <Route  index element={<EmployeeDashboard />} />
-      
+          <Route path="chon-dich-vu" element={<ChonDichVu />} />
+          <Route path="thanh-toan" element={<ThanhToan />} />
+          <Route path="inve" element={<InVe />} />
+          <Route path="llv" element={<LichLamViec cinemaClusterId={cinema_Id} />} />
+          <Route path="face-checkin/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckin cinemaClusterId={cinema_Id} />} />
+          <Route path="face-checkout/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckOut cinemaClusterId={cinema_Id} />} />
+          <Route index element={<EmployeeDashboard />} />
         </Route>
 
         {/* Manager Routes */}
@@ -233,22 +278,20 @@ const App = () => {
         >
           <Route index element={<ManagerDashboard />} />
           <Route path="qlgv" element={<QuanLyGiaVe cinemaId={cinema_Id} />} />
-          <Route path ="qluv" element={<QuanLyUngVien cinemaId={cinema_Id} />} />
+          <Route path="qluv" element={<QuanLyUngVien cinemaId={cinema_Id} />} />
           <Route path='qltd' element={<QuanLyTuyenDung cinemaId={cinema_Id} />} />
           <Route path='qlbv' element={<QuanLyBaiViet cinemaId={cinema_Id} />} />
           <Route path="qlbv/new" element={<CreatePost cinemaId={cinema_Id} />} />
           <Route path='qlnv' element={<EmployeeManagement cinemaId={cinema_Id} />} />
           <Route path='qldv' element={<QuanLyDichVu cinemaId={cinema_Id} />} />
           <Route path='qlllv' element={<QuanLyLichLamViec cinemaClusterId={cinema_Id} />} />
-
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
-        <Route path ='/movies' element={<Movies />} />
+        <Route path='/movies' element={<Movies />} />
         <Route path='/movies/:id' element={<MovieDetails />} />
         <Route path='/movies/:id/:cinemaId/:date' element={<SeatLayout />} />
         <Route path='/booking' element={<ThongTinDatCho cinemaId={cinema_Id} />} />
-
         <Route path="/login" element={<Login />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/profile" element={<Profile />} />
@@ -258,26 +301,59 @@ const App = () => {
         <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
         <Route path="/qr-payment" element={<QRPayment />} />
         <Route path="/posts/edit/:id" element={<EditBlog cinemaId={cinema_Id} />} />
-<Route path='/tickets' element={<MyTicket />} />
-<Route path="/ticket-details/:orderId" element={<TicketDetails />} />
-<Route path="/inve/:order_id" element={<PrintTicket />} />
-<Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
+        <Route path='/tickets' element={<MyTicket />} />
+        <Route path="/ticket-details/:orderId" element={<TicketDetails />} />
+        <Route path="/inve/:order_id" element={<PrintTicket />} />
+        <Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
 
+        {/* Projectionist Routes */}
         <Route
-  path="/projectionist/*"
-  element={
-    <ProtecteEmployeeRoute requiredRole="employee" requiredPosition="Projectionist">
-      <ProjectionistLayout />
-    </ProtecteEmployeeRoute>
-  }
->
-<Route index element={<ProjectionistDashboard />} />
-<Route path='qlpc' element={<QuanLyPhongChieu cinemaId={cinema_Id} />} />
-<Route path='qllc' element={<QuanLyLichChieu cinemaId={cinema_Id} />} />
-
-
-</Route>
+          path="/projectionist/*"
+          element={
+            <ProtecteEmployeeRoute requiredRole="employee" requiredPosition="Projectionist">
+              <ProjectionistLayout />
+            </ProtecteEmployeeRoute>
+          }
+        >
+          <Route index element={<ProjectionistDashboard />} />
+          <Route path='qlpc' element={<QuanLyPhongChieu cinemaId={cinema_Id} />} />
+          <Route path='qllc' element={<QuanLyLichChieu cinemaId={cinema_Id} />} />
+        </Route>
       </Routes>
+
+      {/* CHAT WIDGET - Hiển thị cho employee/manager */}
+      {shouldShowChat && chatUserType === 'employee' && (
+        <ChatWidget
+          currentUser={{
+            id: String(authUser.user_id || authUser.id),
+            name: authUser.name || authUser.full_name || 'User',
+            type: chatUserType,
+            cinemaId: cinema_Id
+          }}
+        />
+      )}
+       {/* CHAT WIDGET - Hiển thị cho employee/manager */}
+       {shouldShowChat && chatUserType === 'customer' && (
+        <ChatWidget
+          currentUser={{
+            id: String(authUser.user_id || authUser.id),
+            name: authUser.name || authUser.full_name || 'User',
+            type: chatUserType,
+            cinemaId: cinema_Id
+          }}
+        />
+      )}
+
+      RASA CHATBOT - Chỉ hiển thị cho user thường
+      {shouldShowRasaChat && authUser && (
+        <RasaChatbot
+          currentUser={{
+            id: authUser.id || authUser.user_id,
+            name: authUser.name || authUser.full_name || 'User',
+            cinemaId: cinema_Id
+          }}
+        />
+      )}
     </>
   );
 };

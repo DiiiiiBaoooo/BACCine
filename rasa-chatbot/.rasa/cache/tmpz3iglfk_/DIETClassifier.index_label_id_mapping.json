@@ -1,0 +1,13 @@
+{
+  "0": "ask_available_seats",
+  "1": "ask_cinema_info",
+  "2": "ask_movie_info",
+  "3": "ask_payment",
+  "4": "ask_showtimes",
+  "5": "book_ticket",
+  "6": "goodbye",
+  "7": "greet",
+  "8": "provide_cinema_name",
+  "9": "provide_date",
+  "10": "provide_movie_name"
+}

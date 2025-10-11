@@ -1,0 +1,84 @@
+version: "3.1"
+
+stories:
+  - story: greet and ask showtimes with full info
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - intent: ask_showtimes
+        entities:
+          - movie_name
+          - cinema_name
+          - date
+      - action: action_get_showtimes
+
+  - story: ask showtimes with cinema only
+    steps:
+      - intent: ask_showtimes
+        entities:
+          - cinema_name
+      - action: action_get_showtimes
+
+  - story: ask showtimes with cinema name directly
+    steps:
+      - intent: ask_showtimes
+        entities:
+          - cinema_name: "BAC Quang Trung"
+      - action: action_get_showtimes
+
+  - story: ask showtimes then provide cinema
+    steps:
+      - intent: ask_showtimes
+      - action: utter_ask_cinema_name
+      - intent: provide_cinema_name
+        entities:
+          - cinema_name
+      - slot_was_set:
+          - cinema_name
+      - action: action_get_showtimes
+
+  - story: book ticket flow
+    steps:
+      - intent: book_ticket
+      - action: utter_ask_movie_name
+      - intent: provide_movie_name
+        entities:
+          - movie_name
+      - slot_was_set:
+          - movie_name
+      - action: utter_ask_cinema_name
+      - intent: provide_cinema_name
+        entities:
+          - cinema_name
+      - slot_was_set:
+          - cinema_name
+      - action: action_get_showtimes
+      - action: utter_ask_num_tickets
+      - intent: provide_num_tickets
+        entities:
+          - num_tickets
+      - slot_was_set:
+          - num_tickets
+      - action: action_get_available_seats
+      - action: action_create_booking
+      - action: action_redirect_to_payment
+
+  - story: check available seats
+    steps:
+      - intent: ask_available_seats
+      - action: action_get_available_seats
+
+  - story: cinema information
+    steps:
+      - intent: ask_cinema_info
+      - action: action_get_cinema_info
+
+  - story: movie information
+    steps:
+      - intent: ask_movie_info
+      - action: action_get_movie_info
+
+  - story: goodbye
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye

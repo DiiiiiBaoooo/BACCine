@@ -24,6 +24,7 @@ import UserRoute from "./routes/UserRoutes.js";
 import { serve } from "inngest/express";
 import { inngest, functions } from "./inggest/index.js"
 import WorkScheduleRoute from "./routes/WorkScheduleRoutes.js";
+import ChatbotRoute from "./routes/ChatBotRoutes.js";
 
 const app = express();
 const port = 3000;
@@ -60,6 +61,7 @@ app.use("/api/user", UserRoute)
 app.use("/api/schedule", WorkScheduleRoute)
 
 app.use("/api/inngest",serve({ client: inngest, functions }))
+app.use("/api/chatbot", ChatbotRoute);
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

@@ -1,0 +1,202 @@
+version: "3.1"
+
+nlu:
+  - intent: greet
+    examples: |
+      - chào bạn
+      - xin chào
+      - hello
+      - hi
+      - chào chatbot
+      - hey
+      - chào buổi sáng
+      - chào buổi chiều
+      
+  - intent: goodbye
+    examples: |
+      - tạm biệt
+      - bye
+      - goodbye
+      - hẹn gặp lại
+      - cảm ơn và tạm biệt
+      - thôi bye
+      - tạm biệt nhé
+      
+  - intent: bot_challenge
+    examples: |
+      - bạn là ai
+      - bạn là bot à
+      - bạn là người hay bot
+      - bạn là chatbot phải không
+      - bạn có phải là máy không
+      
+  - intent: affirm
+    examples: |
+      - có
+      - đồng ý
+      - ok
+      - được
+      - ừ
+      - vâng
+      - yes
+      
+  - intent: deny
+    examples: |
+      - không
+      - không phải
+      - no
+      - thôi
+      - không cần
+      
+  - intent: ask_showtimes
+    examples: |
+      - cho tôi xem lịch chiếu
+      - [Avengers](movie_name) chiếu khi nào
+      - xem lịch chiếu phim [Spider-Man](movie_name)
+      - lịch chiếu của [CGV](cinema_name)
+      - lịch chiếu của [BAC Quang Trung](cinema_name)
+      - [Rạp BAC Quang Trung](cinema_name) có lịch chiếu như thế nào
+      - phim gì chiếu hôm nay
+      - lịch chiếu ngày [2025-10-15](date)
+      - [Oppenheimer](movie_name) chiếu ở đâu
+      - tôi muốn xem lịch chiếu
+      - có suất chiếu nào không
+      - cho tôi xem lịch chiếu phim
+      - lịch chiếu [hôm nay](date) thế nào
+      - [hôm nay](date) có phim gì
+      - [ngày mai](date) có phim gì chiếu
+      - rạp [CGV Vincom](cinema_name) chiếu gì
+      - [Galaxy Nguyễn Du](cinema_name) có lịch chiếu nào
+      - xem lịch chiếu tại [Lotte Cinema](cinema_name)
+      - [BHD Star](cinema_name) chiếu phim gì
+      - lịch chiếu phim tại [Platinum Cineplex](cinema_name)
+      - [hôm nay](date) [CGV](cinema_name) chiếu phim gì
+      - [Avatar](movie_name) chiếu ở [CGV](cinema_name) khi nào
+      - cho xem lịch chiếu [Avengers](movie_name) tại [Galaxy](cinema_name)
+      
+  - intent: ask_available_seats
+    examples: |
+      - còn ghế trống không
+      - xem ghế trống
+      - ghế nào còn trống
+      - kiểm tra ghế
+      - cho tôi xem sơ đồ ghế
+      - suất chiếu này còn bao nhiêu ghế
+      - còn ghế không
+      - còn chỗ trống không
+      
+  - intent: ask_cinema_info
+    examples: |
+      - thông tin về [CGV](cinema_name)
+      - [Lotte Cinema](cinema_name) ở đâu
+      - [BAC Quang Trung](cinema_name) ở đâu
+      - địa chỉ [Rạp BAC](cinema_name)
+      - có rạp nào gần đây
+      - cho tôi danh sách rạp
+      - địa chỉ rạp
+      - rạp chiếu phim nào tốt
+      - có những rạp nào
+      - thông tin rạp chiếu
+      - [Galaxy Cinema](cinema_name) địa chỉ ở đâu
+      - số điện thoại [CGV Vincom](cinema_name)
+      - có những rạp chiếu nào
+      - danh sách rạp
+      - rạp nào gần đây
+      - cho xem danh sách rạp
+      - có rạp gì
+      
+  - intent: ask_movie_info
+    examples: |
+      - thông tin về phim [Avatar](movie_name)
+      - [Inception](movie_name) nói về gì
+      - phim gì hay
+      - có phim mới nào
+      - phim đang chiếu
+      - phim sắp chiếu
+      - giới thiệu phim [Barbie](movie_name)
+      - phim gì hay nhất hiện nay
+      - [Oppenheimer](movie_name) ra mắt khi nào
+      - [Spider-Man](movie_name) có hay không
+      
+  - intent: book_ticket
+    examples: |
+      - tôi muốn đặt vé
+      - đặt vé xem phim
+      - đặt [2](num_tickets) vé
+      - book vé cho tôi
+      - tôi muốn đặt [3](num_tickets) vé phim [Avatar](movie_name)
+      - đặt vé [CGV](cinema_name)
+      - đặt vé xem phim [Oppenheimer](movie_name)
+      - booking vé
+      - đặt [1](num_tickets) vé [Barbie](movie_name)
+      
+  - intent: ask_payment
+    examples: |
+      - thanh toán như thế nào
+      - tôi muốn thanh toán
+      - hướng dẫn thanh toán
+      - phương thức thanh toán
+      - thanh toán ở đâu
+      - có thể thanh toán bằng gì
+      
+  - intent: provide_movie_name
+    examples: |
+      - [Avatar](movie_name)
+      - tôi muốn xem [Spider-Man](movie_name)
+      - phim [Oppenheimer](movie_name)
+      - [Barbie](movie_name) nhé
+      - [The Batman](movie_name)
+      - xem [Avengers](movie_name)
+      
+  - intent: provide_cinema_name
+    examples: |
+      - [CGV](cinema_name)
+      - tại [Lotte Cinema](cinema_name)
+      - [Galaxy Cinema](cinema_name)
+      - rạp [BHD Star](cinema_name)
+      - ở [CGV Vincom](cinema_name)
+      - [Platinum Cineplex](cinema_name)
+      - [BAC Quang Trung](cinema_name)
+      - [Rạp BAC](cinema_name)
+      - [Galaxy Nguyễn Du](cinema_name)
+      
+  - intent: provide_date
+    examples: |
+      - [hôm nay](date)
+      - [ngày mai](date)
+      - [2025-10-15](date)
+      - [15/10/2025](date)
+      - [thứ 7 tuần này](date)
+      - [chủ nhật](date)
+      - [10/11/2025](date)
+      
+  - intent: provide_num_tickets
+    examples: |
+      - [2](num_tickets) vé
+      - [3](num_tickets) vé
+      - [1](num_tickets) vé thôi
+      - đặt [4](num_tickets) vé
+      - tôi muốn [2](num_tickets) vé
+      - [5](num_tickets) vé nhé
+      - [1](num_tickets)
+      - [2](num_tickets)
+      - [3](num_tickets)
+
+  - synonym: BAC Quang Trung
+    examples: |
+      - Rạp BAC Quang Trung
+      - BAC Quang Trung
+      - rạp BAC
+      - BAC
+      
+  - synonym: CGV
+    examples: |
+      - CGV Vincom
+      - CGV Saigon
+      - rạp CGV
+      
+  - synonym: Galaxy Cinema
+    examples: |
+      - Galaxy
+      - Galaxy Nguyễn Du
+      - rạp Galaxy

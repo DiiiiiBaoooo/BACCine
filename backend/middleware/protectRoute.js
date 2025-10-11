@@ -13,7 +13,7 @@ export const protectRoute = async (req, res, next) => {
 
     // Connect DB
     const [rows] = await dbPool.query(
-      "SELECT id, name, phone, province_code, district_code, email, role, profilePicture, isUpdateProfile FROM users WHERE id = ?",
+      "SELECT id, name, phone, province_code, district_code, email, role, isOnline,profilePicture, isUpdateProfile FROM users WHERE id = ?",
       [decoded.id]
     );
 

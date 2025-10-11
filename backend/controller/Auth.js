@@ -58,6 +58,8 @@ export async function login(req, res) {
         return res.status(400).json({ error: "Mật khẩu không đúng" });
       }
   
+      await dbPool.query("UPDATE users SET isOnline = true WHERE id = ?", [user.id]);
+
       // tạo JWT
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },
@@ -122,7 +124,7 @@ export async function updateProfile(req, res) {
 
     // Lấy lại user đã update để return
     const [rows] = await dbPool.execute(
-      `SELECT id, name, province_code, district_code, phone, email ,profilePicture
+      `SELECT id, name, province_code, district_code, phone, email ,profilePicture,isOnline
        FROM users 
        WHERE id = ?`,
       [userID]
@@ -149,8 +151,31 @@ export async function updateProfile(req, res) {
 // }
 // Logout
 export async function logout(req, res) {
-  res.clearCookie("jwt");
-  res.status(200).json({ success: true, message: "Logout successful" });
+  try {
+    // Lấy user từ middleware auth
+    const user = req.user; // { id, email, name, ... }
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not authenticated" });
+    }
+
+    // Xóa cookie JWT
+    res.clearCookie("jwt");
+
+    // Cập nhật trạng thái online → offline
+    await dbPool.query("UPDATE users SET isOnline = false WHERE id = ?", [user.id]);
+
+    res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error during logout",
+    });
+  }
 }
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -188,9 +213,9 @@ export const googleLogin = async (req, res) => {
     let user;
     if (rows.length === 0) {
       const [result] = await dbPool.query(
-        `INSERT INTO users (name, email, profilePicture, role, isUpdateProfile, google_id) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [name, email, picture, "user", 0, googleId]
+        `INSERT INTO users (name, email, profilePicture, role, isUpdateProfile, google_id,isOnline) 
+         VALUES (?, ?, ?, ?, ?, ?,?)`,
+        [name, email, picture, "user", 0, googleId,true]
       );
 
       user = { id: result.insertId, name, email, profilePicture: picture, role: "user", google_id: googleId };
@@ -201,6 +226,8 @@ export const googleLogin = async (req, res) => {
         user.google_id = googleId;
       }
     }
+    await dbPool.query("UPDATE users SET isOnline = true WHERE id = ?", [user.id]);
+
 
     // 👉 Sinh JWT backend
     const jwtToken = generateToken(user);
@@ -248,6 +275,7 @@ export const getAuthUser =  async (req, res) => {
       );
       user.cinemaId = rows[0].cinema_cluster_id;
       user.position=  rows[0].position;
+
       user.employee_id=rows[0].employee_id;
 
     }

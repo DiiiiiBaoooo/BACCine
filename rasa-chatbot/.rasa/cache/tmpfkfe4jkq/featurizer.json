@@ -1,0 +1,79 @@
+{
+  "type": "MaxHistoryTrackerFeaturizer",
+  "state_featurizer": {
+    "action_texts": [],
+    "entity_tag_specs": [],
+    "feature_states": {
+      "intent": {
+        "affirm": 0,
+        "ask_available_seats": 1,
+        "ask_cinema_info": 2,
+        "ask_movie_info": 3,
+        "ask_payment": 4,
+        "ask_showtimes": 5,
+        "back": 6,
+        "book_ticket": 7,
+        "bot_challenge": 8,
+        "deny": 9,
+        "goodbye": 10,
+        "greet": 11,
+        "nlu_fallback": 12,
+        "out_of_scope": 13,
+        "provide_cinema_name": 14,
+        "provide_date": 15,
+        "provide_movie_name": 16,
+        "provide_num_tickets": 17,
+        "provide_showtime": 18,
+        "restart": 19,
+        "session_start": 20
+      },
+      "action_name": {
+        "action_listen": 0,
+        "action_restart": 1,
+        "action_session_start": 2,
+        "action_default_fallback": 3,
+        "action_deactivate_loop": 4,
+        "action_revert_fallback_events": 5,
+        "action_default_ask_affirmation": 6,
+        "action_default_ask_rephrase": 7,
+        "action_two_stage_fallback": 8,
+        "action_unlikely_intent": 9,
+        "action_back": 10,
+        "...": 11,
+        "action_extract_slots": 12,
+        "action_get_showtimes": 13,
+        "action_get_available_seats": 14,
+        "action_get_cinema_info": 15,
+        "action_get_movie_info": 16,
+        "action_create_booking": 17,
+        "action_redirect_to_payment": 18,
+        "utter_ask_cinema_name": 19,
+        "utter_ask_movie_name": 20,
+        "utter_ask_num_tickets": 21,
+        "utter_goodbye": 22,
+        "utter_greet": 23,
+        "utter_iamabot": 24
+      },
+      "entities": {
+        "cinema_name": 0,
+        "date": 1,
+        "movie_name": 2,
+        "num_tickets": 3,
+        "seat_numbers": 4,
+        "showtime_id": 5
+      },
+      "slots": {
+        "movie_name_0": 0,
+        "cinema_name_0": 1,
+        "date_0": 2,
+        "showtime_id_0": 3,
+        "seat_numbers_0": 4,
+        "num_tickets_0": 5,
+        "num_tickets_1": 6
+      },
+      "active_loop": {}
+    }
+  },
+  "remove_duplicates": true,
+  "max_history": 5
+}

@@ -8,7 +8,7 @@ const AuthRoute = express.Router();
 
 AuthRoute.post('/signup',signup)
 AuthRoute.post("/login",login)
-AuthRoute.post("/logout",logout)
+AuthRoute.post("/logout",protectRoute,logout)
 AuthRoute.post("/google",googleLogin)
 AuthRoute.post("/onboarding", protectRoute ,updateProfile)
 AuthRoute.get("/me", protectRoute, getAuthUser );
