@@ -222,7 +222,7 @@ const RasaChatbot = ({ currentUser }) => {
                       : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                  <p className="text-sm text-black whitespace-pre-wrap leading-relaxed">
                     {msg.text}
                   </p>
 
@@ -233,7 +233,7 @@ const RasaChatbot = ({ currentUser }) => {
                         <button
                           key={btnIndex}
                           onClick={() => handleButtonClick(button.payload)}
-                          className="w-full text-left px-3 py-2 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-all hover:shadow-md"
+                          className="w-full text-left px-3 py-2 text-sm  bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-all hover:shadow-md"
                         >
                           {button.title}
                         </button>
@@ -294,7 +294,7 @@ const RasaChatbot = ({ currentUser }) => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Nhập tin nhắn..."
-                className="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="flex-1 border text-black border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 disabled={isLoading}
               />
               <button

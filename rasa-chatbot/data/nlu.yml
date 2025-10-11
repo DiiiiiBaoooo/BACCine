@@ -73,6 +73,9 @@ nlu:
       - [hôm nay](date) [CGV](cinema_name) chiếu phim gì
       - [Avatar](movie_name) chiếu ở [CGV](cinema_name) khi nào
       - cho xem lịch chiếu [Avengers](movie_name) tại [Galaxy](cinema_name)
+      - [The Bad Guys 2](movie_name) chiếu khi nào
+      - xem lịch chiếu [The Bad Guys 2](movie_name)
+      - lịch chiếu phim [The Bad Guys 2](movie_name) tại [BAC Quang Trung](cinema_name)
       
   - intent: ask_available_seats
     examples: |
@@ -84,6 +87,11 @@ nlu:
       - suất chiếu này còn bao nhiêu ghế
       - còn ghế không
       - còn chỗ trống không
+      - xem ghế trống suất [5](showtime_id)
+      - kiểm tra ghế suất [7](showtime_id)
+      - suất [10](showtime_id) còn ghế không
+      - cho xem ghế ID [5](showtime_id)
+      - ghế trống của suất [5](showtime_id)
       
   - intent: ask_cinema_info
     examples: |
@@ -117,6 +125,8 @@ nlu:
       - phim gì hay nhất hiện nay
       - [Oppenheimer](movie_name) ra mắt khi nào
       - [Spider-Man](movie_name) có hay không
+      - [The Bad Guys 2](movie_name) nói về gì
+      - cho xem thông tin phim [The Bad Guys 2](movie_name)
       
   - intent: book_ticket
     examples: |
@@ -129,6 +139,16 @@ nlu:
       - đặt vé xem phim [Oppenheimer](movie_name)
       - booking vé
       - đặt [1](num_tickets) vé [Barbie](movie_name)
+      - đặt vé suất [5](showtime_id)
+      - book vé suất [7](showtime_id) ghế [A1](seat_numbers)
+      - tôi muốn đặt vé suất [10](showtime_id) ghế [A1 A2](seat_numbers)
+      - đặt vé ID [5](showtime_id)
+      - đặt ghế [B5 B6](seat_numbers) suất [5](showtime_id)
+      - đặt vé suất [7](showtime_id), ghế [A1 A2](seat_numbers)
+      - đặt suất [5](showtime_id) ghế [C1 C2 C3](seat_numbers)
+      - book vé suất [4](showtime_id), ghế [V1 V2](seat_numbers)
+      - tôi đặt suất [7](showtime_id) ghế [A1](seat_numbers) [A2](seat_numbers)
+      - đặt vé suất [5](showtime_id) với ghế [B1](seat_numbers) và [B2](seat_numbers)
       
   - intent: ask_payment
     examples: |
@@ -138,6 +158,9 @@ nlu:
       - phương thức thanh toán
       - thanh toán ở đâu
       - có thể thanh toán bằng gì
+      - link thanh toán
+      - thanh toán thế nào
+      - làm sao để thanh toán
       
   - intent: provide_movie_name
     examples: |
@@ -147,6 +170,7 @@ nlu:
       - [Barbie](movie_name) nhé
       - [The Batman](movie_name)
       - xem [Avengers](movie_name)
+      - [The Bad Guys 2](movie_name)
       
   - intent: provide_cinema_name
     examples: |
@@ -169,6 +193,29 @@ nlu:
       - [thứ 7 tuần này](date)
       - [chủ nhật](date)
       - [10/11/2025](date)
+      
+  - intent: provide_showtime_id
+    examples: |
+      - suất [5](showtime_id)
+      - ID [7](showtime_id)
+      - suất chiếu [10](showtime_id)
+      - mã [5](showtime_id)
+      - [5](showtime_id)
+      - [7](showtime_id)
+      - suất số [5](showtime_id)
+      
+  - intent: provide_seat_numbers
+    examples: |
+      - ghế [A1](seat_numbers)
+      - [A1 A2](seat_numbers)
+      - [B5 B6 B7](seat_numbers)
+      - ghế [C1](seat_numbers) và [C2](seat_numbers)
+      - [A1](seat_numbers), [A2](seat_numbers)
+      - [V1 V2](seat_numbers)
+      - ghế [I1](seat_numbers) [I2](seat_numbers)
+      - [C1 C2 C3](seat_numbers)
+      - [A1](seat_numbers) với [A2](seat_numbers)
+      - chọn ghế [B1 B2](seat_numbers)
       
   - intent: provide_num_tickets
     examples: |

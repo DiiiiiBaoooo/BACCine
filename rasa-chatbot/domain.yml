@@ -5,7 +5,7 @@ intents:
   - goodbye
   - affirm
   - deny
-  - bot_challenge  # ADDED: Missing intent
+  - bot_challenge
   - ask_showtimes
   - ask_available_seats
   - ask_cinema_info
@@ -15,8 +15,9 @@ intents:
   - provide_movie_name
   - provide_cinema_name
   - provide_date
-  - provide_showtime
-  - provide_num_tickets  # ADDED: Missing intent
+  - provide_showtime_id
+  - provide_seat_numbers
+  - provide_num_tickets
 
 entities:
   - movie_name
@@ -54,13 +55,21 @@ slots:
     mappings:
       - type: from_entity
         entity: showtime_id
+      - type: from_text
+        conditions:
+          - active_loop: null
+            requested_slot: showtime_id
   
   seat_numbers:
-    type: list
+    type: text
     influence_conversation: true
     mappings:
       - type: from_entity
         entity: seat_numbers
+      - type: from_text
+        conditions:
+          - active_loop: null
+            requested_slot: seat_numbers
   
   num_tickets:
     type: float
@@ -83,22 +92,31 @@ slots:
 
 responses:
   utter_greet:
-    - text: "Xin chào! Tôi là trợ lý đặt vé xem phim. Tôi có thể giúp gì cho bạn?"
+    - text: "👋 Xin chào! Tôi là trợ lý đặt vé xem phim.\n\n🎬 Tôi có thể giúp bạn:\n• Xem lịch chiếu phim\n• Kiểm tra ghế trống\n• Đặt vé xem phim\n• Thông tin rạp chiếu\n\nBạn muốn làm gì?"
   
   utter_goodbye:
-    - text: "Tạm biệt! Chúc bạn xem phim vui vẻ!"
+    - text: "👋 Tạm biệt! Chúc bạn xem phim vui vẻ! 🎬🍿"
   
   utter_iamabot:
-    - text: "Tôi là chatbot hỗ trợ đặt vé xem phim. Tôi có thể giúp bạn tìm lịch chiếu, đặt vé và thanh toán!"
+    - text: "🤖 Tôi là chatbot hỗ trợ đặt vé xem phim!\n\nTôi có thể giúp bạn:\n✅ Tìm lịch chiếu\n✅ Xem ghế trống\n✅ Đặt vé nhanh chóng\n✅ Hướng dẫn thanh toán\n\nHãy hỏi tôi bất cứ điều gì! 😊"
   
   utter_ask_cinema_name:
-    - text: "Bạn muốn xem tại rạp nào?"
+    - text: "🏢 Bạn muốn xem tại rạp nào?"
+    - text: "🎬 Rạp chiếu nào bạn quan tâm?"
   
   utter_ask_movie_name:
-    - text: "Bạn muốn xem phim gì?"
+    - text: "🎬 Bạn muốn xem phim gì?"
+    - text: "🍿 Phim nào bạn muốn xem?"
+  
+  utter_ask_showtime_id:
+    - text: "🎫 Vui lòng cho tôi biết **mã suất chiếu** (ID) bạn muốn xem.\n\nBạn có thể tìm ID trong danh sách lịch chiếu phía trên!"
+  
+  utter_ask_seat_numbers:
+    - text: "🪑 Bạn muốn chọn ghế nào?\n\nVí dụ: A1, A2 hoặc B5 B6"
   
   utter_ask_num_tickets:
-    - text: "Bạn muốn đặt bao nhiêu vé?"
+    - text: "🎫 Bạn muốn đặt bao nhiêu vé?"
+
 actions:
   - action_get_showtimes
   - action_get_available_seats

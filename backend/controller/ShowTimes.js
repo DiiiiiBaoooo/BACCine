@@ -320,6 +320,117 @@ export const getCinemaByMovie = async (req, res) => {
   }
 };
 
+export const getAllSeatsWithStatus = async (req, res) => {
+  try {
+    const { showtimeId } = req.params;
+
+    // Validate showtimeId
+    if (!showtimeId || isNaN(showtimeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid showtimeId'
+      });
+    }
+
+    // Kiểm tra showtime có tồn tại không
+    const showtimeQuery = `
+      SELECT st.id, st.room_id, r.name as room_name
+      FROM showtimes st
+      JOIN rooms r ON r.id = st.room_id
+      WHERE st.id = ?
+    `;
+
+    const [showtimeRows] = await dbPool.query(showtimeQuery, [showtimeId]);
+
+    if (showtimeRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Showtime not found'
+      });
+    }
+
+    const showtime = showtimeRows[0];
+    const roomId = showtime.room_id;
+
+    // Lấy tất cả ghế của phòng chiếu với trạng thái
+    const seatsQuery = `
+      SELECT 
+        ss.seat_id,
+        ss.seat_number,
+        ss.seat_type_id,
+        stp.name AS seat_type_name,
+        COALESCE(ss.status, 'available') AS status,
+        ss.reservation_id,
+        ss.expiry_time
+      FROM show_seats ss
+      LEFT JOIN seat_types stp ON stp.id = ss.seat_type_id
+      LEFT JOIN showtimes stm ON stm.id = ss.showtime_id
+      JOIN rooms r ON r.id = stm.room_id
+      WHERE stm.id = ?
+      ORDER BY ss.seat_number
+    `;
+
+    const [allSeats] = await dbPool.query(seatsQuery, [showtimeId]);
+
+    // Phân loại ghế
+    const availableSeats = allSeats.filter(seat => seat.status === 'available');
+    const reservedSeats = allSeats.filter(seat => seat.status === 'reserved');
+    const bookedSeats = allSeats.filter(seat => seat.status === 'booked');
+
+    // Nhóm ghế trống theo loại
+    const availableByType = {};
+    availableSeats.forEach(seat => {
+      const typeName = seat.seat_type_name || 'standard';
+      if (!availableByType[typeName]) {
+        availableByType[typeName] = [];
+      }
+      availableByType[typeName].push({
+        seat_id: seat.seat_id,
+        seat_number: seat.seat_number,
+        seat_type_id: seat.seat_type_id
+      });
+    });
+
+    // Response
+    return res.status(200).json({
+      success: true,
+      showtimeId: parseInt(showtimeId),
+      roomInfo: {
+        room_id: roomId,
+        room_name: showtime.room_name,
+        total_seats: allSeats.length // Updated to reflect actual seat count
+      },
+      summary: {
+        total: allSeats.length,
+        available: availableSeats.length,
+        reserved: reservedSeats.length,
+        booked: bookedSeats.length
+      },
+      availableSeats: availableSeats.map(seat => ({
+        seat_id: seat.seat_id,
+        seat_number: seat.seat_number,
+        seat_type_id: seat.seat_type_id,
+        seat_type_name: seat.seat_type_name
+      })),
+      availableByType,
+      occupiedSeats: [...reservedSeats, ...bookedSeats].map(seat => ({
+        seat_id: seat.seat_id,
+        seat_number: seat.seat_number,
+        status: seat.status,
+        seat_type_id: seat.seat_type_id,
+        seat_type_name: seat.seat_type_name
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error fetching seats with status:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+};
 
 export const getOccupieSeat = async (req, res) => {
   try {
