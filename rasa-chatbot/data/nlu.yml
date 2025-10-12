@@ -149,6 +149,9 @@ nlu:
       - book vé suất [4](showtime_id), ghế [V1 V2](seat_numbers)
       - tôi đặt suất [7](showtime_id) ghế [A1](seat_numbers) [A2](seat_numbers)
       - đặt vé suất [5](showtime_id) với ghế [B1](seat_numbers) và [B2](seat_numbers)
+      - đặt vé suất [7](showtime_id) ghế [A1 A2](seat_numbers)
+      - đặt suất [7](showtime_id), ghế [A1 A2](seat_numbers)
+      - book suất [5](showtime_id), ghế [B1 B2 B3](seat_numbers)
       
   - intent: ask_payment
     examples: |

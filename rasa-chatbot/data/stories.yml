@@ -37,6 +37,19 @@ stories:
           - cinema_name
       - action: action_get_showtimes
 
+  - story: direct book with showtime and seats
+    steps:
+      - intent: book_ticket
+        entities:
+          - showtime_id
+          - seat_numbers
+      - slot_was_set:
+          - showtime_id
+      - slot_was_set:
+          - seat_numbers
+      - action: action_create_booking
+      - action: action_redirect_to_payment
+
   - story: book ticket flow
     steps:
       - intent: book_ticket
@@ -66,6 +79,10 @@ stories:
   - story: check available seats
     steps:
       - intent: ask_available_seats
+        entities:
+          - showtime_id
+      - slot_was_set:
+          - showtime_id
       - action: action_get_available_seats
 
   - story: cinema information

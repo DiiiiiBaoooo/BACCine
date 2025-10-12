@@ -1,37 +1,54 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 const QRPayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { bookingData } = location.state || {};
+  const [searchParams] = useSearchParams(); // Get query parameters
   const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [qrError, setQrError] = useState(null);
 
-  // Mã QR từ Sepay
-  console.log(bookingData);
-  
-  const placeholderQRCode = 
-     `https://qr.sepay.vn/img?acc=VQRQAENDB9712&bank=MBBank&amount=${bookingData.grand_total}&des=${bookingData.order_id}`
+  // Get bookingData from location.state or query parameters
+  const { bookingData } = location.state || {};
+  const order_id = searchParams.get('order_id') || bookingData?.order_id;
+  const grand_total = parseFloat(searchParams.get('grand_total')) || bookingData?.grand_total;
 
-  // Kiểm tra nếu không có bookingData hoặc order_id
+  // Construct bookingData object
+  const effectiveBookingData = {
+    order_id: order_id || '',
+    grand_total: grand_total || 0,
+  };
+
+  // Log for debugging
+  console.log('QRPayment bookingData:', {
+    fromState: bookingData,
+    fromQuery: { order_id, grand_total },
+    effectiveBookingData,
+  });
+
+  // Generate QR code URL
+  const placeholderQRCode = effectiveBookingData.order_id && effectiveBookingData.grand_total
+    ? `https://qr.sepay.vn/img?acc=VQRQAENDB9712&bank=MBBank&amount=${effectiveBookingData.grand_total}&des=${effectiveBookingData.order_id}`
+    : null;
+
+  // Check if bookingData is valid
   useEffect(() => {
-    if (!bookingData || !bookingData.order_id || !bookingData.grand_total) {
+    if (!effectiveBookingData.order_id || !effectiveBookingData.grand_total) {
       toast.error('Thông tin đặt vé không hợp lệ');
       navigate('/');
     }
-  }, [bookingData, navigate]);
+  }, [effectiveBookingData, navigate]);
 
-  // Polling trạng thái đơn hàng
+  // Polling order status
   useEffect(() => {
-    if (!bookingData?.order_id) return;
+    if (!effectiveBookingData.order_id) return;
 
     const handleGetDetailOrder = async () => {
       try {
-        const res = await axios.get(`/api/bookings/getoderdetail/${bookingData.order_id}`);
+        const res = await axios.get(`/api/bookings/getoderdetail/${effectiveBookingData.order_id}`);
         if (!res.data.success) {
           throw new Error(res.data.message || 'Lỗi khi lấy chi tiết đơn hàng');
         }
@@ -41,7 +58,9 @@ const QRPayment = () => {
           if (status === 'confirmed') {
             setIsSuccess(true);
             toast.success('Thanh toán thành công!');
-            navigate(`/ticket-details/${bookingData.order_id}`, { state: { order_id:bookingData.order_id } });
+            navigate(`/ticket-details/${effectiveBookingData.order_id}`, {
+              state: { order_id: effectiveBookingData.order_id },
+            });
           } else if (status === 'cancelled') {
             setIsSuccess(false);
             toast.error('Thanh toán thất bại');
@@ -59,12 +78,12 @@ const QRPayment = () => {
       }
     };
 
-    const interval = setInterval(handleGetDetailOrder, 10000); // Tăng lên 10s để giảm tải
+    const interval = setInterval(handleGetDetailOrder, 10000); // Poll every 10 seconds
 
-    return () => clearInterval(interval); // Dọn dẹp interval
-  }, [bookingData, navigate]);
+    return () => clearInterval(interval); // Cleanup interval
+  }, [effectiveBookingData.order_id, navigate]);
 
-  // Kiểm tra tải QR code
+  // Check QR code loading
   useEffect(() => {
     if (placeholderQRCode) {
       const img = new Image();
@@ -82,7 +101,7 @@ const QRPayment = () => {
     }
   }, [placeholderQRCode]);
 
-  if (!bookingData || !bookingData.order_id || !bookingData.grand_total) {
+  if (!effectiveBookingData.order_id || !effectiveBookingData.grand_total) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-red-400">Thông tin đặt vé không hợp lệ</p>
@@ -94,7 +113,7 @@ const QRPayment = () => {
     <div className="min-h-screen bg-black text-white py-8 px-4 flex flex-col items-center">
       <h2 className="text-2xl font-bold text-orange-500 mb-8 text-center">Thanh toán bằng mã QR</h2>
       <div className="flex flex-col md:flex-row gap-6 w-full max-w-3xl">
-        {/* Phần mã QR */}
+        {/* QR Code Section */}
         <div className="bg-gray-900 rounded-xl p-6 shadow-lg flex-1">
           <h4 className="text-lg font-semibold text-orange-500 mb-4">Quét mã để thanh toán</h4>
           {loading ? (
@@ -111,7 +130,7 @@ const QRPayment = () => {
           <p className="text-gray-400 text-center mt-4">Sử dụng ứng dụng ngân hàng của bạn để quét mã thanh toán</p>
         </div>
 
-        {/* Phần chi tiết thanh toán */}
+        {/* Payment Details Section */}
         <div className="bg-gray-900 rounded-xl p-6 shadow-lg flex-1">
           <h3 className="text-xl font-semibold text-orange-500 mb-4">Chi tiết thanh toán</h3>
           <div className="flex items-center gap-4 mb-6">
@@ -132,11 +151,11 @@ const QRPayment = () => {
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Số tiền:</span>
-              <span className="text-white font-medium">{bookingData.grand_total.toLocaleString()} VND</span>
+              <span className="text-white font-medium">{effectiveBookingData.grand_total.toLocaleString()} VND</span>
             </div>
             <div className="flex justify-between border-b border-gray-700 pb-2">
               <span className="text-gray-400">Nội dung chuyển khoản:</span>
-              <span className="text-white font-medium">{bookingData.order_id}</span>
+              <span className="text-white font-medium">{effectiveBookingData.order_id}</span>
             </div>
           </div>
         </div>

@@ -78,17 +78,26 @@ slots:
       - type: from_entity
         entity: num_tickets
   
+  
   user_id:
     type: text
     influence_conversation: false
     mappings:
       - type: custom
+        action: action_set_user_id
   
   order_id:
     type: text
     influence_conversation: false
     mappings:
       - type: custom
+  
+  grand_total:
+    type: float
+    influence_conversation: true
+    mappings:
+      - type: custom  # Set by action_create_booking
+        action: action_create_booking
 
 responses:
   utter_greet:
@@ -124,7 +133,3 @@ actions:
   - action_get_movie_info
   - action_create_booking
   - action_redirect_to_payment
-
-session_config:
-  session_expiration_time: 60
-  carry_over_slots_to_new_session: true

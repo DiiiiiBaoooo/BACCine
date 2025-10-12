@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
 import axios from 'axios';
+import parse from 'html-react-parser';
+import { useNavigate } from 'react-router-dom';
 
 const RasaChatbot = ({ currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +12,7 @@ const RasaChatbot = ({ currentUser }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const senderId = useRef(`user_${currentUser?.id || Date.now()}`);
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -25,8 +28,8 @@ const RasaChatbot = ({ currentUser }) => {
         {
           text: '👋 Xin chào! Tôi là trợ lý AI đặt vé xem phim.\n\nTôi có thể giúp bạn:\n• 🎬 Xem lịch chiếu phim\n• 🎫 Đặt vé xem phim\n• 🪑 Kiểm tra ghế trống\n• 🏢 Thông tin rạp chiếu\n• 💰 Hướng dẫn thanh toán\n\nBạn cần tôi giúp gì?',
           sender: 'bot',
-          timestamp: new Date()
-        }
+          timestamp: new Date(),
+        },
       ]);
     }
   }, [isOpen]);
@@ -40,21 +43,29 @@ const RasaChatbot = ({ currentUser }) => {
           message: message,
           metadata: {
             userId: currentUser?.id,
-            cinemaId: currentUser?.cinemaId
-          }
+            cinemaId: currentUser?.cinemaId,
+          },
         }
       );
 
       if (response.data.success && response.data.responses) {
-        return response.data.responses;
+        console.log('Rasa responses:', response.data.responses);
+        return response.data.responses.map(resp => ({
+          text: typeof resp.text === 'string' ? resp.text : '',
+          sender: 'bot',
+          timestamp: new Date(),
+          buttons: resp.buttons || [],
+          image: resp.image || null,
+          custom: resp.custom || null,
+        }));
       }
       return [];
     } catch (error) {
       console.error('Error sending message to RASA:', error);
       return [
         {
-          text: '❌ Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.'
-        }
+          text: '❌ Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
+        },
       ];
     }
   };
@@ -65,30 +76,30 @@ const RasaChatbot = ({ currentUser }) => {
     const userMessage = {
       text: inputMessage,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
     setIsTyping(true);
 
     try {
       const botResponses = await sendMessageToRasa(inputMessage);
-      
+
       setIsTyping(false);
 
       if (botResponses.length > 0) {
-        const newMessages = botResponses.map(resp => ({
-          text: resp.text,
+        const newMessages = botResponses.map((resp) => ({
+          text: typeof resp.text === 'string' ? resp.text : '',
           sender: 'bot',
           timestamp: new Date(),
           buttons: resp.buttons,
           image: resp.image,
-          custom: resp.custom
+          custom: resp.custom,
         }));
 
-        setMessages(prev => [...prev, ...newMessages]);
+        setMessages((prev) => [...prev, ...newMessages]);
       }
     } catch (error) {
       setIsTyping(false);
@@ -109,10 +120,10 @@ const RasaChatbot = ({ currentUser }) => {
     const buttonMessage = {
       text: payload,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, buttonMessage]);
+    setMessages((prev) => [...prev, buttonMessage]);
     setIsLoading(true);
     setIsTyping(true);
 
@@ -121,15 +132,16 @@ const RasaChatbot = ({ currentUser }) => {
       setIsTyping(false);
 
       if (botResponses.length > 0) {
-        const newMessages = botResponses.map(resp => ({
-          text: resp.text,
+        const newMessages = botResponses.map((resp) => ({
+          text: typeof resp.text === 'string' ? resp.text : '',
           sender: 'bot',
           timestamp: new Date(),
           buttons: resp.buttons,
-          image: resp.image
+          image: resp.image,
+          custom: resp.custom,
         }));
 
-        setMessages(prev => [...prev, ...newMessages]);
+        setMessages((prev) => [...prev, ...newMessages]);
       }
     } catch (error) {
       setIsTyping(false);
@@ -148,8 +160,8 @@ const RasaChatbot = ({ currentUser }) => {
         {
           text: '🔄 Cuộc hội thoại đã được reset. Tôi có thể giúp gì cho bạn?',
           sender: 'bot',
-          timestamp: new Date()
-        }
+          timestamp: new Date(),
+        },
       ]);
     } catch (error) {
       console.error('Error resetting conversation:', error);
@@ -222,9 +234,41 @@ const RasaChatbot = ({ currentUser }) => {
                       : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
                   }`}
                 >
-                  <p className="text-sm text-black whitespace-pre-wrap leading-relaxed">
-                    {msg.text}
-                  </p>
+                  {/* Parse HTML content with fallback */}
+                  <div className="text-sm text-black whitespace-pre-wrap leading-relaxed">
+                    {typeof msg.text === 'string' && msg.text.trim() ? (
+                      parse(msg.text)
+                    ) : (
+                      <span>Không có nội dung</span>
+                    )}
+                  </div>
+
+                  {/* Custom Payload */}
+                  {msg.custom && msg.custom.bookingData && (
+                    <div className="mt-2 text-sm text-gray-700">
+                      <p><strong>Mã đơn hàng:</strong> {msg.custom.bookingData.order_id}</p>
+                      <p><strong>Tổng tiền:</strong> {msg.custom.bookingData.grand_total.toLocaleString('vi-VN')} VND</p>
+                      {msg.custom.bookingData.payment_url && (
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/qr-payment?order_id=${encodeURIComponent(
+                                msg.custom.bookingData.order_id
+                              )}&grand_total=${encodeURIComponent(
+                                msg.custom.bookingData.grand_total
+                              )}`,
+                              {
+                                state: { bookingData: msg.custom.bookingData },
+                              }
+                            )
+                          }
+                          className="mt-2 inline-block px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200"
+                        >
+                          Go to Payment
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Buttons */}
                   {msg.buttons && msg.buttons.length > 0 && (
@@ -233,7 +277,7 @@ const RasaChatbot = ({ currentUser }) => {
                         <button
                           key={btnIndex}
                           onClick={() => handleButtonClick(button.payload)}
-                          className="w-full text-left px-3 py-2 text-sm  bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-all hover:shadow-md"
+                          className="w-full text-left px-3 py-2 text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-all hover:shadow-md"
                         >
                           {button.title}
                         </button>
@@ -253,7 +297,7 @@ const RasaChatbot = ({ currentUser }) => {
                   <p className="text-xs mt-2 opacity-60">
                     {msg.timestamp.toLocaleTimeString('vi-VN', {
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
                     })}
                   </p>
                 </div>
@@ -275,8 +319,14 @@ const RasaChatbot = ({ currentUser }) => {
                 <div className="bg-white rounded-2xl px-4 py-3 shadow-md border border-gray-100">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div
+                      className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                      style={{ animationDelay: '0.1s' }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                      style={{ animationDelay: '0.2s' }}
+                    ></div>
                   </div>
                 </div>
               </div>

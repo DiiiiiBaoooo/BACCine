@@ -22,6 +22,7 @@
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.1",
     "face-api.js": "^0.22.2",
+    "html-react-parser": "^5.2.6",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.540.0",
     "react": "^19.1.1",

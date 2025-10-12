@@ -23,26 +23,20 @@ class ActionGetShowtimes(Action):
         
         logger.info(f"Slots - movie: {movie_name}, cinema: {cinema_name}, date: {date}")
         
-        # Parse date
         if date:
             parsed_date = self.parse_date(date)
         else:
             parsed_date = datetime.now().strftime("%Y-%m-%d")
         
         try:
-            # Scenario 1: Có tên phim
             if movie_name:
                 return self.get_showtimes_by_movie(
                     dispatcher, movie_name, cinema_name, parsed_date
                 )
-            
-            # Scenario 2: Chỉ có tên rạp (không có phim cụ thể)
             elif cinema_name:
                 return self.get_showtimes_by_cinema(
                     dispatcher, cinema_name, parsed_date
                 )
-            
-            # Scenario 3: Không có thông tin cụ thể
             else:
                 dispatcher.utter_message(
                     text="Bạn muốn xem lịch chiếu của phim nào? Hoặc bạn muốn xem lịch chiếu tại rạp nào?"
@@ -58,9 +52,7 @@ class ActionGetShowtimes(Action):
         return []
     
     def get_showtimes_by_movie(self, dispatcher, movie_name, cinema_name, date):
-        """Lấy lịch chiếu theo phim sử dụng endpoint /showtimes/movies/:movie_id"""
         try:
-            # Bước 1: Tìm movie_id từ tên phim
             movie_id, movie_info = self.find_movie_id(movie_name)
             
             if not movie_id:
@@ -70,7 +62,6 @@ class ActionGetShowtimes(Action):
                 )
                 return []
             
-            # Bước 2: Lấy lịch chiếu của phim từ API
             response = requests.get(
                 f"{API_BASE_URL}/showtimes/movies/{movie_id}",
                 timeout=5
@@ -100,7 +91,6 @@ class ActionGetShowtimes(Action):
                 )
                 return []
             
-            # Bước 3: Lọc theo rạp nếu có
             if cinema_name:
                 cinema_name_lower = cinema_name.lower()
                 showtimes = [
@@ -114,12 +104,10 @@ class ActionGetShowtimes(Action):
                     )
                     return []
             
-            # Bước 4: Lọc theo ngày
             filtered_by_date = []
             for st in showtimes:
                 start_time = st.get('start_time', '')
                 if start_time:
-                    # Parse ISO datetime: "2025-10-10T05:44:00.000Z"
                     try:
                         st_date = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
                         st_date_str = st_date.strftime('%Y-%m-%d')
@@ -129,7 +117,6 @@ class ActionGetShowtimes(Action):
                     except Exception as e:
                         logger.warning(f"Cannot parse date: {start_time}")
             
-            # Nếu không có suất chiếu trong ngày được chọn, hiển thị tất cả
             if not filtered_by_date:
                 logger.info(f"No showtimes on {date}, showing all available dates")
                 for st in showtimes:
@@ -147,7 +134,6 @@ class ActionGetShowtimes(Action):
                 )
                 return []
             
-            # Bước 5: Hiển thị thông tin
             self.display_movie_showtimes(
                 dispatcher, 
                 movie_data, 
@@ -163,9 +149,7 @@ class ActionGetShowtimes(Action):
             raise
     
     def get_showtimes_by_cinema(self, dispatcher, cinema_name, date):
-        """Lấy lịch chiếu theo rạp sử dụng endpoint /showtimes/datve/:cinema_id/:date"""
         try:
-            # Bước 1: Tìm cinema_id
             cinema_id = self.find_cinema_id(cinema_name)
             
             if not cinema_id:
@@ -174,7 +158,6 @@ class ActionGetShowtimes(Action):
                 )
                 return []
             
-            # Bước 2: Lấy lịch chiếu
             response = requests.get(
                 f"{API_BASE_URL}/showtimes/datve/{cinema_id}/{date}",
                 timeout=5
@@ -188,7 +171,6 @@ class ActionGetShowtimes(Action):
             
             showtimes = response.json()
             
-            # Parse response (có thể là list hoặc dict)
             if isinstance(showtimes, dict):
                 showtimes = showtimes.get('data', []) or showtimes.get('showtimes', [])
             
@@ -198,7 +180,6 @@ class ActionGetShowtimes(Action):
                 )
                 return []
             
-            # Bước 3: Hiển thị
             self.display_cinema_showtimes(dispatcher, cinema_name, showtimes, date)
             
             return []
@@ -208,7 +189,6 @@ class ActionGetShowtimes(Action):
             raise
     
     def display_movie_showtimes(self, dispatcher, movie_data, showtimes, cinema_filter, date):
-        """Hiển thị lịch chiếu của một phim"""
         title = movie_data.get('title', 'N/A')
         runtime = movie_data.get('runtime', 'N/A')
         genres = movie_data.get('genres', [])
@@ -222,7 +202,6 @@ class ActionGetShowtimes(Action):
             message += f"⭐ Đánh giá: {vote_avg}/10\n"
         message += "\n📅 **LỊCH CHIẾU:**\n\n"
         
-        # Nhóm theo rạp
         grouped_by_cinema = {}
         for st in showtimes:
             cinema = st.get('cinema_name', 'Rạp không xác định')
@@ -230,15 +209,13 @@ class ActionGetShowtimes(Action):
                 grouped_by_cinema[cinema] = []
             grouped_by_cinema[cinema].append(st)
         
-        # Sắp xếp theo thời gian
         for cinema, times in grouped_by_cinema.items():
             times.sort(key=lambda x: x.get('parsed_date', datetime.now()))
         
-        # Hiển thị từng rạp
         for cinema, times in grouped_by_cinema.items():
             message += f"🏢 **{cinema}**\n"
             
-            for st in times[:10]:  # Giới hạn 10 suất/rạp
+            for st in times[:10]:
                 showtime_id = st.get('id', 'N/A')
                 room = st.get('room_name', 'N/A')
                 parsed_date = st.get('parsed_date')
@@ -261,11 +238,9 @@ class ActionGetShowtimes(Action):
         dispatcher.utter_message(text=message)
     
     def display_cinema_showtimes(self, dispatcher, cinema_name, showtimes, date):
-        """Hiển thị lịch chiếu của một rạp"""
         message = f"🏢 **Lịch chiếu tại {cinema_name}**\n"
         message += f"📅 Ngày {date}\n\n"
         
-        # Nhóm theo phim
         grouped_by_movie = {}
         for st in showtimes:
             movie = st.get('movie_title', '') or st.get('title', 'Phim không xác định')
@@ -276,7 +251,7 @@ class ActionGetShowtimes(Action):
         for movie, times in grouped_by_movie.items():
             message += f"🎬 **{movie}**\n"
             
-            for st in times[:8]:  # Giới hạn 8 suất/phim
+            for st in times[:8]:
                 showtime_id = st.get('id', 'N/A')
                 show_time = st.get('show_time', '') or st.get('time', 'N/A')
                 room = st.get('room_name', 'N/A')
@@ -294,7 +269,6 @@ class ActionGetShowtimes(Action):
         dispatcher.utter_message(text=message)
     
     def find_movie_id(self, movie_name):
-        """Tìm movie_id từ tên phim"""
         try:
             response = requests.get(f"{API_BASE_URL}/movies", timeout=5)
             
@@ -303,7 +277,6 @@ class ActionGetShowtimes(Action):
             
             movies_data = response.json()
             
-            # Parse response
             if isinstance(movies_data, dict):
                 movies = movies_data.get('data', []) or movies_data.get('movies', [])
             elif isinstance(movies_data, list):
@@ -311,10 +284,8 @@ class ActionGetShowtimes(Action):
             else:
                 return None, None
             
-            # Tìm kiếm
             movie_name_lower = movie_name.lower()
             
-            # Tìm exact match trước
             for movie in movies:
                 if not isinstance(movie, dict):
                     continue
@@ -325,7 +296,6 @@ class ActionGetShowtimes(Action):
                     movie_id = movie.get('movie_id') or movie.get('id')
                     return movie_id, movie
             
-            # Tìm partial match
             for movie in movies:
                 if not isinstance(movie, dict):
                     continue
@@ -343,7 +313,6 @@ class ActionGetShowtimes(Action):
             return None, None
     
     def find_cinema_id(self, cinema_name):
-        """Tìm cinema_id từ tên rạp"""
         try:
             response = requests.get(f"{API_BASE_URL}/cinemas", timeout=5)
             
@@ -352,7 +321,6 @@ class ActionGetShowtimes(Action):
             
             cinemas_data = response.json()
             
-            # Parse response
             if isinstance(cinemas_data, dict):
                 cinemas = cinemas_data.get('cinemas', []) or cinemas_data.get('data', [])
             elif isinstance(cinemas_data, list):
@@ -360,7 +328,6 @@ class ActionGetShowtimes(Action):
             else:
                 return None
             
-            # Tìm kiếm
             cinema_name_lower = cinema_name.lower()
             
             for cinema in cinemas:
@@ -379,7 +346,6 @@ class ActionGetShowtimes(Action):
             return None
     
     def parse_date(self, date_str):
-        """Parse ngày tháng"""
         if not date_str or not isinstance(date_str, str):
             return datetime.now().strftime("%Y-%m-%d")
         
@@ -421,7 +387,6 @@ class ActionGetAvailableSeats(Action):
             return []
         
         try:
-            # Sử dụng API mới để lấy tất cả ghế với trạng thái
             response = requests.get(
                 f"{API_BASE_URL}/showtimes/seats-status/{showtime_id}",
                 timeout=5
@@ -444,7 +409,6 @@ class ActionGetAvailableSeats(Action):
                 
                 logger.info(f"Showtime {showtime_id}: {summary.get('available')} available, {summary.get('booked') + summary.get('reserved')} occupied")
                 
-                # Tạo thông báo
                 message = f"🎫 **Suất chiếu ID: {showtime_id}**\n"
                 message += f"🏢 Phòng: {room_info.get('room_name', 'N/A')}\n\n"
                 
@@ -456,16 +420,13 @@ class ActionGetAvailableSeats(Action):
                 if summary.get('available', 0) > 0:
                     message += "🪑 **GHẾ CÒN TRỐNG:**\n\n"
                     
-                    # Hiển thị ghế trống theo loại
                     for type_name, seats in available_by_type.items():
                         emoji = self.get_seat_type_emoji(type_name)
                         message += f"{emoji} **{type_name.capitalize()}** ({len(seats)} ghế):\n"
                         
-                        # Lấy seat_number
                         seat_numbers = [s.get('seat_number', '') for s in seats]
-                        seat_numbers = [s for s in seat_numbers if s]  # Lọc empty
+                        seat_numbers = [s for s in seat_numbers if s]
                         
-                        # Hiển thị tối đa 30 ghế
                         if len(seat_numbers) > 30:
                             display = ", ".join(seat_numbers[:30])
                             message += f"   {display}\n"
@@ -511,7 +472,6 @@ class ActionGetAvailableSeats(Action):
         return []
     
     def get_seat_type_emoji(self, type_name):
-        """Lấy emoji cho loại ghế"""
         type_map = {
             'standard': '🪑',
             'normal': '🪑',
@@ -533,13 +493,12 @@ class ActionCreateBooking(Action):
         showtime_id = tracker.get_slot("showtime_id")
         seat_numbers = tracker.get_slot("seat_numbers")
         user_id = tracker.get_slot("user_id") or "guest_user"
-        
+        logger.info(f"Retrieved user_id: {user_id} (type: {type(user_id)})")
         # Lấy từ latest message nếu slot trống
         if not showtime_id or not seat_numbers:
             latest_message = tracker.latest_message.get('text', '')
             logger.info(f"Latest message: {latest_message}")
             
-            # Parse showtime_id từ message
             if not showtime_id:
                 import re
                 showtime_match = re.search(r'suất\s+(\d+)', latest_message, re.IGNORECASE)
@@ -547,7 +506,6 @@ class ActionCreateBooking(Action):
                     showtime_id = showtime_match.group(1)
                     logger.info(f"Extracted showtime_id: {showtime_id}")
             
-            # Parse seat_numbers từ message
             if not seat_numbers:
                 seat_numbers = self.extract_seat_numbers(latest_message)
                 logger.info(f"Extracted seats: {seat_numbers}")
@@ -571,16 +529,277 @@ class ActionCreateBooking(Action):
             seat_numbers = [s.strip() for s in seat_numbers.replace(',', ' ').split()]
         
         try:
-            # Chuẩn bị dữ liệu booking
+            # ========================================
+            # BƯỚC 1: Lấy thông tin ghế trước (để validate showtime tồn tại)
+            # ========================================
+            seat_response = requests.get(
+                f"{API_BASE_URL}/showtimes/seats-status/{showtime_id}",
+                timeout=5
+            )
+            
+            if seat_response.status_code != 200:
+                dispatcher.utter_message(
+                    text=f"❌ Không thể lấy thông tin ghế cho suất chiếu ID {showtime_id}"
+                )
+                return []
+            
+            seat_data = seat_response.json()
+            if not seat_data.get('success'):
+                dispatcher.utter_message(text="❌ Không thể lấy thông tin ghế")
+                return []
+            
+            # Lấy danh sách ghế available
+            available_seats = seat_data.get('availableSeats', [])
+            
+            # Thử lấy cinema_id từ roomInfo hoặc các field khác
+            room_info = seat_data.get('roomInfo', {})
+            cinema_id = (
+                seat_data.get('cinema_id') or 
+                seat_data.get('cinemaId') or 
+                seat_data.get('cinema_cluster_id') or
+                room_info.get('cinema_id') or
+                room_info.get('cinema_cluster_id')
+            )
+            
+            logger.info(f"Seat data keys: {seat_data.keys()}")
+            logger.info(f"Room info: {room_info}")
+            logger.info(f"Extracted cinema_id: {cinema_id}")
+            
+            # Nếu không tìm thấy cinema_id, thử query từ showtimes/all
+            if not cinema_id:
+                logger.info("Cinema ID not found in seat data, trying /showtimes/all")
+                
+                showtime_response = requests.get(
+                    f"{API_BASE_URL}/showtimes/all",
+                    timeout=5
+                )
+                
+                if showtime_response.status_code == 200:
+                    all_showtimes = showtime_response.json()
+                    
+                    logger.info(f"All showtimes response type: {type(all_showtimes)}")
+                    
+                    # Parse response
+                    showtimes_list = []
+                    if isinstance(all_showtimes, list):
+                        showtimes_list = all_showtimes
+                    elif isinstance(all_showtimes, dict):
+                        showtimes_list = (
+                            all_showtimes.get('data', []) or 
+                            all_showtimes.get('showtimes', []) or
+                            all_showtimes.get('dateTime', [])
+                        )
+                    
+                    logger.info(f"Showtimes list length: {len(showtimes_list)}")
+                    
+                    # Tìm showtime với showtime_id
+                    showtime_info = next((st for st in showtimes_list if st.get('id') == int(showtime_id)), None)
+                    
+                    if showtime_info:
+                        cinema_id = (
+                            showtime_info.get('cinema_id') or 
+                            showtime_info.get('cinemaId') or 
+                            showtime_info.get('cinema_cluster_id')
+                        )
+                        logger.info(f"Found showtime info: {showtime_info.keys()}")
+                        logger.info(f"Extracted cinema_id from showtime: {cinema_id}")
+            
+            # Nếu vẫn không có cinema_id, dùng giá trị mặc định từ context
+            # hoặc yêu cầu user cung cấp
+            if not cinema_id:
+                # Thử lấy từ conversation context (cinema được chọn trước đó)
+                cinema_name = tracker.get_slot("cinema_name")
+                if cinema_name:
+                    logger.info(f"Trying to find cinema_id from name: {cinema_name}")
+                    cinema_id = self.find_cinema_id_from_name(cinema_name)
+                    logger.info(f"Found cinema_id from name: {cinema_id}")
+            
+            if not cinema_id:
+                dispatcher.utter_message(
+                    text="❌ Không thể xác định rạp chiếu.\n\n"
+                         "Vui lòng thử lại bằng cách:\n"
+                         "1. Xem lịch chiếu phim tại rạp trước\n"
+                         "2. Sau đó đặt vé với ID suất chiếu\n\n"
+                         "Ví dụ: 'Lịch chiếu tại BAC Quang Trung' → sau đó 'Đặt vé suất 7, ghế A1 A2'"
+                )
+                return []
+            
+            logger.info(f"Final cinema_id: {cinema_id} for showtime {showtime_id}")
+            
+            # ========================================
+            # BƯỚC 2: Lấy thông tin showtime để có date
+            # ========================================
+            # Cần date để lấy giá vé từ /ticket-prices/getprice/:cinemaId/:date
+            showtime_date = None
+            
+            # Thử lấy từ available_seats (có thể có start_time)
+            if available_seats and len(available_seats) > 0:
+                # Seats có thể có thông tin showtime
+                pass
+            
+            # Hoặc query lại từ API showtimes
+            try:
+                showtime_detail_response = requests.get(
+                    f"{API_BASE_URL}/showtimes/all",
+                    timeout=5
+                )
+                
+                if showtime_detail_response.status_code == 200:
+                    all_st = showtime_detail_response.json()
+                    st_list = []
+                    
+                    if isinstance(all_st, dict):
+                        st_list = all_st.get('showtimes', []) or all_st.get('data', [])
+                    elif isinstance(all_st, list):
+                        st_list = all_st
+                    
+                    # Tìm showtime
+                    st_info = next((s for s in st_list if str(s.get('id')) == str(showtime_id)), None)
+                    
+                    if st_info:
+                        start_time = st_info.get('start_time') or st_info.get('show_time')
+                        if start_time:
+                            try:
+                                # Parse ISO date: "2025-10-11T23:10:00.000Z"
+                                dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                                showtime_date = dt.strftime('%Y-%m-%d')
+                                logger.info(f"Extracted showtime date: {showtime_date}")
+                            except:
+                                pass
+            except Exception as e:
+                logger.warning(f"Could not get showtime date: {e}")
+            
+            # Fallback to today if can't find date
+            if not showtime_date:
+                showtime_date = datetime.now().strftime('%Y-%m-%d')
+                logger.info(f"Using today as fallback date: {showtime_date}")
+            
+            # ========================================
+            # BƯỚC 3: Lấy giá vé từ ticket-prices API
+            # ========================================
+            ticket_prices_map = {}
+            
+            try:
+                price_response = requests.get(
+                    f"{API_BASE_URL}/ticket-prices/getprice/{cinema_id}/{showtime_date}",
+                    timeout=5
+                )
+                
+                logger.info(f"Ticket prices API status: {price_response.status_code}")
+                
+                if price_response.status_code == 200:
+                    price_data = price_response.json()
+                    logger.info(f"Price data: {price_data}")
+                    
+                    # Parse response (có thể là list hoặc dict)
+                    prices = []
+                    if isinstance(price_data, dict):
+                        prices = price_data.get('prices', []) or price_data.get('data', [])
+                    elif isinstance(price_data, list):
+                        prices = price_data
+                    
+                    # Map seat_type → price
+                    for price_item in prices:
+                        seat_type = (
+                            price_item.get('seat_type') or 
+                            price_item.get('seat_type_name') or
+                            price_item.get('type')
+                        )
+                        base_price = price_item.get('base_price') or price_item.get('price')
+                        
+                        if seat_type and base_price:
+                            ticket_prices_map[seat_type.lower()] = float(base_price)
+                    
+                    logger.info(f"Ticket prices map: {ticket_prices_map}")
+                else:
+                    logger.warning(f"Could not get ticket prices: HTTP {price_response.status_code}")
+            except Exception as e:
+                logger.error(f"Error getting ticket prices: {e}")
+            
+            # Nếu không lấy được giá, dùng giá mặc định
+            if not ticket_prices_map:
+                ticket_prices_map = {
+                    'standard': 50000,
+                    'normal': 50000,
+                    'vip': 80000,
+                    'couple': 150000,
+                    'sweetbox': 150000
+                }
+                logger.warning(f"Using default prices: {ticket_prices_map}")
+            
+            # ========================================
+            # BƯỚC 4: Chuẩn bị tickets array với đúng format
+            # ========================================
+            tickets = []
+            for seat_number in seat_numbers:
+                # Tìm seat trong available_seats
+                seat_info = next((s for s in available_seats if s.get('seat_number') == seat_number), None)
+                
+                if not seat_info:
+                    dispatcher.utter_message(
+                        text=f"❌ Ghế **{seat_number}** không khả dụng hoặc đã được đặt!"
+                    )
+                    return []
+                
+                # Lấy seat_type từ seat_info
+                seat_type = (
+                    seat_info.get('seat_type') or 
+                    seat_info.get('type') or 
+                    seat_info.get('seat_type_name') or
+                    'standard'
+                ).lower()
+                
+                logger.info(f"Seat {seat_number}: type = {seat_type}")
+                
+                # Lấy ticket_price từ map theo seat_type
+                ticket_price = ticket_prices_map.get(seat_type)
+                
+                # Fallback nếu không tìm thấy
+                if not ticket_price:
+                    ticket_price = ticket_prices_map.get('standard', 50000)
+                    logger.warning(f"Price not found for type {seat_type}, using default: {ticket_price}")
+                
+                # Ensure ticket_price is number
+                ticket_price = float(ticket_price)
+                
+                # Backend expects seat_id to be seat_number (A1, A2, etc)
+                tickets.append({
+                    "seat_id": seat_number,  # seat_number như A1, A2
+                    "ticket_price": ticket_price  # Phải là number
+                })
+            
+            logger.info(f"Prepared tickets: {tickets}")
+            
+            # Validate tickets trước khi gửi
+            for ticket in tickets:
+                if not ticket.get('seat_id'):
+                    dispatcher.utter_message(text="❌ Lỗi: seat_id bị thiếu")
+                    return []
+                if not ticket.get('ticket_price') or not isinstance(ticket['ticket_price'], (int, float)):
+                    dispatcher.utter_message(
+                        text=f"❌ Lỗi: Không lấy được giá vé cho ghế {ticket.get('seat_id')}\n"
+                             f"ticket_price = {ticket.get('ticket_price')} (type: {type(ticket.get('ticket_price'))})"
+                    )
+                    return []
+            
+            # ========================================
+            # BƯỚC 3: Chuẩn bị dữ liệu booking với đầy đủ trường
+            # ========================================
             booking_data = {
+                "cinema_id": cinema_id,
                 "user_id": user_id,
                 "showtime_id": int(showtime_id),
-                "seats": seat_numbers,
-                "services": []
+                "tickets": tickets,
+                "services": [],
+                "payment_method": "qr code",  # Mặc định QR code
+                "status": "pending"  # Mặc định pending
             }
             
             logger.info(f"Creating booking: {booking_data}")
             
+            # ========================================
+            # BƯỚC 5: Gọi API tạo booking
+            # ========================================
             response = requests.post(
                 f"{API_BASE_URL}/bookings/create-booking",
                 json=booking_data,
@@ -589,24 +808,36 @@ class ActionCreateBooking(Action):
             
             logger.info(f"Booking response status: {response.status_code}")
             
-            if response.status_code == 200:
+            if response.status_code == 201 or response.status_code == 200:
                 result = response.json()
-                order_id = result.get('order_id') or result.get('id')
+                
+                if not result.get('success'):
+                    error_msg = result.get('message', 'Lỗi không xác định')
+                    dispatcher.utter_message(
+                        text=f"❌ **Đặt vé thất bại!**\n\nLý do: {error_msg}"
+                    )
+                    return []
+                
+                data = result.get('data', {})
+                order_id = data.get('order_id')
                 
                 if order_id:
                     seats_display = ', '.join(seat_numbers) if isinstance(seat_numbers, list) else seat_numbers
+                    grand_total = data.get('grand_total', 0)
                     
                     message = "✅ **ĐẶT VÉ THÀNH CÔNG!**\n\n"
                     message += f"📋 **Mã đơn hàng:** {order_id}\n"
                     message += f"🎬 **Suất chiếu:** ID {showtime_id}\n"
-                    message += f"🪑 **Ghế đã đặt:** {seats_display}\n\n"
+                    message += f"🪑 **Ghế đã đặt:** {seats_display}\n"
+                    message += f"💰 **Tổng tiền:** {grand_total:,} VND\n\n"
                     message += "⏰ Vui lòng **thanh toán trong 15 phút** để giữ vé!\n\n"
                     message += "💳 Bạn có thể hỏi: 'Thanh toán như thế nào?' để được hướng dẫn."
                     
                     dispatcher.utter_message(text=message)
                     return [
                         SlotSet("order_id", order_id),
-                        SlotSet("showtime_id", None),  # Reset để chuẩn bị đặt vé mới
+                        SlotSet("grand_total", float(grand_total)),  # Add this line
+                        SlotSet("showtime_id", None),
                         SlotSet("seat_numbers", None)
                     ]
                 else:
@@ -619,6 +850,9 @@ class ActionCreateBooking(Action):
                     error_msg = error_data.get('message', '') or error_data.get('error', 'Lỗi không xác định')
                 except:
                     error_msg = f"HTTP {response.status_code}"
+                
+                logger.error(f"Booking failed: {error_msg}")
+                logger.error(f"Response body: {response.text}")
                 
                 dispatcher.utter_message(
                     text=f"❌ **Đặt vé thất bại!**\n\n"
@@ -653,7 +887,40 @@ class ActionCreateBooking(Action):
         
         logger.info(f"Extracted seats from '{text}': {seats}")
         return seats if seats else []
-
+    
+    def find_cinema_id_from_name(self, cinema_name):
+        """Tìm cinema_id từ tên rạp"""
+        try:
+            response = requests.get(f"{API_BASE_URL}/cinemas", timeout=5)
+            
+            if response.status_code != 200:
+                return None
+            
+            cinemas_data = response.json()
+            
+            if isinstance(cinemas_data, dict):
+                cinemas = cinemas_data.get('cinemas', []) or cinemas_data.get('data', [])
+            elif isinstance(cinemas_data, list):
+                cinemas = cinemas_data
+            else:
+                return None
+            
+            cinema_name_lower = cinema_name.lower()
+            
+            for cinema in cinemas:
+                if not isinstance(cinema, dict):
+                    continue
+                
+                name = str(cinema.get('cinema_name', '') or cinema.get('name', '')).lower()
+                
+                if cinema_name_lower in name or name in cinema_name_lower:
+                    return cinema.get('id') or cinema.get('cinema_id')
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error finding cinema: {str(e)}")
+            return None
 
 class ActionRedirectToPayment(Action):
     def name(self) -> Text:
@@ -664,28 +931,39 @@ class ActionRedirectToPayment(Action):
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         
         order_id = tracker.get_slot("order_id")
+        grand_total = tracker.get_slot("grand_total")
         
-        if order_id:
-            payment_url = f"http://localhost:5173/payment/{order_id}"
-            
-            message = "💳 **HƯỚNG DẪN THANH TOÁN**\n\n"
-            message += f"🔗 Vui lòng truy cập link sau để thanh toán:\n"
-            message += f"{payment_url}\n\n"
-            message += "📌 **Các phương thức thanh toán:**\n"
-            message += "• Thẻ ATM/Visa/Mastercard\n"
-            message += "• Ví điện tử (Momo, ZaloPay, VNPay)\n"
-            message += "• Chuyển khoản ngân hàng\n\n"
-            message += "⏰ Thời gian giữ vé: **15 phút**"
-            
-            dispatcher.utter_message(text=message)
-        else:
+        if not order_id or not grand_total:
             dispatcher.utter_message(
-                text="❌ Không tìm thấy mã đơn hàng.\n"
+                text="❌ Thiếu thông tin đơn hàng.\n"
                      "Bạn có thể đặt vé mới bằng cách nói: 'Đặt vé phim [tên phim]'"
             )
+            return []
+        
+        # Tạo URL thanh toán cố định
+        payment_url = "http://localhost:5173/qr-payment"
+        
+        message = "💳 **HƯỚNG DẪN THANH TOÁN**\n\n"
+        message += f"🔗 Vui lòng truy cập link sau để thanh toán:\n"
+        message += f"<a href='{payment_url}' target='_blank'>Link thanh toán</a>\n\n"
+        message += f"📌 **Thông tin thanh toán:**\n"
+        message += f"• Mã đơn hàng: {order_id}\n"
+        message += f"• Tổng tiền: {grand_total:,} VND\n"
+        message += "• Phương thức: QR Code (VNPay, Momo, ZaloPay) hoặc chuyển khoản ngân hàng\n\n"
+        message += "⏰ Thời gian giữ vé: **15 phút**"
+        
+        dispatcher.utter_message(
+            text=message,
+            custom={
+                "bookingData": {
+                    "order_id": order_id,
+                    "grand_total": float(grand_total),
+                    "payment_url": payment_url
+                }
+            }
+        )
         
         return []
-
 
 class ActionGetCinemaInfo(Action):
     def name(self) -> Text:
