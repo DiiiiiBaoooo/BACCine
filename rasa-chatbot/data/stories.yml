@@ -84,6 +84,47 @@ stories:
       - slot_was_set:
           - showtime_id
       - action: action_get_available_seats
+  
+  - story: check seats then provide showtime id
+    steps:
+      - intent: ask_available_seats
+      - action: utter_ask_showtime_id
+      - intent: provide_showtime_id
+        entities:
+          - showtime_id
+      - slot_was_set:
+          - showtime_id
+      - action: action_get_available_seats
+
+  - story: book with provided date
+    steps:
+      - intent: ask_showtimes
+        entities:
+          - date
+      - slot_was_set:
+          - date
+      - action: utter_ask_cinema_name
+      - intent: provide_cinema_name
+        entities:
+          - cinema_name
+      - slot_was_set:
+          - cinema_name
+      - action: action_get_showtimes
+
+  - story: ask payment info
+    steps:
+      - intent: ask_payment
+      - action: action_redirect_to_payment
+
+  - story: user affirms
+    steps:
+      - intent: affirm
+      - action: utter_greet
+
+  - story: user denies
+    steps:
+      - intent: deny
+      - action: utter_goodbye
 
   - story: cinema information
     steps:

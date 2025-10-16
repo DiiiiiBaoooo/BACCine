@@ -8,7 +8,169 @@ import logging
 
 API_BASE_URL = "http://localhost:3000/api"
 logger = logging.getLogger(__name__)
+import re
+from typing import Optional, Tuple
 
+def extract_entities_from_text(text: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Extract movie name and cinema name từ text khi NLU miss
+    
+    Returns:
+        Tuple[Optional[str], Optional[str]]: (movie_name, cinema_name)
+    """
+    
+    # Danh sách tên rạp phổ biến
+    cinema_keywords = [
+        'cgv', 'galaxy', 'lotte', 'bhd', 'platinum', 'cinestar', 
+        'beta', 'megastar', 'bac quang trung', 'rạp bac', 'vincom',
+        'gò vấp', 'landmark', 'aeon', 'nguyễn du', 'quốc thanh'
+    ]
+    
+    # Danh sách từ khóa phim phổ biến (có thể mở rộng)
+    movie_keywords = [
+        'avatar', 'spider-man', 'spiderman', 'avengers', 'inception',
+        'oppenheimer', 'barbie', 'batman', 'venom', 'doraemon',
+        'the bad guys', 'bad guys', 'frozen', 'deadpool', 'transformers',
+        'kung fu panda', 'interstellar'
+    ]
+    
+    text_lower = text.lower()
+    
+    # Extract cinema
+    cinema_name = None
+    for keyword in cinema_keywords:
+        if keyword in text_lower:
+            # Tìm context xung quanh keyword
+            pattern = r'(rạp\s+)?' + re.escape(keyword) + r'(\s+\w+)?'
+            match = re.search(pattern, text_lower)
+            if match:
+                cinema_name = match.group(0).strip()
+                break
+    
+    # Extract movie
+    movie_name = None
+    for keyword in movie_keywords:
+        if keyword in text_lower:
+            # Tìm context xung quanh keyword
+            pattern = r'(phim\s+)?' + re.escape(keyword) + r'(\s+\d+)?'
+            match = re.search(pattern, text_lower)
+            if match:
+                movie_name = match.group(0).replace('phim', '').strip()
+                break
+    
+    return movie_name, cinema_name
+
+
+def normalize_entity(entity_value: str, entity_type: str) -> str:
+    """
+    Normalize entity value để match với database
+    
+    Args:
+        entity_value: Giá trị entity từ NLU
+        entity_type: Loại entity (movie_name, cinema_name)
+    
+    Returns:
+        str: Normalized entity value
+    """
+    
+    if not entity_value:
+        return entity_value
+    
+    # Remove common prefixes
+    entity_value = re.sub(r'^(phim|rạp)\s+', '', entity_value, flags=re.IGNORECASE)
+    
+    # Normalize spacing
+    entity_value = ' '.join(entity_value.split())
+    
+    if entity_type == 'cinema_name':
+        # Mapping các biến thể tên rạp
+        cinema_mappings = {
+            'bac': 'BAC Quang Trung',
+            'bac quang trung': 'BAC Quang Trung',
+            'rạp bac': 'BAC Quang Trung',
+            'cgv': 'CGV',
+            'cgv vincom': 'CGV Vincom',
+            'cgv landmark': 'CGV Landmark',
+            'galaxy': 'Galaxy Cinema',
+            'galaxy nguyen du': 'Galaxy Nguyễn Du',
+            'galaxy nguyễn du': 'Galaxy Nguyễn Du',
+            'lotte': 'Lotte Cinema',
+            'lotte go vap': 'Lotte Gò Vấp',
+            'lotte gò vấp': 'Lotte Gò Vấp',
+            'bhd': 'BHD Star',
+            'bhd star': 'BHD Star',
+            'platinum': 'Platinum Cineplex',
+            'cinestar': 'Cinestar',
+            'beta': 'Beta Cineplex',
+            'megastar': 'MegaStar',
+        }
+        
+        entity_lower = entity_value.lower()
+        for key, value in cinema_mappings.items():
+            if key in entity_lower:
+                return value
+    
+    elif entity_type == 'movie_name':
+        # Normalize tên phim
+        movie_mappings = {
+            'the bad guys 2': 'The Bad Guys 2',
+            'bad guys 2': 'The Bad Guys 2',
+            'bad guys': 'The Bad Guys',
+            'spider-man': 'Spider-Man',
+            'spiderman': 'Spider-Man',
+            'kung fu panda': 'Kung Fu Panda',
+        }
+        
+        entity_lower = entity_value.lower()
+        for key, value in movie_mappings.items():
+            if key == entity_lower:
+                return value
+        
+        # Capitalize first letter of each word
+        entity_value = entity_value.title()
+    
+    return entity_value
+
+
+# Thêm vào đầu class ActionGetShowtimes trong actions.py
+class ActionGetShowtimes(Action):
+    def name(self) -> Text:
+        return "action_get_showtimes"
+
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        
+        # Get entities from slots
+        movie_name = tracker.get_slot("movie_name")
+        cinema_name = tracker.get_slot("cinema_name")
+        date = tracker.get_slot("date")
+        
+        # Nếu NLU miss entities, thử extract từ text
+        if not movie_name and not cinema_name:
+            latest_message = tracker.latest_message.get('text', '')
+            extracted_movie, extracted_cinema = extract_entities_from_text(latest_message)
+            
+            if extracted_movie:
+                movie_name = extracted_movie
+                logger.info(f"Extracted movie from text: {movie_name}")
+            
+            if extracted_cinema:
+                cinema_name = extracted_cinema
+                logger.info(f"Extracted cinema from text: {cinema_name}")
+        
+        # Normalize entities
+        if movie_name:
+            movie_name = normalize_entity(movie_name, 'movie_name')
+            logger.info(f"Normalized movie name: {movie_name}")
+        
+        if cinema_name:
+            cinema_name = normalize_entity(cinema_name, 'cinema_name')
+            logger.info(f"Normalized cinema name: {cinema_name}")
+        
+        logger.info(f"Final slots - movie: {movie_name}, cinema: {cinema_name}, date: {date}")
+        
+        # ... rest of the original code
 class ActionGetShowtimes(Action):
     def name(self) -> Text:
         return "action_get_showtimes"

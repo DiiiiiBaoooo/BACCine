@@ -11,6 +11,8 @@ nlu:
       - hey
       - chào buổi sáng
       - chào buổi chiều
+      - alo
+      - hi bot
       
   - intent: goodbye
     examples: |
@@ -21,6 +23,8 @@ nlu:
       - cảm ơn và tạm biệt
       - thôi bye
       - tạm biệt nhé
+      - cảm ơn
+      - thanks
       
   - intent: bot_challenge
     examples: |
@@ -29,6 +33,7 @@ nlu:
       - bạn là người hay bot
       - bạn là chatbot phải không
       - bạn có phải là máy không
+      - ai tạo ra bạn
       
   - intent: affirm
     examples: |
@@ -39,6 +44,8 @@ nlu:
       - ừ
       - vâng
       - yes
+      - đúng rồi
+      - chính xác
       
   - intent: deny
     examples: |
@@ -47,35 +54,46 @@ nlu:
       - no
       - thôi
       - không cần
+      - không muốn
+      - bỏ qua
       
   - intent: ask_showtimes
     examples: |
       - cho tôi xem lịch chiếu
-      - [Avengers](movie_name) chiếu khi nào
-      - xem lịch chiếu phim [Spider-Man](movie_name)
-      - lịch chiếu của [CGV](cinema_name)
-      - lịch chiếu của [BAC Quang Trung](cinema_name)
-      - [Rạp BAC Quang Trung](cinema_name) có lịch chiếu như thế nào
+      - chiếu khi nào
+      - xem lịch chiếu phim
       - phim gì chiếu hôm nay
       - lịch chiếu ngày [2025-10-15](date)
-      - [Oppenheimer](movie_name) chiếu ở đâu
+      - chiếu ở đâu
       - tôi muốn xem lịch chiếu
       - có suất chiếu nào không
-      - cho tôi xem lịch chiếu phim
       - lịch chiếu [hôm nay](date) thế nào
       - [hôm nay](date) có phim gì
       - [ngày mai](date) có phim gì chiếu
+      - [Avengers](movie_name) chiếu khi nào
+      - xem lịch chiếu phim [Spider-Man](movie_name)
+      - [Oppenheimer](movie_name) chiếu ở đâu
+      - [The Bad Guys 2](movie_name) chiếu khi nào
+      - xem lịch chiếu [The Bad Guys 2](movie_name)
+      - [Venom](movie_name) có suất nào
+      - phim [Doraemon](movie_name) lịch chiếu
+      - lịch chiếu của [CGV](cinema_name)
+      - lịch chiếu của [BAC Quang Trung](cinema_name)
+      - [Rạp BAC Quang Trung](cinema_name) có lịch chiếu như thế nào
       - rạp [CGV Vincom](cinema_name) chiếu gì
       - [Galaxy Nguyễn Du](cinema_name) có lịch chiếu nào
       - xem lịch chiếu tại [Lotte Cinema](cinema_name)
       - [BHD Star](cinema_name) chiếu phim gì
       - lịch chiếu phim tại [Platinum Cineplex](cinema_name)
+      - [Cinestar](cinema_name) có phim gì
+      - [Beta Cineplex](cinema_name) chiếu gì hôm nay
+      - lịch chiếu tại [MegaStar](cinema_name)
       - [hôm nay](date) [CGV](cinema_name) chiếu phim gì
       - [Avatar](movie_name) chiếu ở [CGV](cinema_name) khi nào
       - cho xem lịch chiếu [Avengers](movie_name) tại [Galaxy](cinema_name)
-      - [The Bad Guys 2](movie_name) chiếu khi nào
-      - xem lịch chiếu [The Bad Guys 2](movie_name)
       - lịch chiếu phim [The Bad Guys 2](movie_name) tại [BAC Quang Trung](cinema_name)
+      - [Inception](movie_name) tại [Lotte](cinema_name)
+      - [ngày mai](date) [BHD](cinema_name) có [Barbie](movie_name) không
       
   - intent: ask_available_seats
     examples: |
@@ -92,6 +110,8 @@ nlu:
       - suất [10](showtime_id) còn ghế không
       - cho xem ghế ID [5](showtime_id)
       - ghế trống của suất [5](showtime_id)
+      - suất [3](showtime_id) còn chỗ không
+      - ID [12](showtime_id) còn ghế gì
       
   - intent: ask_cinema_info
     examples: |
@@ -112,6 +132,8 @@ nlu:
       - rạp nào gần đây
       - cho xem danh sách rạp
       - có rạp gì
+      - thông tin [BHD](cinema_name)
+      - [Cinestar](cinema_name) ở đâu
       
   - intent: ask_movie_info
     examples: |
@@ -127,6 +149,8 @@ nlu:
       - [Spider-Man](movie_name) có hay không
       - [The Bad Guys 2](movie_name) nói về gì
       - cho xem thông tin phim [The Bad Guys 2](movie_name)
+      - [Venom](movie_name) về cái gì
+      - phim [Doraemon](movie_name) có hay không
       
   - intent: book_ticket
     examples: |
@@ -152,6 +176,7 @@ nlu:
       - đặt vé suất [7](showtime_id) ghế [A1 A2](seat_numbers)
       - đặt suất [7](showtime_id), ghế [A1 A2](seat_numbers)
       - book suất [5](showtime_id), ghế [B1 B2 B3](seat_numbers)
+      - đặt [2](num_tickets) vé suất [3](showtime_id)
       
   - intent: ask_payment
     examples: |
@@ -164,6 +189,8 @@ nlu:
       - link thanh toán
       - thanh toán thế nào
       - làm sao để thanh toán
+      - cách thanh toán
+      - pay như nào
       
   - intent: provide_movie_name
     examples: |
@@ -174,6 +201,14 @@ nlu:
       - [The Batman](movie_name)
       - xem [Avengers](movie_name)
       - [The Bad Guys 2](movie_name)
+      - [Venom](movie_name)
+      - [Doraemon](movie_name)
+      - [Inception](movie_name)
+      - [Interstellar](movie_name)
+      - [Frozen](movie_name)
+      - phim [Deadpool](movie_name)
+      - [Transformers](movie_name)
+      - [Kung Fu Panda](movie_name)
       
   - intent: provide_cinema_name
     examples: |
@@ -186,6 +221,12 @@ nlu:
       - [BAC Quang Trung](cinema_name)
       - [Rạp BAC](cinema_name)
       - [Galaxy Nguyễn Du](cinema_name)
+      - [Cinestar](cinema_name)
+      - [Beta Cineplex](cinema_name)
+      - [MegaStar](cinema_name)
+      - [Lotte Gò Vấp](cinema_name)
+      - [CGV Landmark](cinema_name)
+      - [BHD Vincom](cinema_name)
       
   - intent: provide_date
     examples: |
@@ -196,6 +237,7 @@ nlu:
       - [thứ 7 tuần này](date)
       - [chủ nhật](date)
       - [10/11/2025](date)
+      - [12/10/2025](date)
       
   - intent: provide_showtime_id
     examples: |
@@ -206,6 +248,9 @@ nlu:
       - [5](showtime_id)
       - [7](showtime_id)
       - suất số [5](showtime_id)
+      - [12](showtime_id)
+      - suất [8](showtime_id)
+      - ID [9](showtime_id)
       
   - intent: provide_seat_numbers
     examples: |
@@ -232,6 +277,7 @@ nlu:
       - [2](num_tickets)
       - [3](num_tickets)
 
+  # Entity Synonyms - Rạp chiếu
   - synonym: BAC Quang Trung
     examples: |
       - Rạp BAC Quang Trung
@@ -243,10 +289,59 @@ nlu:
     examples: |
       - CGV Vincom
       - CGV Saigon
+      - CGV Landmark
+      - CGV Aeon
       - rạp CGV
       
   - synonym: Galaxy Cinema
     examples: |
       - Galaxy
       - Galaxy Nguyễn Du
+      - Galaxy Kinh Dương Vương
       - rạp Galaxy
+      
+  - synonym: Lotte Cinema
+    examples: |
+      - Lotte
+      - Lotte Gò Vấp
+      - Lotte Cộng Hòa
+      - rạp Lotte
+      
+  - synonym: BHD Star
+    examples: |
+      - BHD
+      - BHD Vincom
+      - BHD Star Cineplex
+      - rạp BHD
+      
+  - synonym: Platinum Cineplex
+    examples: |
+      - Platinum
+      - rạp Platinum
+      
+  - synonym: Cinestar
+    examples: |
+      - Cinestar Quốc Thanh
+      - rạp Cinestar
+      
+  - synonym: Beta Cineplex
+    examples: |
+      - Beta
+      - rạp Beta
+      
+  - synonym: MegaStar
+    examples: |
+      - Mega Star
+      - rạp MegaStar
+
+  # Regex patterns cho entity extraction
+  - regex: showtime_id
+    examples: |
+      - \d+
+      - suất \d+
+      - ID \d+
+      
+  - regex: seat_numbers
+    examples: |
+      - [A-Z]\d+
+      - ghế [A-Z]\d+

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "seat_numbers",
+    "pattern": "[A-Z]\\d+"
+  },
+  {
+    "name": "seat_numbers",
+    "pattern": "ghế [A-Z]\\d+"
+  },
+  {
+    "name": "showtime_id",
+    "pattern": "ID \\d+"
+  },
+  {
+    "name": "showtime_id",
+    "pattern": "\\d+"
+  },
+  {
+    "name": "showtime_id",
+    "pattern": "suất \\d+"
+  }
+]
