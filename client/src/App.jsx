@@ -62,6 +62,9 @@ import './components/Chat/Chat.css';
 
 // IMPORT RASA CHATBOT
 import RasaChatbot from './components/RasaChatbot';
+import XemPhim from './pages/XemPhim';
+import ThuVienPhim from './pages/ThuVienPhim';
+import QuanLyThuVienPhim from './pages/admin/QuanLyThuVienPhim';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -245,6 +248,7 @@ const App = () => {
           <Route path="qlrap" element={<QuanLyRapPhim />} />
           <Route path="qlkm" element={<QuanLyKhuyenMai />} />
           <Route path="qlttv" element={<QuanLyTheTV />} />
+          <Route path='qltvp' element={<QuanLyThuVienPhim />} />
         </Route>
 
         {/* Employee Routes */}
@@ -305,7 +309,8 @@ const App = () => {
         <Route path="/ticket-details/:orderId" element={<TicketDetails />} />
         <Route path="/inve/:order_id" element={<PrintTicket />} />
         <Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
-
+        <Route path="/video" element={<ThuVienPhim />} />
+        <Route path="/xem-phim/:id" element={<XemPhim />} />
         {/* Projectionist Routes */}
         <Route
           path="/projectionist/*"

@@ -25,7 +25,8 @@ import { serve } from "inngest/express";
 import { inngest, functions } from "./inggest/index.js"
 import WorkScheduleRoute from "./routes/WorkScheduleRoutes.js";
 import ChatbotRoute from "./routes/ChatBotRoutes.js";
-
+import StreamVideoRoute from "./routes/StreamVideoRoute.js";
+import VideoRoute from "./routes/VideoRoutes.js";
 const app = express();
 const port = 3000;
 
@@ -59,6 +60,8 @@ app.use("/api/bookings", BookingRoute)
 app.use("/api/webhook",webhookrouter)
 app.use("/api/user", UserRoute)
 app.use("/api/schedule", WorkScheduleRoute)
+app.use("/api/stream", StreamVideoRoute);
+app.use("/api/video", VideoRoute);
 
 app.use("/api/inngest",serve({ client: inngest, functions }))
 app.use("/api/chatbot", ChatbotRoute);

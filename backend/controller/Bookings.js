@@ -101,7 +101,7 @@ export const createBooking = async (req, res) => {
     let discount_amount = 0;
     if (promotion_id) {
       const [promotionRows] = await connection.query(
-        'SELECT id, discount_type, discount_value, min_order, max_discount, usage_limit, used_count FROM promotions WHERE id = ?',
+        'SELECT id, discount_type, discount_value, min_order, max_discount, used_count FROM promotions WHERE id = ?',
         [promotion_id]
       );
       if (promotionRows.length === 0) {
@@ -109,9 +109,7 @@ export const createBooking = async (req, res) => {
       }
       const promotion = promotionRows[0];
 
-      if (promotion.usage_limit !== null && promotion.used_count >= promotion.usage_limit) {
-        return res.status(400).json({ success: false, message: 'Khuyến mãi đã hết lượt sử dụng' });
-      }
+    
 
       const subtotal = ticket_total + service_total;
       const minOrder = Number(promotion.min_order || 0);
