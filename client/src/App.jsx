@@ -36,6 +36,8 @@ import QuanLyLichChieu from './pages/projectionist/QuanLyLichChieu';
 import Movies from './pages/Movies';
 import MovieDetails from './pages/MovieDetails';
 import SeatLayout from './pages/SeatLayout';
+import RapPhim from './pages/RapPhim';
+
 import QuanLyDichVu from './pages/manager/QuanLyDichVu';
 import Membership from './pages/Membership';
 import PaymentSelection from './pages/PaymentSelection';
@@ -65,6 +67,7 @@ import RasaChatbot from './components/RasaChatbot';
 import XemPhim from './pages/XemPhim';
 import ThuVienPhim from './pages/ThuVienPhim';
 import QuanLyThuVienPhim from './pages/admin/QuanLyThuVienPhim';
+import PaymentFail from './pages/Payment/PaymentFail';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -300,6 +303,8 @@ const App = () => {
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/blog" element={<Blog />} />
+        <Route path="/rapchieu" element={<RapPhim />} />
+
         <Route path='/membership' element={<Membership />} />
         <Route path='/payment' element={<PaymentSelection />} />
         <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
@@ -308,6 +313,7 @@ const App = () => {
         <Route path='/tickets' element={<MyTicket />} />
         <Route path="/ticket-details/:orderId" element={<TicketDetails />} />
         <Route path="/inve/:order_id" element={<PrintTicket />} />
+        <Route path='/payment-failed' element={<PaymentFail />} />
         <Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
         <Route path="/video" element={<ThuVienPhim />} />
         <Route path="/xem-phim/:id" element={<XemPhim />} />
@@ -349,7 +355,6 @@ const App = () => {
         />
       )}
 
-      RASA CHATBOT - Chỉ hiển thị cho user thường
       {shouldShowRasaChat && authUser && (
         <RasaChatbot
           currentUser={{

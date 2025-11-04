@@ -126,3 +126,20 @@ export const updatePost = async (req, res) => {
     }
   });
 };
+export const getAllPosts = async (req, res) => {
+  try {
+    const [rows] = await dbPool.query(
+      `SELECT * 
+       FROM posts 
+       ORDER BY created_at DESC`
+    );
+
+    res.status(200).json({
+      success: true,
+      posts: rows,
+    });
+  } catch (error) {
+    console.error("Error in getAllPosts:", error.message);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};

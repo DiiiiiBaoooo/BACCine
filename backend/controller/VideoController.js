@@ -83,9 +83,12 @@ export const addVideo = async (req, res) => {
           "-profile:v baseline",
           "-level 3.0",
           "-start_number 0",
-          "-hls_time 10",        // mỗi segment 10s
+          "-hls_time 6", // Use 6-second segments (more standard for HLS)
           "-hls_list_size 0",
-          "-f hls"
+          "-hls_segment_type mpegts",
+          "-hls_flags independent_segments", // Ensure segments are independent
+          "-hls_playlist_type vod", // Specify VOD for non-live streams
+          "-f hls",
         ])
         .output(path.join(hlsOutputDir, "master.m3u8"))
         .on("end", () => {

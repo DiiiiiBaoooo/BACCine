@@ -1,5 +1,5 @@
 import express from "express"
-import { addPromotion, deletePromotion, getAllPromotions, updatePromotion ,getPromotionStatistics, getKM} from "../controller/promotions.js";
+import { addPromotion, deletePromotion, getAllPromotions, updatePromotion ,getPromotionStatistics, getKM, applyPromotion} from "../controller/promotions.js";
 
 
 const promotionRoute = express.Router();
@@ -10,4 +10,5 @@ promotionRoute.delete(`/delete/:id`,deletePromotion)
 promotionRoute.put('/update/:id',updatePromotion)
 promotionRoute.get('/statistics',getPromotionStatistics)
 promotionRoute.get('/km',getKM)
+promotionRoute.post('/apply/:user_id',applyPromotion)
 export default promotionRoute;

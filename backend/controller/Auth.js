@@ -263,9 +263,12 @@ export const getAuthUser =  async (req, res) => {
         [user.id]
       );
       
-    
-      // Add cinemaId to user object
+    if(rows)
+    {
       user.cinemaId = rows[0].id;
+
+    }
+      // Add cinemaId to user object
     }
 
     if (user.role === "employee") {

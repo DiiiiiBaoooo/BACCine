@@ -148,3 +148,40 @@ export const getKM = async (req,res) => {
   }
   
 }
+
+export const applyPromotion = async (req,res) => {
+
+  try {
+    const { voucherCode } = req.body;
+    const {user_id} = req.params;
+    const [promotionRows] = await connection.query("SELECT * FROM gift WHERE voucher_code = ? and user_id = ?", [voucherCode,user_id]);
+    if (promotionRows.length === 0) {
+      return res.status(404).json({success:false,message:"Mã không hợp lệ"})
+    }
+    const promotion = promotionRows[0];
+    if(promotion.used !== 0) {
+      return res.status(400).json({success:false,message:"Mã đã được sử dụng"})
+    }
+    if(promotion.expires_at < new Date()) {
+      return res.status(400).json({success:false,message:"Mã đã hết hạn"})
+    }
+    await connection.query("UPDATE gift SET used = 1 WHERE voucher_code = ? and user_id = ?", [voucherCode,user_id]);
+    //khi gọi api, kiểm tra nếu success thì fe sẽ cập nhật lại giá , nếu reward_type= vocher thì kiểm tra discount_type và discount_value ; nếu reward_type= ticket thì  trả về discount_type=fixed và discount_value=100
+    if(promotion.reward_type === "voucher") {
+     
+      if(promotion.discount_type === "percent") {
+        res.status(200).json({success:true,message:"Mã áp dụng thành công",discount_type:"percent",discount_value:promotion.discount_value})
+      } else if(promotion.discount_type === "fixed") {
+        res.status(200).json({success:true,message:"Mã áp dụng thành công",discount_type:"fixed",discount_value:promotion.discount_value})
+      }
+    } else if(promotion.reward_type === "ticket") {
+      res.status(200).json({success:true,message:"Mã áp dụng thành công",discount_type:"percent",discount_value:100})
+    }
+    
+
+
+  } catch (error) {
+    console.error("Lỗi applyPromotion:", error.message);
+    res.status(500).json({success:false,message:error.message})
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { assets } from '../assets/assets';
 import Loading from '../components/Loading';
 import { ClockIcon, TicketCheckIcon } from 'lucide-react';
@@ -15,7 +15,7 @@ const SeatLayout = () => {
   const allRows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
   const { id: movieId, cinemaId, date } = useParams();
   console.log('Raw URL Parameters:', { movieId, cinemaId, date });
-
+  const showtimeId = useSearchParams(); // Lấy showtimeId từ ?2
   // Validate URL parameters
   if (!movieId || !cinemaId || !date) {
     return (
@@ -115,7 +115,14 @@ const SeatLayout = () => {
       setOccupiedSeats([]);
     }
   }, [selectedTime]);
-
+  useEffect(() => {
+    if (showtimes.length > 0 && showtimeId) {
+      const target = showtimes.find(s => s.id === parseInt(showtimeId));
+      if (target) {
+        setSelectedTime(target);
+      }
+    }
+  }, [showtimes, showtimeId]);
   // Fetch movie name
   useEffect(() => {
     const fetchMovieName = async () => {

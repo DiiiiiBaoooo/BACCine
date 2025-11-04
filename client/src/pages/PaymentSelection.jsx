@@ -33,64 +33,72 @@ const PaymentSelection = () => {
 
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!selectedPaymentMethod) {
       toast.error('Vui lòng chọn phương thức thanh toán');
       return;
     }
-
+  
     setSubmitting(true);
     try {
-      // Chuẩn bị dữ liệu cho API createBooking
+      const selectedMethod = paymentMethods.find((pm) => pm.id === selectedPaymentMethod);
+      const methodName = selectedMethod.name.toLowerCase();
+  
+      // DỮ LIỆU GỬI ĐI
       const payload = {
         cinema_id: bookingData.cinema_id,
         user_id: bookingData.user_id,
         showtime_id: bookingData.showtime_id,
-          status:'pending',
+        status: 'pending',
         tickets: bookingData.tickets,
         services: bookingData.services,
-        payment_method: paymentMethods.find((pm) => pm.id === selectedPaymentMethod).name.toLowerCase(),
-        promotion_id: bookingData.promotion_id
+        payment_method: methodName,
+        promotion_id: bookingData.promotion_id,
+        voucher_code: bookingData.voucher_code || null,
+        ticket_total: bookingData.ticket_total,
+        service_total: bookingData.service_total,
+        discount_amount: bookingData.discount_amount,
+        grand_total: bookingData.grand_total,
       };
-console.log(payload);
-// nếu method = qr thì gọi api create-booking sau đó chuyển sang trang QRPayMEnt với data trả Về
-if (paymentMethods.find((pm) => pm.id === selectedPaymentMethod).name.toLowerCase() === 'qr code') {
-  const response = await axios.post('/api/bookings/create-booking', payload);
-  if (response.data.success) {
-    navigate('/qr-payment', {
-      state: {
-        bookingData: response.data.data
+  
+      // GỌI API TẠO ĐƠN HÀNG
+      const response = await axios.post('/api/bookings/create-booking', payload);
+  
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Không thể tạo đơn hàng');
       }
-    });
-  }
-  else{
-    toast.error(response.data.message);
-  }}
-
-      // Gọi API createBooking
-      // const response = await axios.post('/api/bookings', payload);
-      // if (response.data.success) {
-      //   toast.success('Đặt vé thành công!');
-      //   navigate('/confirmation', {
-      //     state: {
-      //       bookingData: {
-      //         ...bookingData,
-      //         order_id: response.data.data.order_id,
-      //         payment_method: payload.payment_method
-      //       }
-      //     }
-      //   });
-      // } else {
-      //   throw new Error(response.data.message || 'Không thể tạo đơn hàng');
-      // }
+  
+      const { order_id, grand_total, status } = response.data.data;
+  
+      // NẾU MIỄN PHÍ → CHUYỂN THẲNG VÀO CHI TIẾT
+      if (grand_total === 0 || status === 'confirmed') {
+        toast.success('Đặt vé thành công! Vé đã được xác nhận ngay lập tức.');
+        navigate(`/ticket-details/${order_id}`, {
+          state: { order_id },
+        });
+        return;
+      }
+  
+      // NẾU LÀ QR CODE → CHUYỂN QUA TRANG QR
+      if (methodName === 'qr code') {
+        navigate('/qr-payment', {
+          state: { bookingData: { order_id, grand_total } }
+        });
+        return;
+      }
+  
+      // CÁC PHƯƠNG THỨC KHÁC (MOMO, VNPay...) → xử lý sau
+      toast.info('Phương thức thanh toán đang được phát triển...');
+      // Ví dụ: redirect đến cổng thanh toán
+      // window.location.href = response.data.payment_url;
+  
     } catch (error) {
-      console.error('Error booking:', error);
-      toast.error('Lỗi khi đặt vé: ' + error.message);
+      console.error('Error:', error);
+      toast.error(error.response?.data?.message || error.message || 'Lỗi khi đặt vé');
     } finally {
       setSubmitting(false);
     }
   };
-
   if (!bookingData) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">

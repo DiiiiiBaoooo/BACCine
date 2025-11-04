@@ -66,29 +66,77 @@ const TicketDetails = () => {
   }
 
   // Find order with type-safe comparison
-  const order = ticketData.tickets.find((t) => String(t.order_id) === orderId); // Convert t.order_id to string
+ // ... (giữ nguyên phần import và useQuery)
 
-  if (!order) {
+// Trong phần xử lý sau khi có ticketData
+const order = ticketData.tickets.find((t) => String(t.order_id) === orderId);
+
+if (!order) {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-red-500 mb-4">404</h1>
+        <h2 className="text-2xl font-semibold mb-4">Không tìm thấy vé</h2>
+        <p className="text-gray-400 mb-8">Vé bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+        <Link
+          to="/tickets"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Quay lại trang chủ
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// Kiểm tra trạng thái vé
+if (order.order_status !== 'confirmed') {
+  if (order.order_status === 'cancelled') {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold text-red-500 mb-4">404</h1>
-          <h2 className="text-2xl font-semibold mb-4">Không tìm thấy vé</h2>
-          <p className="text-gray-400 mb-8">Vé bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+        <div className="text-center max-w-md">
+          <h1 className="text-6xl font-bold text-red-500 mb-4">Hủy vé</h1>
+          <h2 className="text-2xl font-semibold mb-4">Vé đã bị hủy</h2>
+          <p className="text-gray-400 mb-8">
+            Vé với mã đơn hàng <span className="font-mono text-white">#{order.order_id}</span> đã bị hủy và không thể sử dụng.
+          </p>
           <Link
             to="/tickets"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Quay lại trang chủ
+            Quay lại danh sách vé
           </Link>
         </div>
       </div>
     );
   }
 
+  // Các trạng thái khác (pending, failed, v.v.) → không cho vào
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="text-center max-w-md">
+        <h1 className="text-6xl font-bold text-yellow-500 mb-4">Chưa sẵn sàng</h1>
+        <h2 className="text-2xl font-semibold mb-4">Vé chưa được xác nhận</h2>
+        <p className="text-gray-400 mb-8">
+          Vé đang ở trạng thái <span className="capitalize text-yellow-400">{order.order_status}</span>. 
+          Vui lòng chờ thanh toán thành công để xem chi tiết.
+        </p>
+        <Link
+          to="/tickets"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg transition-colors"
+        >
+          Quay lại danh sách vé
+        </Link>
+      </div>
+    </div>
+  );
+}
   // QR code is already in the response
   const qrData = order.qrCode;
 
@@ -105,7 +153,7 @@ const TicketDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white py-8 px-4">
+    <div className="min-h-screen    bg-black text-white py-8 px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="mb-8 flex items-center gap-4">
           <Link
@@ -259,35 +307,36 @@ const TicketDetails = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-950/30 to-black p-8 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-red-500/30">
-              <div className="text-center mb-6">
-                <h3 className="text-xl font-bold text-white mb-2">Check-in</h3>
-                <p className="text-gray-400 text-sm">Quét mã để vào rạp</p>
-              </div>
+            {/* QR Code Section - chỉ hiển thị nếu confirmed và có qrData */}
+<div className="bg-gradient-to-br from-red-950/30 to-black p-8 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-red-500/30">
+  <div className="text-center mb-6">
+    <h3 className="text-xl font-bold text-white mb-2">Check-in</h3>
+    <p className="text-gray-400 text-sm">Quét mã để vào rạp</p>
+  </div>
 
-              {qrData ? (
-                <div className="relative w-64 h-64 bg-white rounded-xl p-4 shadow-2xl shadow-red-500/20">
-                  <img src={qrData} alt="QR Code" className="object-contain w-full h-full" />
-                </div>
-              ) : (
-                <div className="w-64 h-64 bg-gray-800 rounded-xl flex items-center justify-center">
-                  <p className="text-gray-500 text-sm">Không có QR</p>
-                </div>
-              )}
+  {qrData ? (
+    <div className="relative w-64 h-64 bg-white rounded-xl p-4 shadow-2xl shadow-red-500/20">
+      <img src={qrData} alt="QR Code" className="object-contain w-full h-full" />
+    </div>
+  ) : (
+    <div className="w-64 h-64 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-600">
+      <p className="text-gray-500 text-sm">Không có mã QR</p>
+    </div>
+  )}
 
-              <div className="mt-6 text-center">
-                <p className="text-xs text-gray-500 mb-2">Mã đơn hàng</p>
-                <p className="text-white font-mono font-bold text-lg tracking-wider">{order.order_id}</p>
-              </div>
+  <div className="mt-6 text-center">
+    <p className="text-xs text-gray-500 mb-2">Mã đơn hàng</p>
+    <p className="text-white font-mono font-bold text-lg tracking-wider">{order.order_id}</p>
+  </div>
 
-              <div className="mt-6 w-full">
-                <div className="bg-black/50 rounded-lg p-3 border border-gray-800">
-                  <p className="text-xs text-gray-400 text-center leading-relaxed">
-                    Vui lòng xuất trình mã này tại quầy vé hoặc cổng check-in tự động
-                  </p>
-                </div>
-              </div>
-            </div>
+  <div className="mt-6 w-full">
+    <div className="bg-black/50 rounded-lg p-3 border border-gray-800">
+      <p className="text-xs text-gray-400 text-center leading-relaxed">
+        Vui lòng xuất trình mã này tại quầy vé hoặc cổng check-in tự động
+      </p>
+    </div>
+  </div>
+</div>
           </div>
         </div>
 

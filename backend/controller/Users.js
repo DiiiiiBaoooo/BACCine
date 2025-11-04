@@ -16,41 +16,40 @@ export const getMyTickets = async (req, res) => {
   }
 
   const userId = req.user.id;
-  console.log(userId);
-  
 
   try {
     const [rows] = await dbPool.query(
       `
       SELECT 
-          o.order_id AS order_id,
-          o.status AS order_status,
-          o.total_amount,
-          o.updated_at AS ThoiGianThanhToan,
-          o.order_date,
-          st.start_time AS GioBatDau,
-          st.end_time AS GioKetThuc,
-          m.title AS movie_title,
-          m.runtime,
-          m.poster_path,
-          r.name AS PhongChieu,
-          cs.name AS RapChieu,
-          ot.order_ticket_id AS ticket_id,
-          ot.ticket_price,
-          ss.seat_number
+        o.order_id,
+        o.status AS order_status,
+        o.total_amount,
+        o.updated_at AS ThoiGianThanhToan,
+        o.order_date,
+        st.start_time AS GioBatDau,
+        st.end_time AS GioKetThuc,
+        m.title AS movie_title,
+        m.runtime,
+        m.poster_path,
+        r.name AS PhongChieu,
+        cs.name AS RapChieu,
+        ot.order_ticket_id AS ticket_id,
+        ot.ticket_price,
+        ss.seat_number
       FROM orders o
       JOIN showtimes st ON o.showtime_id = st.id
       JOIN movies m ON st.movie_id = m.id
       JOIN rooms r ON st.room_id = r.id
       JOIN cinema_clusters cs ON r.cinema_clusters_id = cs.id
-      JOIN orderticket ot ON ot.order_id = o.order_id
-      JOIN show_seats ss ON ot.seat_id = ss.seat_id
+      LEFT JOIN orderticket ot ON ot.order_id = o.order_id
+      LEFT JOIN show_seats ss ON ot.seat_id = ss.seat_id
       WHERE o.user_id = ?
-      ORDER BY o.updated_at DESC, ss.seat_number ASC
+      ORDER BY o.updated_at DESC, o.order_id, ss.seat_number ASC
       `,
       [userId]
     );
 
+    // Nếu không có đơn hàng nào
     if (rows.length === 0) {
       return res.status(200).json({
         success: true,
@@ -59,49 +58,56 @@ export const getMyTickets = async (req, res) => {
       });
     }
 
-    // Group tickets by order_id and generate QR for each order
+    // Group theo order_id
     const ticketsByOrder = {};
-    rows.forEach((ticket) => {
-      if (!ticketsByOrder[ticket.order_id]) {
-        ticketsByOrder[ticket.order_id] = {
-          order_id: ticket.order_id,
-          order_status: ticket.order_status,
-          total_amount: ticket.total_amount,
-          ThoiGianThanhToan: ticket.ThoiGianThanhToan,
-          order_date: ticket.order_date,
-          GioBatDau: ticket.GioBatDau,
-          GioKetThuc: ticket.GioKetThuc,
-          movie_title: ticket.movie_title,
-          runtime: ticket.runtime,
-          poster_path: ticket.poster_path,
-          PhongChieu: ticket.PhongChieu,
-          RapChieu: ticket.RapChieu,
+
+    rows.forEach((row) => {
+      const orderId = row.order_id;
+
+      // Tạo mới nếu chưa có
+      if (!ticketsByOrder[orderId]) {
+        ticketsByOrder[orderId] = {
+          order_id: orderId,
+          order_status: row.order_status,
+          total_amount: row.total_amount,
+          ThoiGianThanhToan: row.ThoiGianThanhToan,
+          order_date: row.order_date,
+          GioBatDau: row.GioBatDau,
+          GioKetThuc: row.GioKetThuc,
+          movie_title: row.movie_title,
+          runtime: row.runtime,
+          poster_path: row.poster_path,
+          PhongChieu: row.PhongChieu,
+          RapChieu: row.RapChieu,
           seats: [],
         };
       }
-       
-      ticketsByOrder[ticket.order_id].seats.push({
 
-        seat_number: ticket.seat_number,
-        ticket_id: ticket.ticket_id,
-        ticket_price: ticket.ticket_price,
-      });
+      // Chỉ thêm ghế nếu có (tránh null)
+      if (row.seat_number) {
+        ticketsByOrder[orderId].seats.push({
+          seat_number: row.seat_number,
+          ticket_id: row.ticket_id,
+          ticket_price: row.ticket_price,
+        });
+      }
     });
 
-    // Generate QR code for each order
+    // Tạo QR cho từng đơn hàng
     const ticketsWithQR = await Promise.all(
       Object.values(ticketsByOrder).map(async (order) => {
         const validationUrl = `http://localhost:5173/inve/${order.order_id}`;
         const qrBase64 = await QRCode.toDataURL(validationUrl, {
-          errorCorrectionLevel: 'H', // High error correction
+          errorCorrectionLevel: 'H',
           type: 'image/png',
           quality: 0.92,
           margin: 1,
           color: {
-            dark: '#000000FF', // Black
-            light: '#FFFFFFFF'  // White
-          }
+            dark: '#000000FF',
+            light: '#FFFFFFFF',
+          },
         });
+
         return {
           ...order,
           qrCode: qrBase64,
