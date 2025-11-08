@@ -216,12 +216,11 @@ export const getAllShow = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
-
 export const getShow = async (req, res) => {
   try {
     const { movie_id } = req.params;
 
-    // Fetch movie details with genres and actors
+    // 1. LẤY THÔNG TIN PHIM + THỂ LOẠI + DIỄN VIÊN
     const [movieRows] = await dbPool.query(
       `SELECT DISTINCT 
          m.id AS movie_id,
@@ -239,7 +238,6 @@ export const getShow = async (req, res) => {
        LEFT JOIN genres g ON mg.genre_id = g.id
        LEFT JOIN movie_casts mc ON m.id = mc.movie_id
        LEFT JOIN actors a ON mc.actor_id = a.id
-      
        WHERE m.id = ?
        GROUP BY m.id, m.title, m.poster_path, m.vote_average, m.vote_count, m.release_date, m.runtime, m.overview`,
       [movie_id]
@@ -249,25 +247,30 @@ export const getShow = async (req, res) => {
       return res.status(404).json({ success: false, message: "Không tìm thấy phim" });
     }
 
-    // Fetch showtimes with cinema and room details
+    // 2. LẤY SUẤT CHIẾU: CHỈ TỪ HÔM NAY TRỞ ĐI + TRẠNG THÁI HỢP LỆ
     const [showtimeRows] = await dbPool.query(
-      `SELECT s.*, r.name AS room_name, c.name AS cinema_name
+      `SELECT 
+         s.*, 
+         r.name AS room_name, 
+         c.name AS cinema_name
        FROM showtimes s
        JOIN rooms r ON s.room_id = r.id
        JOIN cinema_clusters c ON r.cinema_clusters_id = c.id
-       WHERE s.movie_id = ? AND s.status IN ('Ongoing', 'Scheduled')
+       WHERE s.movie_id = ? 
+         AND s.status IN ('Ongoing', 'Scheduled')
+         AND DATE(s.start_time) >= CURDATE()   -- LỌC SUẤT CHIẾU CŨ
        ORDER BY s.start_time ASC`,
       [movie_id]
     );
 
-    // Format the movie data
+    // 3. ĐỊNH DẠNG DỮ LIỆU PHIM
     const movie = {
       ...movieRows[0],
       genres: movieRows[0].genres ? movieRows[0].genres.split(',').filter(g => g.trim()) : [],
       actors: movieRows[0].actors ? JSON.parse(`[${movieRows[0].actors}]`) : [],
     };
 
-    // Format showtimes with cinema names
+    // 4. ĐỊNH DẠNG SUẤT CHIẾU
     const dateTime = showtimeRows.map(show => ({
       id: show.id,
       room_name: show.room_name,
@@ -283,11 +286,10 @@ export const getShow = async (req, res) => {
       dateTime,
     });
   } catch (error) {
-    console.error("❌ Lỗi getShow:", error);
+    console.error("Lỗi getShow:", error);
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
-
 export const getCinemaByMovie = async (req, res) => {
   try {
     const { movie_id } = req.params;

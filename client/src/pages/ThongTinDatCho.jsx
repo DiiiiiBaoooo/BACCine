@@ -122,60 +122,59 @@ const ThongTinDatCho = ({ cinemaId }) => {
   }, [selectedServices, services]);
 
   // Áp dụng mã giảm giá cá nhân
- // Áp dụng mã giảm giá cá nhân
-const applyVoucherCode = async () => {
-  if (!voucherCode.trim()) {
-    toast.error('Vui lòng nhập mã giảm giá');
-    return;
-  }
-  if (!authUser?.id) {
-    toast.error('Vui lòng đăng nhập để sử dụng mã');
-    return;
-  }
+  const applyVoucherCode = async () => {
+    if (!voucherCode.trim()) {
+      toast.error('Vui lòng nhập mã giảm giá');
+      return;
+    }
+    if (!authUser?.id) {
+      toast.error('Vui lòng đăng nhập để sử dụng mã');
+      return;
+    }
 
-  setApplyingVoucher(true);
-  try {
-    const res = await axios.post(`/api/promotions/apply/${authUser.id}`, {
-      voucherCode: voucherCode.trim().toUpperCase()
-    });
-
-    if (res.data?.success) {
-      const { discount_type, discount_value } = res.data;
-
-      setAppliedVoucher({
-        code: voucherCode.trim().toUpperCase(),
-        type: discount_type,
-        value: Number(discount_value)
+    setApplyingVoucher(true);
+    try {
+      const res = await axios.post(`/api/promotions/apply/${authUser.id}`, {
+        voucherCode: voucherCode.trim().toUpperCase()
       });
 
-      toast.success(
-        discount_type === 'percent'
-          ? `Áp dụng mã thành công! Giảm ${discount_value}%`
-          : `Áp dụng mã thành công! Giảm ${Number(discount_value).toLocaleString()} VND`
-      );
-    } else {
-      toast.error(res.data?.message || 'Mã không hợp lệ');
+      if (res.data?.success) {
+        const { discount_type, discount_value } = res.data;
+
+        setAppliedVoucher({
+          code: voucherCode.trim().toUpperCase(),
+          type: discount_type,
+          value: Number(discount_value)
+        });
+
+        toast.success(
+          discount_type === 'percent'
+            ? `Áp dụng mã thành công! Giảm ${discount_value}% trên giá vé`
+            : `Áp dụng mã thành công! Giảm ${Number(discount_value).toLocaleString()} VND trên giá vé`
+        );
+      } else {
+        toast.error(res.data?.message || 'Mã không hợp lệ');
+        setAppliedVoucher(null);
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Lỗi áp dụng mã giảm giá';
+      toast.error(msg);
       setAppliedVoucher(null);
+    } finally {
+      setApplyingVoucher(false);
     }
-  } catch (error) {
-    const msg = error.response?.data?.message || 'Lỗi áp dụng mã giảm giá';
-    toast.error(msg);
-    setAppliedVoucher(null);
-  } finally {
-    setApplyingVoucher(false);
-  }
-};
+  };
 
-
-  // Tính tổng giảm giá (khuyến mãi + voucher)
+  // Tính tổng giảm giá (khuyến mãi + voucher) - CHỈ ÁP DỤNG CHO VÉ
   const calculateTotalDiscount = useCallback(() => {
-    const subtotal = (bookingInfo?.total || 0) + calculateServiceTotal();
+    const ticketTotal = bookingInfo?.total || 0; // Chỉ tính trên giá vé
     let totalDiscount = 0;
 
-    // Khuyến mãi hệ thống
+    // Khuyến mãi hệ thống - áp dụng cho tổng đơn hàng
     if (selectedPromotionId) {
       const promo = promotions.find(p => p.id === selectedPromotionId);
       if (promo) {
+        const subtotal = ticketTotal + calculateServiceTotal();
         const type = String(promo.discount_type || '').toLowerCase();
         const value = Number(promo.discount_value || 0);
         if (type === 'percent') {
@@ -187,18 +186,18 @@ const applyVoucherCode = async () => {
       }
     }
 
-    // Voucher cá nhân
+    // Voucher cá nhân - CHỈ áp dụng cho giá vé
     if (appliedVoucher) {
       if (appliedVoucher.type === 'percent') {
-        totalDiscount += (subtotal * appliedVoucher.value) / 100;
+        totalDiscount += (ticketTotal * appliedVoucher.value) / 100;
       } else if (appliedVoucher.type === 'fixed') {
         totalDiscount += appliedVoucher.value;
       }
     }
   
+    // Giảm giá không vượt quá tổng tiền
+    const subtotal = ticketTotal + calculateServiceTotal();
     return Math.min(totalDiscount, subtotal);
-
-
   }, [selectedPromotionId, promotions, appliedVoucher, bookingInfo?.total, calculateServiceTotal]);
 
   const calculateGrandTotal = useCallback(() => {
@@ -402,9 +401,10 @@ const applyVoucherCode = async () => {
                   </div>
                 )}
 
-                {/* Mã giảm giá cá nhân */}
+                {/* Mã giảm giá cá nhân - CHỈ GIẢM GIÁ VÉ */}
                 <div className="mt-4 pt-4 border-t border-gray-700">
-                  <div className="font-semibold text-primary mb-3">Nhập mã giảm giá</div>
+                  <div className="font-semibold text-primary mb-2">Nhập mã giảm giá</div>
+                  <p className="text-xs text-yellow-400 mb-2">* Mã chỉ áp dụng cho giá vé</p>
                   <div className="flex gap-2">
                     <input
                       type="text"

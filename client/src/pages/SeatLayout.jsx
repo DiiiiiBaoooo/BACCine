@@ -46,8 +46,8 @@ const SeatLayout = () => {
   const getSeatType = (seatId) => {
     const row = seatId[0];
     if (['A', 'B'].includes(row)) return 'Standard';
-    if (['C', 'D', 'E', 'F', 'G'].includes(row)) return 'VIP';
-    if (['H', 'I', 'J'].includes(row)) return 'Couple';
+    if (['C', 'D', 'E', 'F', 'G', 'H'].includes(row)) return 'VIP';
+    if (['I', 'J'].includes(row)) return 'Couple';
     return 'Standard';
   };
 
@@ -356,13 +356,36 @@ const SeatLayout = () => {
             const normalizedSeatId = seatId.toUpperCase();
             const isOccupied = occupiedSeats.includes(normalizedSeatId);
             const isSelected = selectedSeats.includes(normalizedSeatId);
+            const seatType = getSeatType(normalizedSeatId);
 
-            const buttonClass = `rounded border cursor-pointer ${sizeClass} 
+            // Màu nền theo loại ghế
+            let bgColorClass = '';
+            let borderColorClass = '';
+            if (isOccupied) {
+              bgColorClass = 'bg-gray-500';
+              borderColorClass = 'border-gray-400';
+            } else if (isSelected) {
+              bgColorClass = 'bg-primary';
+              borderColorClass = 'border-primary';
+            } else {
+              if (seatType === 'Standard') {
+                bgColorClass = 'bg-blue-900/40 hover:bg-blue-800/60';
+                borderColorClass = 'border-blue-500/60 hover:border-blue-500';
+              } else if (seatType === 'VIP') {
+                bgColorClass = 'bg-purple-900/40 hover:bg-purple-800/60';
+                borderColorClass = 'border-purple-500/60 hover:border-purple-500';
+              } else if (seatType === 'Couple') {
+                bgColorClass = 'bg-pink-900/40 hover:bg-pink-800/60';
+                borderColorClass = 'border-pink-500/60 hover:border-pink-500';
+              }
+            }
+
+            const buttonClass = `rounded border cursor-pointer ${sizeClass} ${bgColorClass} ${borderColorClass}
               ${isOccupied
-                ? 'bg-gray-500 text-gray-300 border-gray-400 cursor-not-allowed opacity-50'
+                ? 'text-gray-300 cursor-not-allowed opacity-50'
                 : isSelected
-                  ? 'bg-primary text-white border-primary'
-                  : 'border-primary/60 hover:border-primary/80'
+                  ? 'text-white'
+                  : 'text-white'
               }`;
 
             return (
@@ -416,83 +439,128 @@ const SeatLayout = () => {
           )}
         </div>
       </div>
-      <div className="relative flex-1 flex flex-col items-center max-md:mt-16">
-        <BlurCircle top="-100px" left="-100px" />
-        <BlurCircle bottom="0" right="0" />
-        <h1 className="text-2xl font-semibold mb-4">Select Your Seats</h1>
-        <img src={assets.screenImage} alt="screen" />
-        <p className="text-gray-400 text-sm mb-6">SCREEN SIDE</p>
-        <div className="flex flex-col items-center mt-10 text-xs text-gray-300">
-          <div className="grid grid-cols-2 md:grid-cols-1 gap-8 md:gap-2 mb-6">
-            {groupRows[0].map((row) => renderSeats(row))}
-          </div>
-          <div className="grid grid-cols-2 gap-11">
-            {groupRows.slice(1).map((group, idx) => (
-              <div key={idx} className="">
-                {group.map((row) => renderSeats(row))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Selected Seats Panel - Below seats, right side */}
-        <div className="flex justify-end w-full">
-          {selectedSeats.length > 0 && (
-            <div className="mt-6 p-5 bg-black shadow-md rounded-xl border border-primary/30 w-full max-w-md">
-              <h3 className="font-semibold mb-3 text-primary text-lg">Seats Selected</h3>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {selectedSeats.map((seat) => (
-                  <span
-                    key={seat}
-                    className="px-3 py-1 text-sm font-medium bg-primary text-white rounded-full shadow-sm"
-                  >
-                    {seat}
-                  </span>
-                ))}
-              </div>
-              {priceLoading ? (
-                <p className="text-gray-400">Calculating total...</p>
-              ) : ticketPrices.length === 0 ? (
-                <p className="text-red-400">No ticket prices available. Please try another showtime or date.</p>
-              ) : (
-                <p className="text-lg font-bold text-white">
-                  Total: <span className="text-primary">{calculateTotal().toLocaleString()} VND</span>
-                </p>
-              )}
+      
+      <div className="relative flex-1 flex flex-row gap-6 max-md:flex-col max-md:mt-16">
+        {/* Main seat selection area */}
+        <div className="flex-1 flex flex-col items-center">
+          <BlurCircle top="-100px" left="-100px" />
+          <BlurCircle bottom="0" right="0" />
+          <h1 className="text-2xl font-semibold mb-4">Select Your Seats</h1>
+          <img src={assets.screenImage} alt="screen" />
+          <p className="text-gray-400 text-sm mb-6">SCREEN SIDE</p>
+          <div className="flex flex-col items-center mt-10 text-xs text-gray-300">
+            <div className="grid grid-cols-2 md:grid-cols-1 gap-8 md:gap-2 mb-6">
+              {groupRows[0].map((row) => renderSeats(row))}
             </div>
-          )}
-        </div>
-        <button
-          onClick={() => {
-            if (selectedSeats.length === 0) {
-              toast.error('Vui lòng chọn ít nhất một ghế');
-              return;
-            }
-            if (!selectedTime) {
-              toast.error('Vui lòng chọn giờ chiếu');
-              return;
-            }
+            <div className="grid grid-cols-2 gap-11">
+              {groupRows.slice(1).map((group, idx) => (
+                <div key={idx} className="">
+                  {group.map((row) => renderSeats(row))}
+                </div>
+              ))}
+            </div>
+          </div>
 
-            navigate('/booking', {
-              state: {
-                bookingInfo: {
-                  selectedSeats,
-                  selectedTime,
-                  cinemaId,
-                  movieId,
-                  date,
-                  total: calculateTotal(),
-                  movieName,
-                  cinemaName,
-                  movieimg
-                }
+          {/* Selected Seats Panel - Below seats */}
+          <div className="flex justify-center w-full">
+            {selectedSeats.length > 0 && (
+              <div className="mt-6 p-5 bg-black shadow-md rounded-xl border border-primary/30 w-full max-w-md">
+                <h3 className="font-semibold mb-3 text-primary text-lg">Seats Selected</h3>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedSeats.map((seat) => (
+                    <span
+                      key={seat}
+                      className="px-3 py-1 text-sm font-medium bg-primary text-white rounded-full shadow-sm"
+                    >
+                      {seat}
+                    </span>
+                  ))}
+                </div>
+                
+                {priceLoading ? (
+                  <p className="text-gray-400">Calculating total...</p>
+                ) : ticketPrices.length === 0 ? (
+                  <p className="text-red-400">No ticket prices available. Please try another showtime or date.</p>
+                ) : (
+                  <p className="text-lg font-bold text-white">
+                    Total: <span className="text-primary">{calculateTotal().toLocaleString()} VND</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              if (selectedSeats.length === 0) {
+                toast.error('Vui lòng chọn ít nhất một ghế');
+                return;
               }
-            });
-          }}
-          className="flex items-center gap-1 mt-6 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95"
-        >
-          Proceed to Checkout <TicketCheckIcon className="w-4 h-4" strokeWidth={3} />
-        </button>
+              if (!selectedTime) {
+                toast.error('Vui lòng chọn giờ chiếu');
+                return;
+              }
+
+              navigate('/booking', {
+                state: {
+                  bookingInfo: {
+                    selectedSeats,
+                    selectedTime,
+                    cinemaId,
+                    movieId,
+                    date,
+                    total: calculateTotal(),
+                    movieName,
+                    cinemaName,
+                    movieimg
+                  }
+                }
+              });
+            }}
+            className="flex items-center gap-1 mt-6 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95"
+          >
+            Proceed to Checkout <TicketCheckIcon className="w-4 h-4" strokeWidth={3} />
+          </button>
+        </div>
+
+        {/* Price Legend Panel - Right side */}
+        {!priceLoading && ticketPrices.length > 0 && (
+          <div className="w-64 max-md:w-full">
+            <div className="sticky top-32 bg-gray-900/50 backdrop-blur-sm border border-primary/20 rounded-xl p-5 shadow-lg">
+              <h3 className="font-semibold mb-4 text-white text-lg border-b border-primary/30 pb-2">
+                Giá Vé Theo Loại Ghế
+              </h3>
+              <div className="flex flex-col gap-3">
+                {['Standard', 'VIP', 'Couple'].map((type) => {
+                  const priceData = ticketPrices.find(
+                    (p) => p.seat_type.toLowerCase() === type.toLowerCase()
+                  );
+                  const price = priceData?.effective_price || 0;
+
+                  return (
+                    <div
+                      key={type}
+                      className={`flex flex-col p-3 rounded-lg border-2 ${
+                        type === 'Standard'
+                          ? 'bg-blue-900/40 border-blue-500'
+                          : type === 'VIP'
+                          ? 'bg-purple-900/40 border-purple-500'
+                          : 'bg-pink-900/40 border-pink-500'
+                      }`}
+                    >
+                      <span className="font-semibold text-white mb-1">{type}</span>
+                      <span className="text-xl font-bold text-white">
+                        {price.toLocaleString()}đ
+                      </span>
+                      <span className="text-xs text-gray-300 mt-1">
+                        {type === 'Standard' ? 'Hàng A, B' : type === 'VIP' ? 'Hàng C-G' : 'Hàng H, I, J (Đôi)'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

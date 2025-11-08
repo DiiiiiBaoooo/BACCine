@@ -122,7 +122,7 @@ export const deleteTier = async (req, res) => {
  */
 export const spinFortune = async (req, res) => {
   const { user_id } = req.params
-  const { reward, type } = req.body // từ frontend gửi lên
+  const { reward, type } = req.body
 
   const connection = await dbPool.getConnection()
   try {
@@ -157,66 +157,85 @@ export const spinFortune = async (req, res) => {
       [user_id]
     )
 
-    // 3. Tạo voucher nếu là loại voucher
+    // 3. Xử lý phần thưởng: xác định discount_type, discount_value, expiresAt
     let voucherCode = null
     let expiresAt = null
+    let discountType = null
+    let discountValue = null
 
     if (type === 'voucher') {
       voucherCode = 'BAC' + Math.random().toString(36).substring(2, 8).toUpperCase()
 
-      // Tính hạn dùng theo phần thưởng
+      // Xác định loại giảm giá
+      if (reward.includes('%')) {
+        discountType = 'percent'
+        const percentMatch = reward.match(/(\d+)%/)
+        discountValue = percentMatch ? parseInt(percentMatch[1], 10) : 0
+      } else if (reward.includes('K')) {
+        discountType = 'fixed'
+        const fixedMatch = reward.match(/(\d+)K/)
+        discountValue = (fixedMatch ? parseInt(fixedMatch[1], 10) : 0) * 1000
+      } else if (reward === 'Vé miễn phí') {
+        discountType = 'percent'
+        discountValue = 100 // Giảm 100% = miễn phí
+      }
+
+      // Tính hạn dùng
       let days = 7
       if (reward.includes('20%')) days = 10
       else if (reward.includes('30%')) days = 14
-      else if (reward.includes('50K') || reward.includes('100K')) days = 30
+      else if (reward.includes('50K') || reward.includes('100K') || reward.includes('15K') || reward.includes('25K')) days = 30
+      else if (reward === 'Vé miễn phí') days = 7 // hoặc tùy chỉnh
 
       expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + days)
-
-      // Lưu voucher (tùy chọn: tạo bảng riêng nếu cần)
-      // Ở đây lưu luôn vào gift
     }
 
-    // 4. Lưu lịch sử quay thưởng vào bảng gift
+    // 4. Lưu vào bảng gift với đầy đủ thông tin
     const [giftResult] = await connection.query(
       `INSERT INTO gift 
-       (user_id, reward, reward_type, points_spent, voucher_code, expires_at) 
-       VALUES (?, ?, ?, 5000, ?, ?)`,
-      [user_id, reward, type, voucherCode, expiresAt]
+       (user_id, reward, reward_type, points_spent, voucher_code, 
+        discount_type, discount_value, expires_at, used, created_at) 
+       VALUES (?, ?, ?, 5000, ?, ?, ?, ?, 0, NOW())`,
+      [
+        user_id,
+        reward,
+        type,
+        voucherCode,
+        discountType,
+        discountValue,
+        expiresAt,
+      ]
     )
 
     await connection.commit()
 
-    // 5. Cập nhật điểm mới cho membership card
-   
-
-    // 6. Emit realtime cập nhật điểm + lịch sử
-    const [newPoints] = await connection.query(
+    // 5. Lấy điểm mới
+    const [[{ points: newPoints }]] = await connection.query(
       'SELECT points FROM membership_cards WHERE user_id = ?',
       [user_id]
     )
 
-    global._io.to(`membership_card_${user_id}`).emit('fortune_spin_result', {
+    // 6. Phát sự kiện realtime
+    const resultPayload = {
       success: true,
       reward,
       voucherCode,
-      newPoints: newPoints[0].points,
+      newPoints,
       giftId: giftResult.insertId,
-    })
+      discountType,
+      discountValue,
+      expiresAt,
+    }
 
-    // Emit toàn bộ user nếu cần
+    global._io.to(`membership_card_${user_id}`).emit('fortune_spin_result', resultPayload)
     global._io.emit('membership_card_points_update', {
       user_id,
-      points: newPoints[0].points,
+      points: newPoints,
     })
 
-    res.status(200).json({
-      success: true,
-      message: 'Quay thành công!',
-      voucherCode,
-      newPoints: newPoints[0].points,
-      giftId: giftResult.insertId,
-    })
+    // 7. Trả về cho frontend
+    res.status(200).json(resultPayload)
   } catch (error) {
     await connection.rollback()
     console.error('Spin error:', error)
@@ -228,7 +247,6 @@ export const spinFortune = async (req, res) => {
     connection.release()
   }
 }
-
 /**
  * API: Lấy lịch sử quay thưởng
  * GET /api/fortune/history/:user_id

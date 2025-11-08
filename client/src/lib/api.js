@@ -26,3 +26,7 @@ export const getMyTickets = async () => {
   const response = await axiosInstance.get('/user/tickets');
   return response.data;
 };
+export const getTicketByOrderId = async (orderId) => {
+  const response = await axiosInstance.get(`/user/tickets/${orderId}`);
+  return response.data;
+};

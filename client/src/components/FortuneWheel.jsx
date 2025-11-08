@@ -6,17 +6,18 @@ const FortuneWheel = ({ userId, currentPoints, onSpinSuccess }) => {
   const [isSpinning, setIsSpinning] = useState(false)
   const [rotation, setRotation] = useState(0)
   const [selectedReward, setSelectedReward] = useState(null)
+  const [voucherInfo, setVoucherInfo] = useState(null) // Lưu thông tin voucher từ API
 
   const SPIN_COST = 5000
 
   const segments = [
     { id: 1, label: '10%', color: '#FF6B6B', reward: 'Giảm 10%', type: 'voucher' },
     { id: 2, label: '50K', color: '#4ECDC4', reward: 'Voucher 50K', type: 'voucher' },
-    { id: 3, label: 'Free', color: '#FFE66D', reward: 'Vé miễn phí', type: 'ticket' },
+    { id: 3, label: 'Free', color: '#FFE66D', reward: 'Vé miễn phí', type: 'voucher' },
     { id: 4, label: '20%', color: '#95E1D3', reward: 'Giảm 20%', type: 'voucher' },
     { id: 5, label: '100K', color: '#F38181', reward: 'Voucher 100K', type: 'voucher' },
-    { id: 6, label: 'VIP', color: '#AA96DA', reward: 'Nâng cấp VIP 1 tháng', type: 'upgrade' },
-    { id: 7, label: 'Combo', color: '#FCBAD3', reward: 'Combo đặc biệt', type: 'combo' },
+    { id: 6, label: '15K', color: '#AA96DA', reward: 'Voucher giảm 15K', type: 'voucher' },
+    { id: 7, label: '25K', color: '#FCBAD3', reward: 'Voucher 25K', type: 'voucher' },
     { id: 8, label: '30%', color: '#A8DADC', reward: 'Giảm 30%', type: 'voucher' },
   ]
 
@@ -33,6 +34,7 @@ const FortuneWheel = ({ userId, currentPoints, onSpinSuccess }) => {
 
     setIsSpinning(true)
     setSelectedReward(null)
+    setVoucherInfo(null)
 
     // Animation
     const spins = 4 + Math.random() * 2
@@ -54,17 +56,24 @@ const FortuneWheel = ({ userId, currentPoints, onSpinSuccess }) => {
 
         if (res.data?.success) {
           setSelectedReward(selected.reward)
+          setVoucherInfo({
+            code: res.data.voucherCode,
+            discountType: res.data.discountType,
+            discountValue: res.data.discountValue,
+            expiresAt: res.data.expiresAt,
+          })
+
           toast.success(
             selected.type === 'voucher'
               ? `Chúc mừng! Mã giảm giá: ${res.data.voucherCode}`
               : `Chúc mừng! Bạn nhận được: ${selected.reward}`
           )
 
-          // Cập nhật điểm và lịch sử
+          // Gọi callback để cập nhật điểm & lịch sử ở component cha
           onSpinSuccess?.({
             newPoints: res.data.newPoints,
             voucherCode: res.data.voucherCode,
-            historyId: res.data.historyId,
+            historyId: res.data.giftId, // hoặc historyId nếu bạn dùng tên khác
           })
         } else {
           toast.error(res.data?.message || 'Lỗi khi xử lý phần thưởng')
@@ -155,11 +164,32 @@ const FortuneWheel = ({ userId, currentPoints, onSpinSuccess }) => {
 
       {/* Result */}
       {selectedReward && (
-        <div className="text-center animate-bounce">
+        <div className="text-center animate-bounce max-w-xs">
           <p className="text-sm text-gray-300 mb-1">Phần thưởng:</p>
-          <p className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+          <p className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent mb-2">
             {selectedReward}
           </p>
+
+          {voucherInfo?.code && (
+            <div className="mt-3 p-3 bg-gray-800 rounded-lg border border-yellow-500">
+              <p className="text-xs text-gray-400">Mã giảm giá:</p>
+              <p className="text-lg font-mono font-bold text-yellow-400 tracking-wider">
+                {voucherInfo.code}
+              </p>
+
+              {voucherInfo.discountType && (
+                <p className="text-xs text-gray-300 mt-1">
+                  Giảm:{' '}
+                  {voucherInfo.discountType === 'percent'
+                    ? `${voucherInfo.discountValue}%`
+                    : `${(voucherInfo.discountValue / 1000).toFixed(0)}K`}
+                  {voucherInfo.expiresAt && (
+                    <> · HSD: {new Date(voucherInfo.expiresAt).toLocaleDateString('vi-VN')}</>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
