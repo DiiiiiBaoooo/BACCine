@@ -15,6 +15,9 @@ const QuanLyThuVienPhim = () => {
     folderName: "",
     posterImage: null,
     videoFile: null,
+    price: "",
+    rentalDuration: "",
+    isFree: false, // Mới: Miễn phí
   })
   const navigate = useNavigate()
 
@@ -33,12 +36,11 @@ const QuanLyThuVienPhim = () => {
   const filteredVideos = videos.filter((video) =>
     video.video_title.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }))
   }
 
@@ -77,18 +79,19 @@ const QuanLyThuVienPhim = () => {
 
     setIsLoading(true)
     setUploadProgress(0)
-    
+
     try {
       const uploadFormData = new FormData()
       uploadFormData.append("videoTitle", formData.videoTitle)
       uploadFormData.append("folderName", formData.folderName)
       uploadFormData.append("posterImage", formData.posterImage)
       uploadFormData.append("videoFile", formData.videoFile)
+      uploadFormData.append("isFree", formData.isFree ? "1" : "0")
+      uploadFormData.append("price", formData.price || "0")
+      uploadFormData.append("rentalDuration", formData.isFree ? "NULL" : (formData.rentalDuration || "NULL"))
 
       const res = await axios.post("http://localhost:3000/api/video", uploadFormData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        },
+        headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           setUploadProgress(percent)
@@ -102,21 +105,20 @@ const QuanLyThuVienPhim = () => {
           folderName: "",
           posterImage: null,
           videoFile: null,
+          price: "",
+          rentalDuration: "",
+          isFree: false,
         })
         setPreviewImage(null)
         setIsModalOpen(false)
         setUploadProgress(0)
         const fetchRes = await axios.get("http://localhost:3000/api/video")
         setVideos(fetchRes.data)
-      } else {
-        alert("Lỗi khi thêm phim")
       }
     } catch (error) {
-      console.error("Lỗi:", error)
       alert(error.response?.data?.message || "Lỗi khi thêm phim")
     } finally {
       setIsLoading(false)
-      setUploadProgress(0)
     }
   }
 
@@ -364,7 +366,55 @@ const QuanLyThuVienPhim = () => {
                     </label>
                   </div>
                 </div>
+{/* === GIÁ VÀ LOẠI PHIM === */}
+<div className="space-y-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+  <div className="flex items-center gap-3">
+    <input
+      type="checkbox"
+      id="isFree"
+      name="isFree"
+      checked={formData.isFree}
+      onChange={handleInputChange}
+      disabled={isLoading}
+      className="w-5 h-5 text-cyan-500 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500"
+    />
+    <label htmlFor="isFree" className="text-sm font-medium text-slate-300">
+      Miễn phí
+    </label>
+  </div>
 
+  {!formData.isFree && (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="block text-xs font-medium text-slate-300 mb-1">Giá (VND)</label>
+        <input
+          type="number"
+          name="price"
+          value={formData.price}
+          onChange={handleInputChange}
+          placeholder="50000"
+          min="0"
+          disabled={isLoading}
+          className="w-full bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 rounded-lg py-2 px-3 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-300 mb-1">Thời gian thuê (ngày)</label>
+        <input
+          type="number"
+          name="rentalDuration"
+          value={formData.rentalDuration}
+          onChange={handleInputChange}
+          placeholder="7"
+          min="1"
+          disabled={isLoading}
+          className="w-full bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 rounded-lg py-2 px-3 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none"
+        />
+        <p className="text-xs text-slate-500 mt-1">Để trống = MUA vĩnh viễn</p>
+      </div>
+    </div>
+  )}
+</div>
                 {/* Progress Bar */}
                 {isLoading && (
                   <div className="space-y-2">

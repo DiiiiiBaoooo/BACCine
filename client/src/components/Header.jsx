@@ -51,7 +51,7 @@ const Header = () => {
   }, [isAuthenticated, isLoading]);
 
   return (
-    <div className=" top-0 left-0 right-0 z-40 backdrop-blur-md bg-black/30 border-b border-white/10">
+    <div className=" top-0 left-0 right-0 z-80 backdrop-blur-md bg-black/30 border-b border-white/10">
       <div className="flex items-center justify-between px-6 py-4 md:px-8 lg:px-16 gap-8">
         {/* Logo */}
         <Link to="/" className="flex-shrink-0 group">
@@ -92,19 +92,19 @@ const Header = () => {
               {isAuthenticated ? (
                 <div className="relative avatar-wrapper group">
                   {/* Glow Effect */}
-                  <div className="absolute -inset-1 bg-gradient-to-r from-red-600/30 to-transparent rounded-full animate-pulse pointer-events-none"></div>
+                  <div  className="absolute z-10 -inset-1 bg-gradient-to-r from-red-600/30 to-transparent rounded-full animate-pulse pointer-events-none"></div>
 
                   <img
                     src={authUser.profilePicture || "https://via.placeholder.com/40"}
                     alt="Avatar"
                     referrerPolicy="no-referrer"
-                    className="relative z-10 w-10 h-10 rounded-full border-2 border-red-500 cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-red-500/40"
+                    className="relative z-100 w-10 h-10 rounded-full border-2 border-red-500 cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-red-500/40"
                   />
 
                   {/* DROPDOWN - Z-INDEX CAO NHẤT */}
                   <div
                     ref={dropdownRef}
-                    className="absolute right-0 top-full mt-3 w-56 bg-gray-800/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl py-2 hidden z-50"
+                    className="absolute   right-0 top-full mt-3 w-56 bg-gray-800/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl py-2 hidden z-50"
                   >
                     <Link
                       to="/profile"

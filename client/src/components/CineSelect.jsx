@@ -43,11 +43,11 @@ const CineSelect = ({ id, onSelectCinema }) => {
     <div id="cineSelect" className="pt-10">
       <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative p-8 bg-primary/10 border border-primary/20 rounded-lg">
         <div className="">
-          <p className="text-lg font-semibold">Choose Cinema</p>
+          <p className="text-lg font-semibold">Chọn rạp phim</p>
           {error ? (
             <p className="text-red-500 mt-5">{error}</p>
           ) : cinemas.length === 0 ? (
-            <p className="text-gray-400 mt-5">No cinemas available for this movie.</p>
+            <p className="text-gray-400 mt-5">Phim hiện không có rạp chiếu nào </p>
           ) : (
             <div className="flex items-center gap-6 text-sm mt-5">
               <ChevronLeftIcon width={28} />

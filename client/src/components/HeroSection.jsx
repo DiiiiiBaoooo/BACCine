@@ -98,7 +98,7 @@ const HeroSlider = () => {
       {/* Background với zoom-in animation */}
       <div
         key={currentMovie.id}
-        className="absolute inset-0 bg-cover  bg-center animate-in fade-in zoom-in duration-800"
+        className="absolute  z-0 inset-0 bg-cover  bg-center animate-in fade-in zoom-in duration-800"
         style={{
           backgroundImage: `url('${currentMovie.backgroundImage}')`,
         }}

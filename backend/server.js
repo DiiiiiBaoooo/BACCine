@@ -27,6 +27,9 @@ import WorkScheduleRoute from "./routes/WorkScheduleRoutes.js";
 import ChatbotRoute from "./routes/ChatBotRoutes.js";
 import StreamVideoRoute from "./routes/StreamVideoRoute.js";
 import VideoRoute from "./routes/VideoRoutes.js";
+import VideoPurchaseRoute from "./routes/VideoPurchaseRoute.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import ManagerRoute from "./routes/ManagerRoutes.js";
 const app = express();
 const port = 3000;
 
@@ -62,6 +65,9 @@ app.use("/api/user", UserRoute)
 app.use("/api/schedule", WorkScheduleRoute)
 app.use("/api/stream", StreamVideoRoute);
 app.use("/api/video", VideoRoute);
+app.use("/api/video-purchase", VideoPurchaseRoute);
+app.use("/api/admin", adminRoutes);
+app.use("/api/manager", ManagerRoute);
 
 app.use("/api/inngest",serve({ client: inngest, functions }))
 app.use("/api/chatbot", ChatbotRoute);

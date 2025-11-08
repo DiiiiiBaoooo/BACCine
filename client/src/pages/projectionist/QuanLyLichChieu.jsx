@@ -69,19 +69,30 @@ const QuanLyLichChieu = ({ cinemaId }) => {
   };
 
   // Fetch danh sách phim đang chiếu tại cụm rạp
-  const fetchNowPlayingMovies = async () => {
-    try {
-      const response = await axios.get(`/api/cinemas/planmovies/${cinemaId}`);
-      if (response.data.success) {
-        const movies = response.data.plans[0]?.movies || [];
-        setNowPlayingMovies(movies);
-      } else {
-        toast.error(response.data.message || "Không thể tải danh sách phim đang chiếu");
-      }
-    } catch (err) {
-      toast.error("Không thể tải danh sách phim đang chiếu");
+// Fetch danh sách phim từ TẤT CẢ các kế hoạch
+const fetchNowPlayingMovies = async () => {
+  try {
+    const response = await axios.get(`/api/cinemas/planmovies/${cinemaId}`);
+    if (response.data.success) {
+      // Gom tất cả phim từ TẤT CẢ các plan
+      const allMovies = response.data.plans.reduce((acc, plan) => {
+        return acc.concat(plan.movies || []);
+      }, []);
+
+      // Loại bỏ trùng lặp theo movie_id
+      const uniqueMovies = Array.from(
+        new Map(allMovies.map(m => [m.movie_id, m])).values()
+      );
+
+      setNowPlayingMovies(uniqueMovies);
+    } else {
+      toast.error(response.data.message || "Không thể tải danh sách phim");
     }
-  };
+  } catch (err) {
+    console.error("Lỗi fetch phim:", err);
+    toast.error("Không thể tải danh sách phim");
+  }
+};
 
   // Fetch danh sách phòng chiếu
   const fetchRooms = async () => {

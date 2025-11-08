@@ -68,6 +68,7 @@ import XemPhim from './pages/XemPhim';
 import ThuVienPhim from './pages/ThuVienPhim';
 import QuanLyThuVienPhim from './pages/admin/QuanLyThuVienPhim';
 import PaymentFail from './pages/Payment/PaymentFail';
+import VideoPurchasePage from './pages/VideoPurchasePage';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -283,7 +284,7 @@ const App = () => {
             </ProtectedRoute>
           }
         >
-          <Route index element={<ManagerDashboard />} />
+          <Route index element={<ManagerDashboard cinemaId={cinema_Id} />} />
           <Route path="qlgv" element={<QuanLyGiaVe cinemaId={cinema_Id} />} />
           <Route path="qluv" element={<QuanLyUngVien cinemaId={cinema_Id} />} />
           <Route path='qltd' element={<QuanLyTuyenDung cinemaId={cinema_Id} />} />
@@ -317,6 +318,9 @@ const App = () => {
         <Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
         <Route path="/video" element={<ThuVienPhim />} />
         <Route path="/xem-phim/:id" element={<XemPhim />} />
+        <Route path="/video-purchase/:id" element={<VideoPurchasePage />} />
+
+         
         {/* Projectionist Routes */}
         <Route
           path="/projectionist/*"

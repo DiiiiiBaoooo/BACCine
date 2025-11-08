@@ -5,6 +5,7 @@ import axios from "axios";
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import BronzeCard from "../../components/BrozneCard";
 
 import SilverCard from "../../components/SilverCard";
 import GoldCard from "../../components/GoldCard";
@@ -107,6 +108,8 @@ export default function QuanLyTheTV() {
     switch (tier.name.toLowerCase()) {
       case "silver":
         return <SilverCard {...commonProps} />;
+        case "bronze":
+        return <BronzeCard {...commonProps} /> 
       case "gold":
         return <GoldCard {...commonProps} />;
       case "platinum":

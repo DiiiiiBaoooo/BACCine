@@ -40,7 +40,7 @@ export default function PaymentFail() {
         </h1>
 
         <p className="text-gray-300 mb-8">
-          <span className="font-semibold text-red-400">Lý do:</span> {reason}
+          <span className="font-semibold text-red-400">Lý do:</span> Chưa thanh toán
         </p>
 
         {/* Nút duy nhất */}

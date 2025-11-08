@@ -60,8 +60,8 @@ export const getAllMovies = async (req, res) => {
       // 3. Insert movies
       await dbPool.query(
         `INSERT INTO movies 
-        (id, title, original_title, original_language, overview, poster_path, backdrop_path, release_date, popularity, vote_average, vote_count, import_cost, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        (id, title, original_title, original_language, overview, poster_path, backdrop_path, release_date, popularity, vote_average, vote_count, import_cost, runtime,created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, NOW(), NOW())`,
         [
           movieApiData.id,
           movieApiData.title,
@@ -74,7 +74,8 @@ export const getAllMovies = async (req, res) => {
           movieApiData.popularity,
           movieApiData.vote_average,
           movieApiData.vote_count,
-          import_cost
+          movieCreditsData.runtime,
+          movieApiData.runtime
         ]
       );
   

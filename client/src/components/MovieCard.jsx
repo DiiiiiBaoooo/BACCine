@@ -30,7 +30,7 @@ const MovieCard = ({ movie, isSelected, onSelect }) => {
       <p className='text-sm text-gray-400 mt-2'>
 {
     new Date(movie.release_date).getFullYear()
-} ఌ︎ {genres.length > 0 ? genres.slice(0, 2).join(' | ') : 'N/A'} |{' '}ఌ︎ {timeFormat(movie.runtime)}
+} - {genres.length > 0 ? genres.slice(0, 2).join(' | ') : 'N/A'} |{' '} - {timeFormat(movie.runtime)}
 
                 </p>
       <div className="flex items-center justify-between mt-4 pb-3">
@@ -41,7 +41,7 @@ const MovieCard = ({ movie, isSelected, onSelect }) => {
           }}
           className="px-4 py-2 text-xs bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
         >
-          Buy Tickets
+          Đặt vé ngay
         </button>
       </div>
     </div>

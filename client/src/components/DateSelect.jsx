@@ -26,9 +26,9 @@ const DateSelect = ({ dateTime, movieId, cinemaId, cinemaName }) => {
     <div id="dateSelect" className="pt-10">
       <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative p-8 bg-primary/10 border border-primary/20 rounded-lg">
         <div>
-          <p className="text-lg font-semibold">Choose Date</p>
+          <p className="text-lg font-semibold">Chọn ngày</p>
           {uniqueDates.length === 0 ? (
-            <p className="text-gray-400 mt-5">No showtimes available for this cinema.</p>
+            <p className="text-gray-400 mt-5">Không có suất chiếu nào</p>
           ) : (
             <div className="flex items-center gap-6 text-sm mt-5">
               <ChevronLeftIcon width={28} />
@@ -62,7 +62,7 @@ const DateSelect = ({ dateTime, movieId, cinemaId, cinemaName }) => {
               : 'bg-gray-400 text-gray-200 cursor-not-allowed'
           }`}
         >
-          Book Now
+          Đặt vé ngay
         </button>
       </div>
     </div>

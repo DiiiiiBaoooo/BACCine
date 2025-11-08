@@ -365,6 +365,8 @@ export const getMoviesByCinema = async (req, res) => {
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
+// backend/controllers/moviePlanController.js
+
 export const getMoviePlanCinema = async (req, res) => {
   try {
     const { cinema_id } = req.params;
@@ -373,58 +375,74 @@ export const getMoviePlanCinema = async (req, res) => {
       return res.status(400).json({ success: false, message: "Thiếu cinema_id" });
     }
 
-    // Lấy danh sách phim theo kế hoạch của 1 rạp
-    const [rows] = await dbPool.query(
+    // 1. Lấy TẤT CẢ kế hoạch của rạp (có phim hay chưa)
+    const [planRows] = await dbPool.query(
       `SELECT 
-          bl.id AS plan_id,
-          bl.description,
-          bl.start_date,
-          bl.end_date,
-          m.id AS movie_id,
+          id AS plan_id,
+          description,
+          start_date,
+          end_date,
+          created_by,
+          created_at,
+          updated_at
+       FROM business_plan
+       WHERE cinema_id = ?
+       ORDER BY created_at DESC`,
+      [cinema_id]
+    );
+
+    if (!planRows.length) {
+      return res.status(404).json({ success: false, message: "Không có kế hoạch nào cho cụm rạp này" });
+    }
+
+    // 2. Lấy phim (LEFT JOIN) → cho phép plan có movies = []
+    const planIds = planRows.map(p => p.plan_id);
+    const [movieRows] = await dbPool.query(
+      `SELECT 
+          bpm.plan_id,
+          m.id          AS movie_id,
           m.title,
           m.poster_path,
           m.vote_average,
           m.vote_count,
           m.release_date,
           bpm.note
-       FROM business_plan bl
-       JOIN business_plan_movies bpm ON bl.id = bpm.plan_id
+       FROM business_plan_movies bpm
        JOIN movies m ON bpm.movie_id = m.id
-       WHERE bl.cinema_id = ?
-       ORDER BY bl.created_at DESC, m.title ASC`,
-      [cinema_id]
+       WHERE bpm.plan_id IN (${planIds.map(() => '?').join(',')})`,
+      planIds
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Không có kế hoạch phim nào cho cụm rạp này" });
-    }
-
-    // Gom nhóm phim theo plan_id
-    const plans = {};
-    rows.forEach((row) => {
-      if (!plans[row.plan_id]) {
-        plans[row.plan_id] = {
-          plan_id: row.plan_id,
-          description: row.description,
-          start_date: row.start_date,
-          end_date: row.end_date,
-          movies: [],
-        };
-      }
-      plans[row.plan_id].movies.push({
-        movie_id: row.movie_id,
-        title: row.title,
-        poster_path: row.poster_path,
-        vote_average: row.vote_average,
-        vote_count: row.vote_count,
-        release_date: row.release_date,
-        note: row.note,
+    // 3. Gom nhóm phim theo plan_id
+    const movieMap = {};
+    movieRows.forEach(m => {
+      if (!movieMap[m.plan_id]) movieMap[m.plan_id] = [];
+      movieMap[m.plan_id].push({
+        movie_id: m.movie_id,
+        title: m.title,
+        poster_path: m.poster_path,
+        vote_average: m.vote_average,
+        vote_count: m.vote_count,
+        release_date: m.release_date,
+        note: m.note,
       });
     });
 
-    res.status(200).json({ success: true, plans: Object.values(plans) });
+    // 4. Kết hợp: plan + movies (nếu có)
+    const result = planRows.map(plan => ({
+      plan_id: plan.plan_id,
+      description: plan.description,
+      start_date: plan.start_date,
+      end_date: plan.end_date,
+      created_by: plan.created_by,
+      created_at: plan.created_at,
+      updated_at: plan.updated_at,
+      movies: movieMap[plan.plan_id] || [], // ← luôn có mảng, có thể rỗng
+    }));
+
+    res.status(200).json({ success: true, plans: result });
   } catch (error) {
-    console.error("❌ Lỗi getMoviePlanCinema:", error.message);
-    res.status(500).json({ success: false, message: "Lỗi server", error: error.message });
+    console.error("Lỗi getMoviePlanCinema:", error);
+    res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };

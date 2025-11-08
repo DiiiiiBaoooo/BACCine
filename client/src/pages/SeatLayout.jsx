@@ -445,9 +445,9 @@ const SeatLayout = () => {
         <div className="flex-1 flex flex-col items-center">
           <BlurCircle top="-100px" left="-100px" />
           <BlurCircle bottom="0" right="0" />
-          <h1 className="text-2xl font-semibold mb-4">Select Your Seats</h1>
+          <h1 className="text-2xl font-semibold mb-4">Chọn chỗ ngồi cho bạn</h1>
           <img src={assets.screenImage} alt="screen" />
-          <p className="text-gray-400 text-sm mb-6">SCREEN SIDE</p>
+          <p className="text-gray-400 text-sm mb-6">Màn hình chiếu</p>
           <div className="flex flex-col items-center mt-10 text-xs text-gray-300">
             <div className="grid grid-cols-2 md:grid-cols-1 gap-8 md:gap-2 mb-6">
               {groupRows[0].map((row) => renderSeats(row))}
@@ -465,7 +465,7 @@ const SeatLayout = () => {
           <div className="flex justify-center w-full">
             {selectedSeats.length > 0 && (
               <div className="mt-6 p-5 bg-black shadow-md rounded-xl border border-primary/30 w-full max-w-md">
-                <h3 className="font-semibold mb-3 text-primary text-lg">Seats Selected</h3>
+                <h3 className="font-semibold mb-3 text-primary text-lg">Ghế đã chọn</h3>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {selectedSeats.map((seat) => (
                     <span
@@ -478,12 +478,12 @@ const SeatLayout = () => {
                 </div>
                 
                 {priceLoading ? (
-                  <p className="text-gray-400">Calculating total...</p>
+                  <p className="text-gray-400">Đang tính toán giá vé</p>
                 ) : ticketPrices.length === 0 ? (
                   <p className="text-red-400">No ticket prices available. Please try another showtime or date.</p>
                 ) : (
                   <p className="text-lg font-bold text-white">
-                    Total: <span className="text-primary">{calculateTotal().toLocaleString()} VND</span>
+                    Tổng tiền: <span className="text-primary">{calculateTotal().toLocaleString()} VND</span>
                   </p>
                 )}
               </div>
@@ -518,17 +518,15 @@ const SeatLayout = () => {
             }}
             className="flex items-center gap-1 mt-6 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95"
           >
-            Proceed to Checkout <TicketCheckIcon className="w-4 h-4" strokeWidth={3} />
+            Tiến hành thanh toán <TicketCheckIcon className="w-4 h-4" strokeWidth={3} />
           </button>
         </div>
 
         {/* Price Legend Panel - Right side */}
         {!priceLoading && ticketPrices.length > 0 && (
-          <div className="w-64 max-md:w-full">
+          <div className="w-32 max-md:w-full">
             <div className="sticky top-32 bg-gray-900/50 backdrop-blur-sm border border-primary/20 rounded-xl p-5 shadow-lg">
-              <h3 className="font-semibold mb-4 text-white text-lg border-b border-primary/30 pb-2">
-                Giá Vé Theo Loại Ghế
-              </h3>
+             
               <div className="flex flex-col gap-3">
                 {['Standard', 'VIP', 'Couple'].map((type) => {
                   const priceData = ticketPrices.find(
@@ -539,7 +537,7 @@ const SeatLayout = () => {
                   return (
                     <div
                       key={type}
-                      className={`flex flex-col p-3 rounded-lg border-2 ${
+                      className={`flex flex-col p-3 rounded-lg border-2 text-xs ${
                         type === 'Standard'
                           ? 'bg-blue-900/40 border-blue-500'
                           : type === 'VIP'
@@ -548,12 +546,10 @@ const SeatLayout = () => {
                       }`}
                     >
                       <span className="font-semibold text-white mb-1">{type}</span>
-                      <span className="text-xl font-bold text-white">
+                      <span className="text-xs font-bold text-white">
                         {price.toLocaleString()}đ
                       </span>
-                      <span className="text-xs text-gray-300 mt-1">
-                        {type === 'Standard' ? 'Hàng A, B' : type === 'VIP' ? 'Hàng C-G' : 'Hàng H, I, J (Đôi)'}
-                      </span>
+                    
                     </div>
                   );
                 })}

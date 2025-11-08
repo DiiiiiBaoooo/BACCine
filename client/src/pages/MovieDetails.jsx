@@ -132,13 +132,12 @@ const MovieDetails = () => {
           <div className="flex items-center flex-wrap gap-4 mt-4">
             <button className="flex items-center gap-2 px-7 py-3 text-sm bg-gray-800 hover:bg-gray-900 transition rounded-md font-medium cursor-pointer active:scale-95">
               <PlayCircleIcon className="w-5 h-5" />
-              Watch Trailer
-            </button>
+Xem trailer            </button>
             <a
               href="#cineSelect"
               className="px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer active:scale-95"
             >
-              Buy Tickets
+Đặt vé
             </a>
             <button
               onClick={() => {
@@ -152,7 +151,7 @@ const MovieDetails = () => {
         </div>
       </div>
       
-      <p className="text-lg font-medium mt-20">Your Favorite Cast</p>
+      <p className="text-lg font-medium mt-20">Diễn viên </p>
       <div className="overflow-x-auto no-scrollbar mt-8 pb-4">
         <div className="flex items-center gap-4 w-max px-4">
           {show.movie.actors?.slice(0, 12).map((actor, index) => (
@@ -174,8 +173,8 @@ const MovieDetails = () => {
       {selectedCinema && filteredDateTime.length === 0 && (
         <div className="pt-10">
           <div className="p-8 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-            <p className="text-yellow-800 mb-2">No showtimes available</p>
-            <p className="text-yellow-600 text-sm">for {selectedCinema.name} on this date</p>
+            <p className="text-yellow-800 mb-2">Phim hiện đang không có lịch chiếu </p>
+            <p className="text-yellow-600 text-sm"></p>
           </div>
         </div>
       )}
@@ -190,7 +189,7 @@ const MovieDetails = () => {
         />
       )}
       
-      <p className="text-lg font-medium mt-20 mb-8">You may also like</p>
+      <p className="text-lg font-medium mt-20 mb-8">Bạn cũng có thể thích </p>
       <div className="flex flex-wrap max-sm:justify-center gap-8">
         {relatedShows.slice(0, 4).map((movie) => (
           <MovieCard key={movie.movie_id} movie={movie} />
@@ -204,8 +203,7 @@ const MovieDetails = () => {
           }}
           className="px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer"
         >
-          Show More
-        </button>
+Xem thêm        </button>
       </div>
     </div>
   );

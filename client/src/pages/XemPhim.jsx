@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { Play, Pause, ArrowLeft, Share2, Volume2, VolumeX, Maximize, Download, SkipBack, SkipForward } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { 
+  Play, Pause, ArrowLeft, Share2, Volume2, VolumeX, 
+  Maximize, Download, SkipBack, SkipForward, Lock 
+} from "lucide-react";
 import Hls from "hls.js";
 import axios from "axios";
 
@@ -9,6 +12,13 @@ const XemPhim = () => {
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
+
+  // ==========================================
+  // 📌 QUY TẮC: TẤT CẢ HOOKS PHẢI Ở ĐÂY
+  // KHÔNG BAO GIỜ đặt hooks sau if/return
+  // ==========================================
+
+  // States cho video player
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -21,7 +31,16 @@ const XemPhim = () => {
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
 
-  // Fetch movie data
+  // States mới cho access control
+  const [hasAccess, setHasAccess] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [showPurchase, setShowPurchase] = useState(false);
+
+  // ==========================================
+  // 📌 TẤT CẢ useEffect CŨNG PHẢI Ở ĐÂY
+  // ==========================================
+
+  // useEffect 1: Fetch movie data
   useEffect(() => {
     const fetchMovie = async () => {
       try {
@@ -42,9 +61,53 @@ const XemPhim = () => {
     }
   }, [id]);
 
-  // Setup HLS streaming
+  // useEffect 2: Check access
   useEffect(() => {
-    if (!movie || !videoRef.current) return;
+    const checkAccess = async () => {
+      if (!id) return;
+      
+      try {
+        setCheckingAccess(true);
+        const response = await axios.get(
+          `http://localhost:3000/api/video-purchase/${id}/access`,
+          { withCredentials: true }
+        );
+        
+        console.log('✅ Access check:', response.data);
+        setHasAccess(response.data.has_access);
+        
+        if (!response.data.has_access) {
+          setShowPurchase(true);
+        }
+      } catch (error) {
+        console.error('Lỗi kiểm tra quyền:', error);
+        
+        if (error.response?.status === 401) {
+          alert('Vui lòng đăng nhập để xem video');
+          navigate('/login');
+          return;
+        }
+        
+        if (error.response?.status === 404) {
+          setError('Video không tồn tại');
+          setShowPurchase(false);
+          return;
+        }
+        
+        // Lỗi khác - tạm cho xem
+        console.warn('Lỗi kiểm tra, cho xem tạm thời');
+        setHasAccess(true);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    checkAccess();
+  }, [id, navigate]);
+
+  // useEffect 3: Setup HLS
+  useEffect(() => {
+    if (!movie || !videoRef.current || !hasAccess) return;
   
     const videoSrc = `http://localhost:3000/api/stream/${movie.s3_folder_name}/master.m3u8`;
   
@@ -58,7 +121,7 @@ const XemPhim = () => {
         maxBufferHole: 0.5,
         maxStarvationDelay: 4,
         fetchTimeout: 20_000,
-        xhrSetup: (xhr, url) => {
+        xhrSetup: (xhr) => {
           xhr.withCredentials = false;
         },
       });
@@ -95,7 +158,44 @@ const XemPhim = () => {
       setError("Trình duyệt không hỗ trợ phát video HLS");
       setBuffering(false);
     }
-  }, [movie]);
+  }, [movie, hasAccess]);
+
+  // useEffect 4: Save progress
+  useEffect(() => {
+    if (!hasAccess || !id) return;
+    
+    const saveProgress = async () => {
+      if (!videoRef.current) return;
+      
+      try {
+        await axios.post(
+          'http://localhost:3000/api/video-purchase/watch-progress',
+          {
+            video_id: id,
+            last_position: Math.floor(videoRef.current.currentTime),
+            watch_duration: Math.floor(videoRef.current.currentTime),
+          },
+          { withCredentials: true }
+        );
+      } catch (error) {
+        console.error('Lỗi lưu tiến độ:', error);
+      }
+    };
+
+    const interval = setInterval(saveProgress, 30000);
+    const handleBeforeUnload = () => saveProgress();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      saveProgress();
+    };
+  }, [hasAccess, id]);
+
+  // ==========================================
+  // 📌 SAU KHI KHAI BÁO HẾT HOOKS, MỚI ĐỊNH NGHĨA HÀM
+  // ==========================================
 
   const handlePlayPause = async () => {
     if (!videoRef.current) return;
@@ -110,11 +210,9 @@ const XemPhim = () => {
         if (videoRef.current.paused || videoRef.current.ended) {
           setBuffering(true);
           await videoRef.current.play().catch((err) => {
-            if (err.name === "AbortError") {
-              console.warn("Play request interrupted:", err);
-            } else {
+            if (err.name !== "AbortError") {
               console.error("Play error:", err);
-              setError("Không thể phát video. Vui lòng thử lại.");
+              setError("Không thể phát video.");
             }
           });
           setIsPlaying(true);
@@ -123,7 +221,6 @@ const XemPhim = () => {
       }
     } catch (err) {
       console.error("Play/pause error:", err);
-      setError("Lỗi khi phát hoặc tạm dừng video.");
       setBuffering(false);
     }
   };
@@ -141,74 +238,6 @@ const XemPhim = () => {
       setBuffering(false);
     }
   };
-
-  // Tua video khi click vào thanh progress
-  const handleProgressClick = (e) => {
-    if (!progressBarRef.current || !videoRef.current || !duration) return;
-    
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percent = clickX / rect.width;
-    const newTime = percent * duration;
-    
-    videoRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  // Tua tiến 10 giây
-  const handleSkipForward = () => {
-    if (videoRef.current && duration) {
-      const newTime = Math.min(currentTime + 10, duration);
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
-  // Tua lùi 10 giây
-  const handleSkipBackward = () => {
-    if (videoRef.current) {
-      const newTime = Math.max(currentTime - 10, 0);
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
-  const handleVolumeToggle = () => {
-    if (videoRef.current) {
-      const newMutedState = !isMuted;
-      videoRef.current.muted = newMutedState;
-      setIsMuted(newMutedState);
-    }
-  };
-
-  const handleVolumeChange = (e) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      if (newVolume === 0) {
-        setIsMuted(true);
-        videoRef.current.muted = true;
-      } else if (isMuted) {
-        setIsMuted(false);
-        videoRef.current.muted = false;
-      }
-    }
-  };
-
-  const handleFullscreen = () => {
-    if (videoRef.current) {
-      if (videoRef.current.requestFullscreen) {
-        videoRef.current.requestFullscreen();
-      } else if (videoRef.current.webkitRequestFullscreen) {
-        videoRef.current.webkitRequestFullscreen();
-      } else if (videoRef.current.msRequestFullscreen) {
-        videoRef.current.msRequestFullscreen();
-      }
-    }
-  };
-
-  // Tải video xuống
   const handleDownload = async () => {
     if (!movie) return;
     
@@ -265,6 +294,68 @@ const XemPhim = () => {
       setDownloadProgress(0);
     }
   };
+  const handleProgressClick = (e) => {
+    if (!progressBarRef.current || !videoRef.current || !duration) return;
+    
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = clickX / rect.width;
+    const newTime = percent * duration;
+    
+    videoRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const handleSkipForward = () => {
+    if (videoRef.current && duration) {
+      const newTime = Math.min(currentTime + 10, duration);
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleSkipBackward = () => {
+    if (videoRef.current) {
+      const newTime = Math.max(currentTime - 10, 0);
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleVolumeToggle = () => {
+    if (videoRef.current) {
+      const newMutedState = !isMuted;
+      videoRef.current.muted = newMutedState;
+      setIsMuted(newMutedState);
+    }
+  };
+
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+      if (newVolume === 0) {
+        setIsMuted(true);
+        videoRef.current.muted = true;
+      } else if (isMuted) {
+        setIsMuted(false);
+        videoRef.current.muted = false;
+      }
+    }
+  };
+
+  const handleFullscreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen();
+      } else if (videoRef.current.webkitRequestFullscreen) {
+        videoRef.current.webkitRequestFullscreen();
+      } else if (videoRef.current.msRequestFullscreen) {
+        videoRef.current.msRequestFullscreen();
+      }
+    }
+  };
 
   const formatTime = (time) => {
     if (!time || isNaN(time)) return "0:00";
@@ -273,8 +364,74 @@ const XemPhim = () => {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+  // ==========================================
+  // 📌 CUỐI CÙNG MỚI ĐẾN CÁC ĐIỀU KIỆN RENDER
+  // ==========================================
 
+  // 1. Đang kiểm tra quyền
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-blue-300">Đang kiểm tra quyền truy cập...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Cần mua video
+  if (showPurchase) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/50 rounded-xl p-8 text-center mb-8">
+            <Lock className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Video này yêu cầu thanh toán</h2>
+            <p className="text-gray-300 mb-6">
+              Vui lòng mua hoặc thuê video để xem nội dung
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+    onClick={() => window.location.href = `/video-purchase/${id}`}
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-lg font-semibold transition-all"
+              >
+                Mua/Thuê ngay
+              </button>
+              <button
+                onClick={() => navigate('/video')}
+                className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-semibold transition-all"
+              >
+                Quay lại
+              </button>
+            </div>
+          </div>
+
+          {movie && (
+            <div className="grid md:grid-cols-2 gap-6">
+              <img
+                src={movie.poster_image_url || '/placeholder-poster.jpg'}
+                alt={movie.video_title}
+                className="rounded-xl w-full aspect-[2/3] object-cover opacity-50"
+              />
+              <div>
+                <h1 className="text-3xl font-bold mb-4">{movie.video_title}</h1>
+                <div className="space-y-4 text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-red-400" />
+                    <span>Nội dung bị khóa</span>
+                  </div>
+                  <p>Để xem video này, bạn cần mua hoặc thuê nội dung.</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Đang tải
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
@@ -286,6 +443,7 @@ const XemPhim = () => {
     );
   }
 
+  // 4. Có lỗi
   if (error) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
@@ -306,18 +464,21 @@ const XemPhim = () => {
     return null;
   }
 
+  // 5. Render video player bình thường
+  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+
   return (
-    <div className="min-h-screen    bg-gray-950 text-white">
+    <div className="min-h-screen bg-gray-950 text-white">
       {/* Header */}
-      <header className="top-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-blue-500/20">
+      <header className="bg-gray-900/80 backdrop-blur-md border-b border-blue-500/20">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link
-            to="/video"
+          <button
+            onClick={() => navigate('/video')}
             className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span>Quay lại thư viện</span>
-          </Link>
+          </button>
           <h1 className="text-xl font-bold text-blue-200">{movie.video_title}</h1>
           <button className="p-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all">
             <Share2 className="w-5 h-5" />
@@ -325,9 +486,8 @@ const XemPhim = () => {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Video Player */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Video Player */}
         <div className="relative group mb-8">
           <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gray-900">
             <div className="relative aspect-video">
@@ -384,39 +544,21 @@ const XemPhim = () => {
                 {/* Control Buttons */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={handlePlayPause}
-                      className="text-white hover:text-blue-400 transition-colors"
-                    >
+                    <button onClick={handlePlayPause} className="text-white hover:text-blue-400 transition-colors">
                       {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                     </button>
                     
-                    <button
-                      onClick={handleSkipBackward}
-                      className="text-white hover:text-blue-400 transition-colors"
-                      title="Tua lùi 10 giây"
-                    >
+                    <button onClick={handleSkipBackward} className="text-white hover:text-blue-400 transition-colors" title="Tua lùi 10s">
                       <SkipBack className="w-5 h-5" />
                     </button>
 
-                    <button
-                      onClick={handleSkipForward}
-                      className="text-white hover:text-blue-400 transition-colors"
-                      title="Tua tiến 10 giây"
-                    >
+                    <button onClick={handleSkipForward} className="text-white hover:text-blue-400 transition-colors" title="Tua tiến 10s">
                       <SkipForward className="w-5 h-5" />
                     </button>
 
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleVolumeToggle}
-                        className="text-white hover:text-blue-400 transition-colors"
-                      >
-                        {isMuted || volume === 0 ? (
-                          <VolumeX className="w-5 h-5" />
-                        ) : (
-                          <Volume2 className="w-5 h-5" />
-                        )}
+                      <button onClick={handleVolumeToggle} className="text-white hover:text-blue-400 transition-colors">
+                        {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                       </button>
                       <input
                         type="range"
@@ -434,11 +576,7 @@ const XemPhim = () => {
                     </span>
                   </div>
 
-                  <button
-                    onClick={handleFullscreen}
-                    className="text-white hover:text-blue-400 transition-colors"
-                    title="Toàn màn hình"
-                  >
+                  <button onClick={handleFullscreen} className="text-white hover:text-blue-400 transition-colors" title="Toàn màn hình">
                     <Maximize className="w-5 h-5" />
                   </button>
                 </div>
@@ -512,6 +650,8 @@ const XemPhim = () => {
             </div>
           </div>
         </div>
+
+
       </main>
     </div>
   );

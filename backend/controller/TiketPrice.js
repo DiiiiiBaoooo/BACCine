@@ -166,8 +166,8 @@ export const saveTicketPrices = async (req, res) => {
       }
   
       // Determine if it's a weekend
-      const isWeekend = queryDate.getDay() >= 6; // Saturday (6) or Sunday (0)
-  
+      const dayOfWeek = queryDate.getDay(); // 0 = CN, 6 = T7
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // ĐÚNG  
       // Calculate effective price for each seat type
       const ticketPrices = prices.map((priceRow) => ({
         seat_type: priceRow.seat_type,
