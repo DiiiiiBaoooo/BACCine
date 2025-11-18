@@ -21,6 +21,8 @@ export const getMyTickets = async (req, res) => {
         o.order_id,
         o.status AS order_status,
         o.total_amount,
+        movie_id,         
+  o.showtime_id,
         o.updated_at AS ThoiGianThanhToan,
         o.order_date,
         st.start_time AS GioBatDau,
@@ -72,6 +74,8 @@ export const getMyTickets = async (req, res) => {
           runtime: row.runtime,
           poster_path: row.poster_path,
           PhongChieu: row.PhongChieu,
+          movie_id: row.movie_id,        // THÊM DÒNG NÀY
+    showtime_id: row.showtime_id,
           RapChieu: row.RapChieu,
           seats: [],
         };
@@ -147,6 +151,9 @@ export const getTicketByOrderId = async (req, res) => {
         o.total_amount,
         o.updated_at AS ThoiGianThanhToan,
         o.order_date,
+          o.showtime_id,
+          movie_id,
+
         st.start_time AS GioBatDau,
         st.end_time AS GioKetThuc,
         m.title AS movie_title,

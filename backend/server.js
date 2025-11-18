@@ -30,6 +30,8 @@ import VideoRoute from "./routes/VideoRoutes.js";
 import VideoPurchaseRoute from "./routes/VideoPurchaseRoute.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import ManagerRoute from "./routes/ManagerRoutes.js";
+import reviewRoutes from './routes/reviewRoute.js';
+
 const app = express();
 const port = 3000;
 
@@ -68,6 +70,7 @@ app.use("/api/video", VideoRoute);
 app.use("/api/video-purchase", VideoPurchaseRoute);
 app.use("/api/admin", adminRoutes);
 app.use("/api/manager", ManagerRoute);
+app.use('/api/reviews', reviewRoutes);
 
 app.use("/api/inngest",serve({ client: inngest, functions }))
 app.use("/api/chatbot", ChatbotRoute);

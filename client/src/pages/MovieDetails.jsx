@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import BlurCircle from '../components/BlurCircle';
-import { Heart, PlayCircleIcon, StarIcon } from 'lucide-react';
+import { CheckCircle, Heart, MessageSquare, PlayCircleIcon, StarIcon } from 'lucide-react';
 import timeFormat from '../lib/timeFormat';
 import DateSelect from '../components/DateSelect';
 import CineSelect from '../components/CineSelect';
 import MovieCard from '../components/MovieCard';
 import { toast } from 'react-toastify';
 import Loading from '../components/Loading';
+import { dateFormat } from '../lib/dateFormat';
 
 const MovieDetails = () => {
   const navigate = useNavigate();
@@ -188,7 +189,108 @@ Xem trailer            </button>
           cinemaName={selectedCinema.name}
         />
       )}
-      
+      {/* ===== PHẦN ĐÁNH GIÁ TỪ KHÁN GIẢ - HIỂN THỊ TỪ ĐẦU (theo movie_id) ===== */}
+<div className="mt-20">
+  <h2 className="text-2xl font-bold text-white mb-8">Đánh giá từ khán giả</h2>
+
+  {/* Nếu chưa có đánh giá */}
+  {!show.reviews || show.reviews.length === 0 ? (
+    <div className="text-center py-16 bg-gray-900/50 rounded-2xl border border-gray-800">
+      <MessageSquare className="w-16 h-16 mx-auto text-gray-600 mb-4" />
+      <p className="text-gray-400 text-lg">Chưa có đánh giá nào cho bộ phim này</p>
+      <p className="text-gray-500 text-sm mt-2">Hãy là người đầu tiên chia sẻ cảm nhận sau khi xem!</p>
+    </div>
+  ) : (
+    <>
+      {/* Thống kê tổng quan */}
+      <div className="bg-gray-900/70 backdrop-blur-sm rounded-2xl p-6 border border-gray-800 mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-6">
+          <div>
+            <p className="text-gray-400 text-sm">Đánh giá trung bình từ khán giả</p>
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <StarIcon
+                    key={star}
+                    className={`w-8 h-8 ${
+                      star <= Math.round(show.average_rating || 0)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-700"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-3xl font-bold text-yellow-400">
+                {show.average_rating > 0 ? show.average_rating.toFixed(1) : "Chưa có"}
+              </span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-5xl font-bold text-white">
+              {show.review_count || 0}
+            </p>
+            <p className="text-gray-400">lượt đánh giá</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Danh sách đánh giá (mới nhất trước, 5 sao trước) */}
+      <div className="space-y-6">
+        {show.reviews.map((review) => (
+          <div
+            key={review.review_id}
+            className="bg-gray-900/50 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-all"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+                  {review.user_name?.[0]?.toUpperCase() || "K"}
+                </div>
+                <div>
+                  <p className="font-medium text-white">{review.user_name || "Khán giả"}</p>
+                  <p className="text-xs text-gray-500">
+                    {dateFormat(review.created_at)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <StarIcon
+                    key={star}
+                    className={`w-5 h-5 ${
+                      star <= review.rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-700"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            {review.comment && (
+              <p className="text-gray-300 leading-relaxed mt-3 pl-1">{review.comment}</p>
+            )}
+            {/* Badge verified nếu có vé thật */}
+            {review.is_verified_viewer && (
+              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">
+                <CheckCircle className="w-4 h-4" />
+                Đã xem tại rạp
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Nút xem thêm nếu có nhiều */}
+      {show.review_count > show.reviews.length && (
+        <div className="text-center mt-10">
+          <button className="px-8 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-white font-medium transition">
+            Xem thêm đánh giá
+          </button>
+        </div>
+      )}
+    </>
+  )}
+</div>
       <p className="text-lg font-medium mt-20 mb-8">Bạn cũng có thể thích </p>
       <div className="flex flex-wrap max-sm:justify-center gap-8">
         {relatedShows.slice(0, 4).map((movie) => (

@@ -246,7 +246,25 @@ export const getShow = async (req, res) => {
     if (movieRows.length === 0) {
       return res.status(404).json({ success: false, message: "Không tìm thấy phim" });
     }
+// Sau khi lấy thông tin phim
+const [reviewStats] = await dbPool.query(`
+  SELECT 
+    COALESCE(AVG(rating), 0) AS average_rating,
+    COUNT(*) AS review_count
+  FROM movie_reviews 
+  WHERE movie_id = ?
+`, [movie_id]);
 
+const [reviews] = await dbPool.query(`
+  SELECT 
+    mr.review_id, mr.rating, mr.comment, mr.created_at, mr.is_verified_viewer,
+    u.name AS user_name
+  FROM movie_reviews mr
+  JOIN users u ON mr.user_id = u.id
+  WHERE mr.movie_id = ?
+  ORDER BY mr.rating DESC, mr.created_at DESC
+  LIMIT 10
+`, [movie_id]);
     // 2. LẤY SUẤT CHIẾU: CHỈ TỪ HÔM NAY TRỞ ĐI + TRẠNG THÁI HỢP LỆ
     const [showtimeRows] = await dbPool.query(
       `SELECT 
@@ -284,6 +302,9 @@ export const getShow = async (req, res) => {
       success: true,
       movie,
       dateTime,
+      average_rating: parseFloat(reviewStats[0].average_rating),
+  review_count: reviewStats[0].review_count,
+  reviews: reviews,  // danh sách đánh giá
     });
   } catch (error) {
     console.error("Lỗi getShow:", error);
