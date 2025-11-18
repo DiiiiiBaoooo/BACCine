@@ -11,6 +11,7 @@ const Home = () => {
 
   return (
     <>
+    
       <HeroSection />
       <FeaturedSection />
       <News />

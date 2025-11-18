@@ -88,7 +88,7 @@ export const getMyTickets = async (req, res) => {
 
     const ticketsWithQR = await Promise.all(
       Object.values(ticketsByOrder).map(async (order) => {
-        const validationUrl = `http://localhost:5173/ticket-details/${order.order_id}`;
+        const validationUrl = `http://localhost:5173/inve/${order.order_id}`;
         const qrBase64 = await QRCode.toDataURL(validationUrl, {
           errorCorrectionLevel: 'H',
           type: 'image/png',
@@ -235,7 +235,7 @@ export const getTicketByOrderId = async (req, res) => {
     });
 
     // Tạo QR code
-    const validationUrl = `http://localhost:5173/ticket-details/${order.order_id}`;
+    const validationUrl = `http://localhost:5173/inve/${order.order_id}`;
     const qrBase64 = await QRCode.toDataURL(validationUrl, {
       errorCorrectionLevel: 'H',
       type: 'image/png',

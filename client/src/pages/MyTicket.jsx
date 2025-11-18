@@ -5,23 +5,29 @@ import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import {CheckCircle} from "lucide-react"
 import { getMyTickets } from "../lib/api";
 import useAuthUser from "../hooks/useAuthUser";
 
 const TicketCard = ({ ticket, onClick }) => {
   const totalPrice = parseFloat(ticket.total_amount) || 0;
+  
   const formattedPrice = new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
   }).format(totalPrice);
-
+  const startTime = new Date(ticket.GioBatDau);
+  const runtimeMinutes = ticket.runtime || 0;
+  const endTime = new Date(startTime.getTime() + runtimeMinutes * 60000);
+  const now = new Date();
+  const isUsed = now > endTime;
   return (
     <div
       className="border border-red-500 rounded-lg shadow-lg bg-gray-900 overflow-hidden hover:bg-gray-800 transition cursor-pointer relative"
       onClick={onClick}
     >
       {/* Status Badge */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <span
           className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
             ticket.order_status === "confirmed"
@@ -37,6 +43,13 @@ const TicketCard = ({ ticket, onClick }) => {
             ? "Đã hủy"
             : "Chờ thanh toán"}
         </span>
+         {/* Nhãn "Đã sử dụng" */}
+         {isUsed && ticket.order_status === "confirmed" && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold bg-gray-700 text-gray-300 border border-gray-600">
+            <CheckCircle className="w-3 h-3" />
+            Đã sử dụng
+          </span>
+        )}
       </div>
 
       {/* Content */}

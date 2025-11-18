@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import './styles/dropdown-fix.css';
+
 @theme {
     --color-primary:#F84565;
     --color-primary-dull:#D63854;

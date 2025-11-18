@@ -18,11 +18,9 @@ import { getStorage } from "firebase/storage"; // THÊM MỚI
 const firebaseConfig = {
   apiKey: "AIzaSyDMvFFBnSLMsgrXFXVSQQJGv95tMBrS7BQ",
   authDomain: "todo-app-30eb4.firebaseapp.com",
+  databaseURL: "https://todo-app-30eb4-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "todo-app-30eb4",
-  databaseURL: "https://baccine-5319e-default-rtdb.asia-southeast1.firebasedatabase.app",
-
   storageBucket: "todo-app-30eb4.firebasestorage.app",
-  
   messagingSenderId: "262599136953",
   appId: "1:262599136953:web:8f92c30056cb6d40a8ad68"
 };

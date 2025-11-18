@@ -1,0 +1,144 @@
+/* client/src/styles/dropdown-fix.css */
+
+/* ===================================
+   IMPORT THIS FILE IN index.css:
+   @import './styles/dropdown-fix.css';
+   ================================== */
+
+/* ===================================
+   Z-INDEX HIERARCHY
+   ================================== */
+
+/* Level 1: Base content (z-index: 0-9) */
+.base-content {
+    z-index: 0;
+  }
+  
+  /* Level 2: Sections with blur/decorative elements (z-index: 10-19) */
+  .blur-circle,
+  .decorative-element {
+    z-index: 10;
+  }
+  
+  /* Level 3: Header/Navigation (z-index: 40-49) */
+  .header-container {
+    z-index: 40;
+  }
+  
+  /* Level 4: Dropdown menus (z-index: 50-59) */
+  .dropdown-menu {
+    z-index: 50 !important;
+  }
+  
+  /* Level 5: Modals/Overlays (z-index: 60-69) */
+  .modal-overlay {
+    z-index: 60;
+  }
+  
+  /* Level 6: Toasts/Notifications (z-index: 70-79) */
+  .toast-container {
+    z-index: 70;
+  }
+  
+  /* ===================================
+     HEADER DROPDOWN SPECIFIC FIXES
+     ================================== */
+  
+  /* Header wrapper - ensure it's above content */
+  header,
+  .header-wrapper {
+    position: relative;
+    z-index: 40 !important;
+  }
+  
+  /* Dropdown trigger button */
+  .dropdown-trigger {
+    position: relative;
+    z-index: 41;
+  }
+  
+  /* Dropdown menu container */
+  .dropdown-content,
+  [class*="dropdown-menu"],
+  [class*="absolute"][class*="top-"],
+  .profile-dropdown,
+  .user-menu {
+    position: absolute !important;
+    z-index: 50 !important;
+  }
+  
+  /* Ensure dropdown appears above hero section */
+  .hero-section,
+  [class*="hero"] {
+    position: relative;
+    z-index: 1 !important;
+  }
+  
+  /* Fix for specific hero elements */
+  .hero-section > * {
+    position: relative;
+    z-index: 2;
+  }
+  
+  /* Blur circles should be behind everything */
+  [class*="blur-circle"],
+  .blur-bg {
+    z-index: 0 !important;
+  }
+  
+  /* ===================================
+     DROPDOWN POSITIONING FIXES
+     ================================== */
+  
+  /* Ensure dropdown menu is properly positioned */
+  .dropdown-menu {
+    margin-top: 0.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Prevent parent overflow hiding */
+  .dropdown-parent,
+  .has-dropdown {
+    overflow: visible !important;
+  }
+  
+  /* Fix for header navigation overflow */
+  nav,
+  .navigation {
+    overflow: visible !important;
+  }
+  
+  /* ===================================
+     RESPONSIVE FIXES
+     ================================== */
+  
+  @media (max-width: 768px) {
+    /* Mobile dropdown might need different z-index */
+    .mobile-menu,
+    .mobile-dropdown {
+      z-index: 55 !important;
+    }
+  }
+  
+  /* ===================================
+     DEBUGGING (Remove in production)
+     ================================== */
+  
+  /* Uncomment to debug z-index issues */
+  /*
+  .dropdown-menu {
+    background: rgba(255, 0, 0, 0.3) !important;
+    border: 2px solid red !important;
+  }
+  
+  header {
+    background: rgba(0, 255, 0, 0.3) !important;
+    border: 2px solid green !important;
+  }
+  
+  .hero-section {
+    background: rgba(0, 0, 255, 0.3) !important;
+    border: 2px solid blue !important;
+  }
+  */

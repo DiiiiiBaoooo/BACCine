@@ -14,6 +14,7 @@ function ChatWidget({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [onlineEmployees, setOnlineEmployees] = useState([]);
+  const [isConnecting, setIsConnecting] = useState(false); // ✨ THÊM state mới
 
   // Load online employees
   useEffect(() => {
@@ -110,6 +111,7 @@ function ChatWidget({ currentUser }) {
   // Tạo cuộc hội thoại mới
   const startNewConversation = async () => {
     try {
+      setIsConnecting(true); // ✨ Bắt đầu connecting
       console.log('📞 Bắt đầu tạo conversation...');
   
       // Kiểm tra conversation với employee online
@@ -154,6 +156,8 @@ function ChatWidget({ currentUser }) {
     } catch (error) {
       console.error('❌ Lỗi khi tạo cuộc hội thoại:', error);
       alert('Không thể kết nối với nhân viên. Vui lòng thử lại!');
+    } finally {
+      setIsConnecting(false); // ✨ Kết thúc connecting
     }
   };
 
@@ -273,9 +277,9 @@ function ChatWidget({ currentUser }) {
                       <button
                         className="btn-start-chat"
                         onClick={startNewConversation}
-                        disabled={loading}
+                        disabled={isConnecting} // ✨ Sử dụng isConnecting
                       >
-                        {loading ? 'Đang kết nối...' : 'Bắt đầu trò chuyện'}
+                        {isConnecting ? 'Đang kết nối...' : 'Bắt đầu trò chuyện'} {/* ✨ Chỉ hiện "Đang kết nối..." */}
                       </button>
                     </div>
                   ) : (
