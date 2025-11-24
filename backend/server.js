@@ -33,7 +33,7 @@ import ManagerRoute from "./routes/ManagerRoutes.js";
 import reviewRoutes from './routes/reviewRoute.js';
 
 const app = express();
-const port = process.env.PORT || 3000;   // Cloud Run sẽ set PORT=8080
+const PORT = process.env.PORT || 3000;   // Cloud Run sẽ set PORT=8080
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -96,7 +96,7 @@ io.on("connection", (socket) => {
 
 // Start the server
 // Start the server
-server.listen(port, '0.0.0.0', () => {
-  console.log(`Server is running on http://0.0.0.0:${port}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
   console.log(`Cloud Run URL: https://YOUR-SERVICE-HASH.a.run.app`);
 });
