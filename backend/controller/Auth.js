@@ -153,17 +153,20 @@ export async function updateProfile(req, res) {
 // Logout
 export async function logout(req, res) {
   try {
-    // Lấy user từ middleware auth
-    const user = req.user; // { id, email, name, ... }
+    const user = req.user;
 
     if (!user) {
       return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
-    // Xóa cookie JWT
-    res.clearCookie("jwt");
+    // CẦN PHẢI CÓ ĐỦ OPTION GIỐNG KHI SET
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,        // ← quan trọng!
+      path: "/",           // ← thêm cho chắc
+    });
 
-    // Cập nhật trạng thái online → offline
     await dbPool.query("UPDATE users SET isOnline = false WHERE id = ?", [user.id]);
 
     res.status(200).json({
@@ -172,10 +175,7 @@ export async function logout(req, res) {
     });
   } catch (error) {
     console.error("Logout error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error during logout",
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 }
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -235,8 +235,8 @@ export const googleLogin = async (req, res) => {
 
     res.cookie("jwt", jwtToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,          // ← PHẢI TRUE!
+      sameSite: "none",      // ← PHẢI NONE!
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
