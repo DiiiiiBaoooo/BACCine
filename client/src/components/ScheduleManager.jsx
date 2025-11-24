@@ -23,7 +23,7 @@ const ScheduleManager = ({ cinemaClusterId }) => {
   const [error, setError] = useState(null);
   const [showAllSchedules, setShowAllSchedules] = useState(false);
 
-  const API_BASE_URL = 'http://localhost:3000/api';
+  const API_BASE_URL = '/api';
 
   const getDateString = (date) => {
     if (!(date instanceof Date) || isNaN(date)) {

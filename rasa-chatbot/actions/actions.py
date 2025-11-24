@@ -6,7 +6,7 @@ import requests
 from datetime import datetime, timedelta
 import logging
 
-API_BASE_URL = "http://localhost:3000/api"
+API_BASE_URL = "/api"
 logger = logging.getLogger(__name__)
 import re
 from typing import Optional, Tuple

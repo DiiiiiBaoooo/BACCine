@@ -24,7 +24,7 @@ const QuanLyThuVienPhim = () => {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/video")
+        const res = await axios.get("/api/video")
         setVideos(res.data)
       } catch (error) {
         console.error("Lỗi khi lấy danh sách phim:", error)
@@ -90,7 +90,7 @@ const QuanLyThuVienPhim = () => {
       uploadFormData.append("price", formData.price || "0")
       uploadFormData.append("rentalDuration", formData.isFree ? "NULL" : (formData.rentalDuration || "NULL"))
 
-      const res = await axios.post("http://localhost:3000/api/video", uploadFormData, {
+      const res = await axios.post("/api/video", uploadFormData, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -112,7 +112,7 @@ const QuanLyThuVienPhim = () => {
         setPreviewImage(null)
         setIsModalOpen(false)
         setUploadProgress(0)
-        const fetchRes = await axios.get("http://localhost:3000/api/video")
+        const fetchRes = await axios.get("/api/video")
         setVideos(fetchRes.data)
       }
     } catch (error) {

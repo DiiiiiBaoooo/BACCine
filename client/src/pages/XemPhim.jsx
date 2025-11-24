@@ -5,14 +5,14 @@ import {
   Maximize, Download, SkipBack, SkipForward, Lock 
 } from "lucide-react";
 import Hls from "hls.js";
-import axios from "axios";
+import axios from "axios"
 
 const XemPhim = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const progressBarRef = useRef(null);
-
+  const VITE_BASE_URL =import.meta.env.VITE_BASE_URL
   // ==========================================
   // 📌 QUY TẮC: TẤT CẢ HOOKS PHẢI Ở ĐÂY
   // KHÔNG BAO GIỜ đặt hooks sau if/return
@@ -45,7 +45,7 @@ const XemPhim = () => {
     const fetchMovie = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:3000/api/video/${id}`);
+        const response = await axios.get(`/api/video/${id}`);
         setMovie(response.data);
         setError(null);
       } catch (err) {
@@ -69,7 +69,7 @@ const XemPhim = () => {
       try {
         setCheckingAccess(true);
         const response = await axios.get(
-          `http://localhost:3000/api/video-purchase/${id}/access`,
+          `/api/video-purchase/${id}/access`,
           { withCredentials: true }
         );
         
@@ -109,7 +109,7 @@ const XemPhim = () => {
   useEffect(() => {
     if (!movie || !videoRef.current || !hasAccess) return;
   
-    const videoSrc = `http://localhost:3000/api/stream/${movie.s3_folder_name}/master.m3u8`;
+    const videoSrc = `${VITE_BASE_URL}api/stream/${movie.s3_folder_name}/master.m3u8`;
   
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -169,7 +169,7 @@ const XemPhim = () => {
       
       try {
         await axios.post(
-          'http://localhost:3000/api/video-purchase/watch-progress',
+          '/api/video-purchase/watch-progress',
           {
             video_id: id,
             last_position: Math.floor(videoRef.current.currentTime),
@@ -245,7 +245,7 @@ const XemPhim = () => {
     setDownloadProgress(0);
 
     try {
-      const videoUrl = `http://localhost:3000/api/stream/${movie.s3_folder_name}/master.m3u8`;
+      const videoUrl = `/api/stream/${movie.s3_folder_name}/master.m3u8`;
       
       // Tải file m3u8 để lấy danh sách segments
       const m3u8Response = await axios.get(videoUrl);
@@ -266,7 +266,7 @@ const XemPhim = () => {
       // Tải từng segment
       const segments = [];
       for (let i = 0; i < tsFiles.length; i++) {
-        const tsUrl = `http://localhost:3000/api/stream/${movie.s3_folder_name}/${tsFiles[i]}`;
+        const tsUrl = `/api/stream/${movie.s3_folder_name}/${tsFiles[i]}`;
         const response = await axios.get(tsUrl, {
           responseType: 'blob'
         });

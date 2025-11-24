@@ -16,7 +16,7 @@ const LichLamViec = ({ cinemaClusterId }) => {
   useEffect(() => {
     const checkFaceRegistration = async () => {
       try {
-        const response = await axios.get(`http://localhost:3000/api/schedule/employee/face/check/${employeeId}`);
+        const response = await axios.get(`/api/schedule/employee/face/check/${employeeId}`);
         setHasFaceDescriptor(response.data.hasFaceDescriptor);
         setLoading(false);
       } catch (error) {

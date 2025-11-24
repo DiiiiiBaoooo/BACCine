@@ -14,7 +14,7 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
   const [loading, setLoading] = useState(false);
   const [draggedEmployee, setDraggedEmployee] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:3000/api';
+  const API_BASE_URL = '/api';
 
   const handleDragOver = (e) => {
     e.preventDefault();
