@@ -11,7 +11,7 @@ const ThuVienPhim = () => {
     const fetchMovies = async () => {
       try {
         setLoading(true)
-        const response = await axios.get("http://localhost:3000/api/video")
+        const response = await axios.get("/api/video")
         setMovies(response.data)
         setError(null)
       } catch (err) {
