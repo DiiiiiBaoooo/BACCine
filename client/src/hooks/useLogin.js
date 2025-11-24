@@ -14,6 +14,7 @@ const useLogin = () => {
     mutationFn: login,
     onSuccess: async (data) => {
       // invalidate để refetch authUser
+      
       await queryClient.invalidateQueries({ queryKey: ["authUser"] });
 
       // kiểm tra role + isUpdateProfile để điều hướng

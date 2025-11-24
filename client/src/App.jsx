@@ -63,7 +63,7 @@ import ChatWidget from './components/Chat/ChatWidget';
 import './components/Chat/Chat.css';
 
 // IMPORT RASA CHATBOT
-import RasaChatbot from './components/RasaChatbot';
+// import RasaChatbot  from "./components/RasaChatBot"
 import XemPhim from './pages/XemPhim';
 import ThuVienPhim from './pages/ThuVienPhim';
 import QuanLyThuVienPhim from './pages/admin/QuanLyThuVienPhim';
@@ -359,7 +359,7 @@ const App = () => {
         />
       )}
 
-      {shouldShowRasaChat && authUser && (
+      {/* {shouldShowRasaChat && authUser && (
         <RasaChatbot
           currentUser={{
             id: authUser.id || authUser.user_id,
@@ -367,7 +367,7 @@ const App = () => {
             cinemaId: cinema_Id
           }}
         />
-      )}
+      )} */}
     </>
   );
 };

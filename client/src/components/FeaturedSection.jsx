@@ -17,7 +17,7 @@
       console.log('Fetching Ongoing movies from all cinemas');
       setLoading(true);
       try {
-        const response = await axios.get('/api/showtimes/all');
+        const response = await axios.get('api/showtimes/all');
         console.log('API Response:', response.data);
         if (response.data.success) {
           setShows(response.data.showtimes);
