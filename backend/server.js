@@ -33,8 +33,7 @@ import ManagerRoute from "./routes/ManagerRoutes.js";
 import reviewRoutes from './routes/reviewRoute.js';
 
 const app = express();
-const port = 3000;
-
+const port = process.env.PORT || 3000;   // Cloud Run sẽ set PORT=8080
 // Middleware
 app.use(express.json());
 app.use(cookieParser());

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
-import { database } from '../../../../backend/config/firebase';
-
+import { database } from '../../lib/firebase';
 function ConversationList({ conversations, selectedConversation, onSelectConversation, currentUserId }) {
   const [conversationsWithLastMsg, setConversationsWithLastMsg] = useState([]);
 

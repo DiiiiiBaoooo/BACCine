@@ -1,8 +1,7 @@
 // backend/services/chat.service.js
 import { ref, push, set, onValue, query, orderByChild, get, update, serverTimestamp } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { database, storage } from '../config/firebase';
-
+import { database, storage} from "./firebase"
 class ChatService {
   // Tạo conversation mới
   async createConversation(customerId, employeeId, cinemaId = null) {

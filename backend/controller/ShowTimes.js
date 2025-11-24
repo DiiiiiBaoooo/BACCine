@@ -68,32 +68,31 @@ export const createShowTime = async (req, res) => {
       const seatEntries = [];
       const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
-      for (const row of rows) {
-        const maxSeats = row <= 'H' ? 9 : 4; // Rows A-H have 1-9, I-J have 1-4
-        const seatTypeId = row === 'A' || row === 'B' ? 1 : row === 'I' || row === 'J' ? 3 : 2; // A,B: 1; I,J: 3; C-H: 2
+      // Sửa lại phần tạo seatEntries
+for (const row of rows) {
+  const maxSeats = row <= 'H' ? 9 : 4;
+  const seatTypeId = row === 'A' || row === 'B' ? 1 : row === 'I' || row === 'J' ? 3 : 2;
 
-        for (let seatNum = 1; seatNum <= maxSeats; seatNum++) {
-          seatEntries.push([
-            showtimeId,
-            `${row}${seatNum}`, // e.g., "A1", "B2", etc.
-            'available',
-            seatTypeId,
-            'NOW()',
-            'NOW()'
-          ]);
-        }
-      }
+  for (let seatNum = 1; seatNum <= maxSeats; seatNum++) {
+    seatEntries.push([
+      showtimeId,
+      `${row}${seatNum}`,
+      'available',
+      seatTypeId
+      // ❌ Xóa 'NOW()' và 'NOW()' ở đây
+    ]);
+  }
+}
 
-      // Insert all seat entries in a single query
-      if (seatEntries.length > 0) {
-        await dbPool.query(
-          `INSERT INTO show_seats (showtime_id, seat_number, status, seat_type_id, created_at, updated_at)
-           VALUES ?`,
-          [seatEntries]
-        );
-      } else {
-        return res.status(400).json({ success: false, message: "Không có ghế nào được tạo" });
-      }
+// Sửa lại câu INSERT
+if (seatEntries.length > 0) {
+  await dbPool.query(
+    `INSERT INTO show_seats (showtime_id, seat_number, status, seat_type_id)
+     VALUES ?`,
+    [seatEntries]
+  );
+}
+
     }
 
     res.status(201).json({ success: true, ids: insertedIds, message: "Thêm lịch chiếu và ghế thành công" });
@@ -281,11 +280,27 @@ const [reviews] = await dbPool.query(`
       [movie_id]
     );
 
-    // 3. ĐỊNH DẠNG DỮ LIỆU PHIM
+
+    // Lấy genres
+    const [genresRows] = await dbPool.query(`
+      SELECT g.name
+      FROM movie_genres mg
+      JOIN genres g ON mg.genre_id = g.id
+      WHERE mg.movie_id = ?
+    `, [movie_id]);
+    
+    // Lấy actors
+    const [actorsRows] = await dbPool.query(`
+      SELECT a.id, a.name, a.profile_path
+      FROM movie_casts mc
+      JOIN actors a ON mc.actor_id = a.id
+      WHERE mc.movie_id = ?
+    `, [movie_id]);
+    
     const movie = {
       ...movieRows[0],
-      genres: movieRows[0].genres ? movieRows[0].genres.split(',').filter(g => g.trim()) : [],
-      actors: movieRows[0].actors ? JSON.parse(`[${movieRows[0].actors}]`) : [],
+      genres: genresRows.map(g => g.name),
+      actors: actorsRows,
     };
 
     // 4. ĐỊNH DẠNG SUẤT CHIẾU

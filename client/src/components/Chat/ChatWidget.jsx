@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ref, onValue } from 'firebase/database';
-import { database } from '../../../../backend/config/firebase';
-import ChatService from '../../../../backend/services/chat.service';
+import { database } from '../../lib/firebase';
+import ChatService from '../../lib/chatservice';
 import ChatBox from './ChatBox';
 import ConversationList from './ConversationList';
 import useAuthUser from '../../hooks/useAuthUser';
