@@ -1,11 +1,11 @@
 import { axiosInstance } from "./axios";
 export const login =async (loginData)=>{
-    const response = await axiosInstance.post("/auth/login",loginData);
+    const response = await axiosInstance.post("/api/auth/login",loginData);
     return response.data;
 }
 export const getAuthUser = async ()=>{
     try {
-        const res = await axiosInstance.get("/auth/me");
+        const res = await axiosInstance.get("/api/auth/me");
         return res.data;
     } catch (error) {
       console.log("error in getauth user",error);
@@ -15,19 +15,19 @@ export const getAuthUser = async ()=>{
   }
 
   export const completeOnboarding = async (userData)=>{
-    const res= await axiosInstance.post("/auth/onboarding",userData);
+    const res= await axiosInstance.post("/api/auth/onboarding",userData);
     return res.data;
 }
 export const logout = async () =>{
-  const response = await axiosInstance.post("/auth/logout");
+  const response = await axiosInstance.post("/api/auth/logout");
   return response.data;
 }
 export const getMyTickets = async () => {
-  const response = await axiosInstance.get('/user/tickets');
+  const response = await axiosInstance.get('/api/user/tickets');
   return response.data;
 };
 export const getTicketByOrderId = async (orderId) => {
-  const response = await axiosInstance.get(`/user/tickets/${orderId}`);
+  const response = await axiosInstance.get(`/api/user/tickets/${orderId}`);
   return response.data;
 };
 
@@ -38,7 +38,7 @@ export const getTicketByOrderId = async (orderId) => {
  */
 export const checkReviewEligibility = async (orderId) => {
   try {
-    const response = await axiosInstance.get(`/reviews/eligibility/${orderId}`);
+    const response = await axiosInstance.get(`/api/reviews/eligibility/${orderId}`);
     return response.data;
   } catch (error) {
     console.error('Check review eligibility error:', error);
@@ -58,7 +58,7 @@ export const checkReviewEligibility = async (orderId) => {
  */
 export const submitReview = async (reviewData) => {
   try {
-    const response = await axiosInstance.post('/reviews', reviewData);
+    const response = await axiosInstance.post('/api/reviews', reviewData);
     return response.data;
   } catch (error) {
     console.error('Submit review error:', error);
@@ -73,7 +73,7 @@ export const submitReview = async (reviewData) => {
  */
 export const getUserReview = async (orderId) => {
   try {
-    const response = await axiosInstance.get(`/reviews/user/${orderId}`);
+    const response = await axiosInstance.get(`/api/reviews/user/${orderId}`);
     return response.data;
   } catch (error) {
     console.error('Get user review error:', error);
@@ -91,7 +91,7 @@ export const getUserReview = async (orderId) => {
  */
 export const updateReview = async (reviewId, reviewData) => {
   try {
-    const response = await axiosInstance.put(`/reviews/${reviewId}`, reviewData);
+    const response = await axiosInstance.put(`/api/reviews/${reviewId}`, reviewData);
     return response.data;
   } catch (error) {
     console.error('Update review error:', error);
@@ -106,7 +106,7 @@ export const updateReview = async (reviewId, reviewData) => {
  */
 export const deleteReview = async (reviewId) => {
   try {
-    const response = await axiosInstance.delete(`/reviews/${reviewId}`);
+    const response = await axiosInstance.delete(`/api/reviews/${reviewId}`);
     return response.data;
   } catch (error) {
     console.error('Delete review error:', error);
@@ -125,7 +125,7 @@ export const deleteReview = async (reviewId) => {
  */
 export const getMovieReviews = async (movieId, params = {}) => {
   try {
-    const response = await axiosInstance.get(`/reviews/movie/${movieId}`, {
+    const response = await axiosInstance.get(`/api/reviews/movie/${movieId}`, {
       params: {
         page: params.page || 1,
         limit: params.limit || 10,
@@ -146,7 +146,7 @@ export const getMovieReviews = async (movieId, params = {}) => {
  */
 export const markReviewHelpful = async (reviewId) => {
   try {
-    const response = await axiosInstance.post(`/reviews/${reviewId}/helpful`);
+    const response = await axiosInstance.post(`/api/reviews/${reviewId}/helpful`);
     return response.data;
   } catch (error) {
     console.error('Mark review helpful error:', error);

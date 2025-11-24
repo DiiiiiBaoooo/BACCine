@@ -37,9 +37,27 @@ const PORT = process.env.PORT || 3000;   // Cloud Run sẽ set PORT=8080
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+// Thay toàn bộ đoạn cors cũ bằng cái này:
+const allowedOrigins = [
+  "https://bac-cine.vercel.app",     // Production
+  "http://localhost:5173",           // Vite dev
+  "http://localhost:3000",           // Nếu bạn dùng port khác
+  "https://bac-cine-git-*.vercel.app", // Preview deploy (nếu cần)
+];
+
 app.use(
   cors({
-    origin: "*",    credentials: true,
+    origin: (origin, callback) => {
+      // Cho phép request không có origin (Postman, mobile, curl...)
+      if (!origin || allowedOrigins.some(allowed => 
+        origin === allowed || origin.startsWith(allowed.replace("https://", ""))
+      )) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,  // BẬT ĐỂ COOKIE ĐƯỢC GỬI
   })
 );
 
@@ -77,7 +95,7 @@ app.use("/api/chatbot", ChatbotRoute);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow frontend to connect
+    origin: ["https://bac-cine.vercel.app", "http://localhost:5173"],
     credentials: true,
   },
 });
