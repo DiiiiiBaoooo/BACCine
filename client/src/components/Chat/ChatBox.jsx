@@ -1,6 +1,6 @@
 // ChatBox.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import ChatService from '../../lib/chat.service';
+import ChatService from '../../lib/chatservice';
 
 function ChatBox({ conversationId, currentUserId, currentUserType, onMessageSent }) {
   const [messages, setMessages] = useState([]);
