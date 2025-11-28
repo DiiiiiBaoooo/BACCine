@@ -34,7 +34,7 @@ const EventQRPayment = () => {
       if (!hasAutoCancelled && purchase_id) {
         setHasAutoCancelled(true);
         // Gọi API hủy
-        axios.delete(`/api/event-requests/${purchase_id}/cancel`)
+        axios.delete(`/api/events/${purchase_id}/cancel`)
           .then(() => toast.warning("Đã hết thời gian! Yêu cầu đã hủy tự động"))
           .catch(() => toast.error("Không thể hủy tự động"));
       }
@@ -86,7 +86,7 @@ const EventQRPayment = () => {
 
     const checkPaymentStatus = async () => {
       try {
-        const res = await axios.get(`/api/event-requests/payment-status/${purchase_id}`);
+        const res = await axios.get(`/api/events/payment-status/${purchase_id}`);
         if (res.data.success && res.data.data.isPaid) {
           setPaymentStatus("success");
           toast.success("Thanh toán thành công!");

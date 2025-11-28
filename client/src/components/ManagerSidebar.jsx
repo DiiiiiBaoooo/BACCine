@@ -21,7 +21,7 @@ const ManagerSidebar = () => {
     {name:"Quản lý lịch làm việc", path:'/manager/qlllv',icon:CalendarCheck},
 
     {name: "Quản lý dịch vụ",path:'/manager/qldv',icon:Popcorn},
-        {name: "Quản lý sự kiện",path:'/manager/qksk',icon:BadgeDollarSign}
+        {name: "Quản lý sự kiện",path:'/manager/qlsk',icon:BadgeDollarSign}
 
     
   ]

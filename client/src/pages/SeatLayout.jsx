@@ -15,7 +15,8 @@ const SeatLayout = () => {
   const allRows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
   const { id: movieId, cinemaId, date } = useParams();
   console.log('Raw URL Parameters:', { movieId, cinemaId, date });
-  const showtimeId = useSearchParams(); // Lấy showtimeId từ ?2
+  const showtimeId = useSearchParams();
+  
   // Validate URL parameters
   if (!movieId || !cinemaId || !date) {
     return (
@@ -41,7 +42,7 @@ const SeatLayout = () => {
   const [movieName, setMovieName] = useState('');
   const [cinemaName, setCinemaName] = useState('');
   const [movieimg, setMovieimg] = useState('');
-  const [occupiedSeats, setOccupiedSeats] = useState([]); // Array of seat_number strings, e.g., ['I3']
+  const [occupiedSeats, setOccupiedSeats] = useState([]);
 
   const getSeatType = (seatId) => {
     const row = seatId[0];
@@ -75,16 +76,6 @@ const SeatLayout = () => {
     return total;
   };
 
-  const getPriceBreakdown = () => {
-    const breakdown = { Standard: [], VIP: [], Couple: [] };
-    selectedSeats.forEach((seat) => {
-      const seatType = getSeatType(seat);
-      breakdown[seatType].push(seat);
-    });
-    console.log('Price breakdown:', breakdown);
-    return breakdown;
-  };
-
   // Fetch occupied seats for the selected showtime
   const fetchOccupiedSeats = async (showtimeId) => {
     try {
@@ -92,7 +83,6 @@ const SeatLayout = () => {
       const response = await axios.get(`/api/showtimes/seat/${showtimeId}`);
       console.log('Occupied Seats API Response:', JSON.stringify(response.data, null, 2));
       if (response.data && Array.isArray(response.data.occupiedSeats)) {
-        // Normalize seat_number to uppercase and extract as array of strings
         const occupiedList = response.data.occupiedSeats.map(seat => seat.seat_number.toUpperCase());
         setOccupiedSeats(occupiedList);
         console.log('Set occupied seats:', occupiedList);
@@ -115,6 +105,7 @@ const SeatLayout = () => {
       setOccupiedSeats([]);
     }
   }, [selectedTime]);
+
   useEffect(() => {
     if (showtimes.length > 0 && showtimeId) {
       const target = showtimes.find(s => s.id === parseInt(showtimeId));
@@ -123,6 +114,7 @@ const SeatLayout = () => {
       }
     }
   }, [showtimes, showtimeId]);
+
   // Fetch movie name
   useEffect(() => {
     const fetchMovieName = async () => {
@@ -259,46 +251,6 @@ const SeatLayout = () => {
     }
   }, [selectedTime, cinemaId, date]);
 
-  const areRowsAdjacent = (rows) => {
-    if (rows.length <= 2) {
-      if (rows.length === 1) return true;
-      const indices = rows.map((row) => allRows.indexOf(row)).sort((a, b) => a - b);
-      return indices[1] - indices[0] === 1;
-    }
-    return false;
-  };
-
-  const isOrphanedSeatCreatedInRow = (row, currentSelectedSeats, bookedSeats = [], newSeatId = null) => {
-    const rowSeats = Array(row === 'I' || row === 'J' ? 4 : 9).fill(0);
-    currentSelectedSeats.forEach((seat) => {
-      if (seat.startsWith(row)) {
-        const num = parseInt(seat.slice(1));
-        rowSeats[num - 1] = 1;
-      }
-    });
-    bookedSeats.forEach((seat) => {
-      if (seat.startsWith(row)) {
-        const num = parseInt(seat.slice(1));
-        rowSeats[num - 1] = 1;
-      }
-    });
-    if (newSeatId && newSeatId.startsWith(row)) {
-      const seatNumber = parseInt(newSeatId.slice(1));
-      rowSeats[seatNumber - 1] = 1;
-    }
-
-    for (let i = 0; i < rowSeats.length; i++) {
-      if (rowSeats[i] === 0) {
-        const leftOccupied = i > 0 && rowSeats[i - 1] === 1;
-        const rightOccupied = i < rowSeats.length - 1 && rowSeats[i + 1] === 1;
-        if (leftOccupied && rightOccupied) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-
   const handleSeatClick = (seatId) => {
     const normalizedSeatId = seatId.toUpperCase();
 
@@ -309,33 +261,15 @@ const SeatLayout = () => {
     }
 
     if (!selectedTime) {
-      return toast('Please select Time first');
+      return toast('Vui lòng chọn giờ chiếu trước');
     }
+
+    // Check maximum seats limit
     if (!selectedSeats.includes(normalizedSeatId) && selectedSeats.length >= 5) {
-      return toast('Only select up to 5 seats');
+      return toast('Chỉ được chọn tối đa 5 ghế');
     }
 
-    const bookedSeats = occupiedSeats;
-
-    if (!selectedSeats.includes(normalizedSeatId)) {
-      const currentRows = [...new Set(selectedSeats.map((seat) => seat[0]))];
-      const newRows = [...new Set([...currentRows, normalizedSeatId[0]])];
-      if (!areRowsAdjacent(newRows)) {
-        return toast('Please select seats in two adjacent rows only (e.g., A-B or B-C)');
-      }
-
-      const adjacentRowIndex = allRows.indexOf(normalizedSeatId[0]);
-      const adjacentRows = [normalizedSeatId[0]];
-      if (adjacentRowIndex > 0) adjacentRows.push(allRows[adjacentRowIndex - 1]);
-      if (adjacentRowIndex < allRows.length - 1) adjacentRows.push(allRows[adjacentRowIndex + 1]);
-
-      for (const checkRow of adjacentRows) {
-        if (isOrphanedSeatCreatedInRow(checkRow, selectedSeats, bookedSeats, normalizedSeatId)) {
-          return toast('Cannot select this seat as it creates an orphaned seat');
-        }
-      }
-    }
-
+    // Toggle seat selection - NO MORE ADJACENT ROW CHECK
     setSelectedSeats((prev) =>
       prev.includes(normalizedSeatId)
         ? prev.filter((seat) => seat !== normalizedSeatId)
@@ -358,7 +292,6 @@ const SeatLayout = () => {
             const isSelected = selectedSeats.includes(normalizedSeatId);
             const seatType = getSeatType(normalizedSeatId);
 
-            // Màu nền theo loại ghế
             let bgColorClass = '';
             let borderColorClass = '';
             if (isOccupied) {

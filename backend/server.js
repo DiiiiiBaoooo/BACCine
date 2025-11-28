@@ -114,7 +114,7 @@ io.on("connection", (socket) => {
 
 // Start the server
 // Start the server
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log(`Server is running on http://0.0.0.0:${PORT}`);
   console.log(`Cloud Run URL: https://YOUR-SERVICE-HASH.a.run.app`);
 });
