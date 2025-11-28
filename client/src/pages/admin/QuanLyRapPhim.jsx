@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 import { dateFormat } from "../../lib/dateFormat";
 // Initialize Socket.IO client
-const socket = io("http://localhost:3000", {
+const socket = io("https://bac-cine.vercel.app/", {
   cors: {
     origin: "*",
   },

@@ -40,7 +40,7 @@ export default function QuanLyKhuyenMai() {
   const statuses = ["Tất cả", "active", "upcoming", "expired", "inactive","outofstock"];
   useEffect(() => {
     // Kết nối tới server socket
-    const socket = io("http://localhost:3000", {
+    const socket = io("https://bac-cine.vercel.app", {
       transports: ["websocket"], // đảm bảo dùng websocket
     });
 

@@ -50,7 +50,7 @@ export const getVideoById = async (req, res) => {
 
 // Thêm video mới
 export const addVideo = async (req, res) => {
-  const { videoTitle, folderName } = req.body;
+  const { videoTitle, folderName,price,rentalDuration,isFree } = req.body;
   const posterImage = req.files?.posterImage?.[0];
   const videoFile = req.files?.videoFile?.[0];
 
@@ -120,8 +120,8 @@ export const addVideo = async (req, res) => {
 
     // 6️⃣ Lưu thông tin video vào database
     const [result] = await dbPool.query(
-      "INSERT INTO video_library (video_title, s3_folder_name, poster_image_url, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-      [videoTitle, folderName, cloudinaryResult.secure_url]
+      "INSERT INTO video_library (video_title, s3_folder_name, poster_image_url,price,	rental_duration,isFree, created_at, updated_at) VALUES (?, ?, ?,?,?,?, NOW(), NOW())",
+      [videoTitle, folderName, cloudinaryResult.secure_url,price,rentalDuration,isFree]
     );
 
     // 7️⃣ Lấy thông tin video vừa thêm

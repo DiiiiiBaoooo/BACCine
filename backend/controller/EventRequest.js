@@ -225,17 +225,28 @@ export const acceptQuote = async (req, res) => {
     };
 
     const eventDateISO = normalizeDate(eventData.event_date);
+    
 
-    // Tính end_time
-    const [startHour, startMinute] = eventData.start_time.split(":").map(Number);
-    const totalMinutes = startHour * 60 + startMinute + movieRuntime + 15;
-    const endHour = Math.floor(totalMinutes / 60) % 24;
-    const endMinute = totalMinutes % 60;
-    const end_time = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}:00`;
+   // Sau dòng: const eventDateISO = normalizeDate(eventData.event_date);
 
-    const fullStartTime = `${eventDateISO} ${eventData.start_time}:00`;
-    const fullEndTime = `${eventDateISO} ${end_time}`;
+// Chuẩn hóa start_time (loại bỏ giây nếu có)
+const normalizeTime = (timeStr) => {
+  if (!timeStr) return null;
+  const parts = timeStr.split(':');
+  return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+};
 
+const startTime = normalizeTime(eventData.start_time);
+
+// Tính end_time
+const [startHour, startMinute] = startTime.split(":").map(Number);
+const totalMinutes = startHour * 60 + startMinute + movieRuntime + 15;
+const endHour = Math.floor(totalMinutes / 60) % 24;
+const endMinute = totalMinutes % 60;
+const end_time = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}:00`;
+
+const fullStartTime = `${eventDateISO} ${startTime}`;
+const fullEndTime = `${eventDateISO} ${end_time}`;
     // 2. Lấy danh sách phòng
     const [rooms] = await connection.query(
       "SELECT id, name FROM rooms WHERE cinema_clusters_id = ? AND status = 'AVAILABLE'",
