@@ -8,6 +8,8 @@ const socket = io("https://bac-cine.vercel.app/", {
   cors: {
     origin: "*",
   },
+  transports: ['polling', 'websocket'], // Try polling first
+  upgrade: false // Prevent automatic upgrade to WebSocket
 });
 
 function classNames(...arr) {

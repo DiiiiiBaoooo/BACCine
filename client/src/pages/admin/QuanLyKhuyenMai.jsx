@@ -41,7 +41,8 @@ export default function QuanLyKhuyenMai() {
   useEffect(() => {
     // Kết nối tới server socket
     const socket = io("https://bac-cine.vercel.app", {
-      transports: ["websocket"], // đảm bảo dùng websocket
+      transports: ['polling', 'websocket'], // Try polling first
+  upgrade: false // Prevent automatic upgrade to WebSocket
     });
 
     // Lắng nghe sự kiện server emit
