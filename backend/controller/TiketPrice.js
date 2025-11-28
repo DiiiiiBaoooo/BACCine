@@ -44,76 +44,51 @@ export const getTicketPriceCinema = async (req, res) => {
 };
 
 // POST/UPDATE ticket prices for a cinema
+// POST/UPDATE ticket prices for a cinema
 export const saveTicketPrices = async (req, res) => {
-    try {
-      const { cinema_id, prices } = req.body;
-  
-      // Validate input
-      if (!cinema_id || !Array.isArray(prices) || prices.length === 0) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Dữ liệu không hợp lệ" });
-      }
-  
-      // Validate cinema_id exists
-      const [cinemaExists] = await connection.query(
-        "SELECT id FROM cinema_clusters WHERE id = ?",
-        [cinema_id]
-      );
-      if (!cinemaExists.length) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Rạp không tồn tại" });
-      }
-  
-      // Validate seat types and prices
-      const validSeatTypes = ["Standard", "VIP", "Couple"];
-      for (const price of prices) {
-        if (!validSeatTypes.includes(price.seat_type)) {
-          return res.status(400).json({
-            success: false,
-            message: `Loại ghế không hợp lệ: ${price.seat_type}`,
-          });
-        }
-        if (
-          isNaN(price.base_price) ||
-          isNaN(price.weekend_price) ||
-          isNaN(price.special_price) ||
-          price.base_price < 0 ||
-          price.weekend_price < 0 ||
-          price.special_price < 0
-        ) {
-          return res
-            .status(400)
-            .json({ success: false, message: "Giá vé không hợp lệ" });
-        }
-      }
-  
-      // UPDATE prices (chỉ cập nhật, không insert mới)
-      const updateQuery = `
-        UPDATE ticket_prices
-        SET base_price = ?, weekend_price = ?, special_price = ?, updated_at = NOW()
-        WHERE cinema_id = ? AND seat_type_id = (SELECT id FROM seat_types WHERE name = ?)
-      `;
-  
-      for (const price of prices) {
-        await connection.query(updateQuery, [
-          price.base_price,
-          price.weekend_price,
-          price.special_price,
-          cinema_id,
-          price.seat_type,
-        ]);
-      }
-  
-      res.status(200).json({ success: true, message: "Cập nhật giá vé thành công!" });
-    } catch (error) {
-      console.error(error.message);
-      res
-        .status(500)
-        .json({ success: false, message: "Lỗi server" });
+  try {
+    const { cinema_id, prices } = req.body;
+
+    if (!cinema_id || !Array.isArray(prices) || prices.length === 0) {
+      return res.status(400).json({ success: false, message: "Dữ liệu không hợp lệ" });
     }
-  };
+
+    const [cinemaExists] = await connection.query(
+      "SELECT id FROM cinema_clusters WHERE id = ?",
+      [cinema_id]
+    );
+    if (!cinemaExists.length) {
+      return res.status(404).json({ success: false, message: "Rạp không tồn tại" });
+    }
+
+    const query = `
+      INSERT INTO ticket_prices (cinema_id, seat_type_id, base_price, weekend_price, special_price, updated_at)
+      VALUES (?, (SELECT id FROM seat_types WHERE name = ?), ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        base_price = VALUES(base_price),
+        weekend_price = VALUES(weekend_price),
+        special_price = VALUES(special_price),
+        updated_at = NOW();
+    `;
+
+    for (const p of prices) {
+      await connection.query(query, [
+        cinema_id,
+        p.seat_type,
+        p.base_price,
+        p.weekend_price,
+        p.special_price,
+      ]);
+    }
+
+    res.status(200).json({ success: true, message: "Lưu / cập nhật giá vé thành công!" });
+
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ success: false, message: "Lỗi server" });
+  }
+};
+
   
   // Lấy giá vé cho rạp và ngày cụ thể
   export const getTicketPricesByCinemaAndDate = async (req, res) => {

@@ -29,29 +29,30 @@ const VideoPurchasePage = () => {
     }
   };
 
-  const handlePurchase = async () => {
-    setPurchasing(true);
-    try {
-      const response = await axios.post(
-        'api/video-purchase/purchase',
-        {
-          video_id: id,
-          purchase_type: purchaseType,
-          payment_method: 'credit_card',
-          transaction_id: `TXN${Date.now()}`,
-        },
-        { withCredentials: true }
-      );
+const handlePurchase = async () => {
+  setPurchasing(true);
+  try {
+    const response = await axios.post(
+      'api/video-purchase/purchase',
+      {
+        video_id: id,
+        purchase_type: purchaseType,
+        payment_method: 'qr_code', // ĐỔI THÀNH qr_code
+      },
+      { withCredentials: true }
+    );
 
-      alert(response.data.message);
-      navigate(`/xem-phim/${id}`);
-    } catch (error) {
-      console.error('Purchase error:', error);
-      alert(error.response?.data?.message || 'Lỗi khi mua video');
-    } finally {
-      setPurchasing(false);
-    }
-  };
+    // Điều hướng đến trang QR payment
+    const { purchase_id, amount } = response.data;
+    navigate(`/video-purchase/qr-payment?purchase_id=${purchase_id}&amount=${amount}`);
+
+  } catch (error) {
+    console.error('Purchase error:', error);
+    alert(error.response?.data?.message || 'Lỗi khi mua video');
+  } finally {
+    setPurchasing(false);
+  }
+};
 
   if (loading) {
     return (

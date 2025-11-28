@@ -5,7 +5,8 @@ import {
   getMyPurchasedVideos,
   saveWatchProgress,
   getVideoWithPurchaseStatus,
-  getAllVideosWithAccess
+  getAllVideosWithAccess,
+  checkPurchaseStatus
 } from "../controller/VideoPurchaseController.js";
 import { protectRoute } from "../middleware/protectRoute.js";
 
@@ -20,5 +21,6 @@ VideoPurchaseRoute.get("/:video_id/access", protectRoute, checkVideoAccess);
 VideoPurchaseRoute.post("/purchase", protectRoute, purchaseVideo);
 VideoPurchaseRoute.get("/my-videos/purchased", protectRoute, getMyPurchasedVideos);
 VideoPurchaseRoute.post("/watch-progress", protectRoute, saveWatchProgress);
+VideoPurchaseRoute.get("/check-status/:purchase_id",checkPurchaseStatus);
 
 export default VideoPurchaseRoute;

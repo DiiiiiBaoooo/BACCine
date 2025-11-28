@@ -192,7 +192,7 @@ export const createBooking = async (req, res) => {
         const [memberRows] = await connection.query('SELECT id, points FROM membership_cards WHERE user_id = ?', queryParams);
         if (memberRows.length > 0) {
           pointsAdded = Math.floor(grand_total / 10000); // 1 điểm = 10k
-          await connection.query('UPDATE membership_cards SET points = points + ? WHERE id = ?', [pointsAdded, memberRows[0].id]);
+          await connection.query('UPDATE membership_cards SET points = points + ? WHERE id = ?', [100, memberRows[0].id]);
         }
       }
     }

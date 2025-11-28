@@ -339,32 +339,42 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     <div className="flex h-screen">
       <EmployeeList employees={employees} loading={loading} error={error} />
       <div className="flex-1 flex flex-col">
-        <div className="border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold text-gray-900">Quản Lý Lịch Làm Việc</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">{formatWeekRange()}</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAllSchedules(!showAllSchedules)}
-                  className="text-xs"
-                >
-                  {showAllSchedules ? 'Chỉ hiện tuần hiện tại' : 'Hiện tất cả lịch'}
-                </Button>
-                <Button variant="outline" size="icon" onClick={goToPreviousWeek} className="h-8 w-8 bg-transparent">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-8 w-8 bg-transparent">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button onClick={handleSaveSchedule} className="ml-4" disabled={loading}>
-                  {loading ? 'Đang lưu...' : 'Lưu Lịch'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+       <div className="bg-black/90 backdrop-blur-xl border-b border-red-900/50 px-6 py-5">
+  <div className="flex items-center justify-between">
+    <h1 className="text-2xl font-black text-white">
+      LỊCH LÀM VIỆC <span className="text-red-500">BAC CINEMA</span>
+    </h1>
+
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => setShowAllSchedules(!showAllSchedules)}
+        className="px-4 py-2 rounded-lg text-sm ${showAllSchedules ? 'bg-red-600' : 'bg-gray-800'} text-white`}"
+      >
+        {showAllSchedules ? 'Ẩn lịch cũ' : 'Tất cả lịch'}
+      </button>
+
+      <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-2">
+        <button onClick={goToPreviousWeek} className="p-2 hover:bg-red-900/50 rounded-lg">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <span className="font-bold text-red-400 w-40 text-center">{formatWeekRange()}</span>
+        <button onClick={goToNextWeek} className="p-2 hover:bg-red-900/50 rounded-lg">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      <button
+        onClick={handleSaveSchedule}
+        disabled={loading}
+        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 
+                 px-8 py-3 rounded-xl font-bold shadow-lg shadow-red-900/50 
+                 disabled:opacity-50 transition-all"
+      >
+        {loading ? 'Đang lưu...' : 'LƯU LỊCH'}
+      </button>
+    </div>
+  </div>
+</div>
         {error && (
           <div className="p-4 text-red-600 text-sm">{error}</div>
         )}

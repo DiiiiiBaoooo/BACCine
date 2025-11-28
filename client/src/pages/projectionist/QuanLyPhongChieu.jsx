@@ -34,7 +34,7 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
   // Tính toán thống kê từ danh sách phòng
   const calculateStatistics = (roomList) => {
     const total_rooms = roomList.length;
-    const total_active = roomList.filter(room => room.status === 'Active').length;
+    const total_active = roomList.filter(room => room.status === 'AVAILABLE').length;
     const total_maintenance = roomList.filter(room => room.status === 'Maintenance').length;
     const total_closed = roomList.filter(room => room.status === 'Closed').length;
 
@@ -283,8 +283,8 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
               className="px-3 py-2 bg-gray-800 border border-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="" className="bg-gray-800">Tất cả trạng thái</option>
-              <option value="Active" className="bg-gray-800">Hoạt động</option>
-              <option value="Maintenance" className="bg-gray-800">Bảo trì</option>
+              <option value="AVAILABLE" className="bg-gray-800">Hoạt động</option>
+              <option value="MAINTANCE" className="bg-gray-800">Bảo trì</option>
               <option value="Closed" className="bg-gray-800">Đóng cửa</option>
             </select>
           </div>

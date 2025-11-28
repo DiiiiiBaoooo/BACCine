@@ -47,56 +47,63 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
     return null;
   }
 
-  return (
-    <div className="flex-1 overflow-auto p-6">
-      <div className="min-w-max">
-        {showAllSchedules && (
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Tất cả lịch làm việc</h3>
-            {schedule.map((entry) => (
-              <div key={`${entry.date}-${entry.shift}`} className="mt-2">
-                <div className="text-xs font-medium text-gray-700">{entry.date} - {entry.shift}</div>
-                {entry.employees.map((emp) => (
-                  <div key={emp.id} className="text-xs text-gray-500 ml-4">
-                    {emp.name} ({emp.position}) - {emp.status}
-                  </div>
-                ))}
+ // WeeklySchedule.jsx (chỉ thay phần return)
+return (
+  <div className="flex-1 overflow-auto bg-gradient-to-b from-black to-gray-950">
+    <div className="p-6">
+      <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-red-900/30 overflow-hidden shadow-2xl">
+        {/* Header ngày */}
+        <div className="grid grid-cols-8 gap-0 border-b border-red-900/30">
+          <div className="py-5 px-6 font-bold text-gray-400 text-sm">CA LÀM</div>
+          {DAYS.map((day, i) => {
+            const dateStr = getDateString(i);
+            const dayNum = new Date(dateStr).getDate();
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            return (
+              <div
+                key={day}
+                className={`py-5 text-center border-l border-red-900/30 ${
+                  isToday ? 'bg-red-600/20' : ''
+                }`}
+              >
+                <div className="font-bold text-lg text-white">{dayNum}</div>
+                <div className="text-xs text-gray-400 mt-1">{day}</div>
+                {isToday && <div className="text-[10px] text-red-400 font-bold mt-1">HÔM NAY</div>}
               </div>
-            ))}
-          </div>
-        )}
-        <div className="grid grid-cols-[120px_repeat(7,1fr)] gap-3">
-          <div className="bg-white border border-gray-200 rounded-lg p-3">
-            <div className="text-sm font-semibold text-gray-500">Ca làm</div>
-          </div>
-          {DAYS.map((day, index) => (
-            <div key={day} className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-              <div className="text-sm font-semibold text-gray-900">{day}</div>
-              <div className="text-xs text-gray-500 mt-1">{getDateForDay(index)}</div>
+            );
+          })}
+        </div>
+
+        {/* Các ca */}
+        {SHIFTS.map((shift) => (
+          <div key={shift.key} className="grid grid-cols-8 gap-0 border-b border-gray-800 last:border-0">
+            {/* Tên ca */}
+            <div className="py-6 px-6 bg-gradient-to-r from-red-900/20 to-transparent flex flex-col">
+              <div className="font-bold text-red-400 text-lg">{shift.label}</div>
+              <div className="text-xs text-gray-500">{shift.time}</div>
             </div>
-          ))}
-          {SHIFTS.map((shift) => (
-            <React.Fragment key={`label-${shift.key}`}>
-              <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 flex items-center">
-                <div className="text-sm font-medium text-gray-900">{shift.label}</div>
-              </div>
-              {DAYS.map((_, dayIndex) => (
+
+            {/* 7 ngày */}
+            {DAYS.map((_, dayIndex) => {
+              const date = getDateString(dayIndex);
+              return (
                 <ShiftCell
                   key={`${dayIndex}-${shift.key}`}
-                  date={getDateString(dayIndex)}
+                  date={date}
                   shift={shift.key}
-                  employees={getEmployeesForShift(getDateString(dayIndex), shift.key)}
-                  onDrop={(date, shift, employee, options) => onDrop(date, shift, employee, { ...options, dayIndex })}
+                  employees={getEmployeesForShift(date, shift.key)}
+                  onDrop={(date, shift, emp, opt) => onDrop(date, shift, emp, { ...opt, dayIndex })}
                   onRemoveEmployee={onRemoveEmployee}
-                  cinemaClusterId={cinemaClusterId.toString()}
+                  cinemaClusterId={cinemaClusterId}
                 />
-              ))}
-            </React.Fragment>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 WeeklySchedule.propTypes = {

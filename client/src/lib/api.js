@@ -153,3 +153,149 @@ export const markReviewHelpful = async (reviewId) => {
     throw error;
   }
 };
+/**
+ * Tạo yêu cầu đặt suất chiếu riêng
+ * @param {Object} eventData - Dữ liệu yêu cầu
+ * @param {number} eventData.cinema_id - ID rạp
+ * @param {number} eventData.movie_id - ID phim
+ * @param {string} eventData.event_date - Ngày chiếu (YYYY-MM-DD)
+ * @param {string} eventData.start_time - Giờ bắt đầu (HH:mm)
+ * @param {number} eventData.guest_count - Số khách dự kiến
+ * @param {string} eventData.contact_name - Họ tên người liên hệ
+ * @param {string} eventData.contact_phone - SĐT liên hệ
+ * @param {string} eventData.contact_email - Email liên hệ
+ * @param {string} [eventData.special_requirements] - Yêu cầu đặc biệt (tùy chọn)
+ * @returns {Promise<{success: boolean, message: string, data: Object}>}
+ */
+export const createEventRequest = async (eventData) => {
+  try {
+    const response = await axiosInstance.post("/api/events", eventData);
+    return response.data;
+  } catch (error) {
+    console.error("Create event request error:", error);
+    throw error.response?.data || { message: "Gửi yêu cầu thất bại" };
+  }
+};
+
+/**
+ * Lấy danh sách yêu cầu sự kiện của user hiện tại
+ * @param {Object} [params] - Bộ lọc
+ * @param {string} [params.status] - pending | quoted | accepted | rejected | cancelled
+ * @returns {Promise<{success: boolean, data: Array}>}
+ */
+export const getMyEventRequests = async (params = {}) => {
+  try {
+    const response = await axiosInstance.get("/api/events/my-requests", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Get my events error:", error);
+    throw error.response?.data || { message: "Không tải được danh sách yêu cầu" };
+  }
+};
+
+/**
+ * Khách hàng chấp nhận báo giá → tạo suất chiếu riêng
+ * @param {number|string} eventId - ID yêu cầu sự kiện
+ * @returns {Promise<{success: boolean, message: string, data: Object}>}
+ */
+
+export const acceptEventQuote = async (eventId) => {
+  try {
+    const response = await axiosInstance.patch(`/api/events/${eventId}/accept`);
+    return response.data;
+  } catch (error) {
+    console.error("Accept quote error:", error);
+    throw error.response?.data || { message: "Chấp nhận báo giá thất bại" };
+  }
+};
+/**
+ * Khách hàng hủy yêu cầu (chỉ khi còn pending)
+ * @param {number|string} eventId - ID yêu cầu
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export const cancelEventRequest = async (eventId) => {
+  try {
+    const response = await axiosInstance.patch(`/api/events/${eventId}/cancel`);
+    return response.data;
+  } catch (error) {
+    console.error("Cancel event error:", error);
+    throw error.response?.data || { message: "Hủy yêu cầu thất bại" };
+  }
+};
+
+/* ===================== MANAGER ENDPOINTS ===================== */
+
+/**
+ * [Manager] Lấy tất cả yêu cầu sự kiện (theo rạp mà manager quản lý)
+ * @param {Object} [params]
+ * @param {string} [params.status] - pending | quoted | accepted | rejected | cancelled
+ * @param {number} [params.cinema_id] - Lọc theo rạp cụ thể
+ * @returns {Promise<{success: boolean, data: Array}>}
+ */
+export const getManagerEventRequests = async (params = {}) => {
+  try {
+    const response = await axiosInstance.get("/api/events/manager/requests", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Get manager events error:", error);
+    throw error.response?.data || { message: "Không tải được danh sách yêu cầu" };
+  }
+};
+
+/**
+ * [Manager] Báo giá cho một yêu cầu
+ * @param {number|string} eventId - ID yêu cầu
+ * @param {Object} quoteData
+ * @param {number} quoteData.quoted_price - Giá báo (VNĐ)
+ * @param {string} [quoteData.quote_note] - Ghi chú báo giá
+ * @param {number} [quoteData.room_id] - Phòng gợi ý (tùy chọn)
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export const quoteEventRequest = async (eventId, quoteData) => {
+  try {
+    const response = await axiosInstance.patch(`/api/events/manager/${eventId}/quote`, quoteData);
+    return response.data;
+  } catch (error) {
+    console.error("Quote event error:", error);
+    throw error.response?.data || { message: "Báo giá thất bại" };
+  }
+};
+
+/**
+ * [Manager] Từ chối yêu cầu
+ * @param {number|string} eventId - ID yêu cầu
+ * @param {Object} [data]
+ * @param {string} [data.reason] - Lý do từ chối (tùy chọn)
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export const rejectEventRequest = async (eventId, data = {}) => {
+  try {
+    const response = await axiosInstance.patch(`/api/events/manager/${eventId}/reject`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Reject event error:", error);
+    throw error.response?.data || { message: "Từ chối yêu cầu thất bại" };
+  }
+};
+
+/**
+ * ⭐ MỚI: Khởi tạo thanh toán cho event (trước khi chấp nhận báo giá)
+ * @param {number|string} eventId - ID yêu cầu sự kiện
+ * @returns {Promise<{success: boolean, message: string, data: Object}>}
+ */
+export const initiateEventPayment = async (variables) => {
+  try {
+    const { eventId } = variables;
+    const response = await axiosInstance.post(`/api/events/${eventId}/initiate-payment`);
+    return response.data;
+  } catch (error) {
+    console.error("Initiate event payment error:", error);
+    throw error.response?.data || { message: "Khởi tạo thanh toán thất bại" };
+  }
+};
+
+/**
+ * Chấp nhận báo giá (GIỮ LẠI để webhook gọi, KHÔNG gọi trực tiếp từ frontend nữa)
+ * @param {number|string} eventId - ID yêu cầu sự kiện
+ * @returns {Promise<{success: boolean, message: string, data: Object}>}
+ */

@@ -136,11 +136,11 @@ export const getVideoWithPurchaseStatus = async (req, res) => {
 
 // Mua/Thuê video
 export const purchaseVideo = async (req, res) => {
-  const { video_id, purchase_type, payment_method, transaction_id } = req.body;
+  const { video_id, purchase_type, payment_method } = req.body;
   const userId = req.user.id;
 
   try {
-    // Kiểm tra video tồn tại
+    // 1. Kiểm tra video tồn tại
     const [videoRows] = await dbPool.query(
       `SELECT * FROM video_library WHERE video_id = ?`,
       [video_id]
@@ -155,7 +155,7 @@ export const purchaseVideo = async (req, res) => {
 
     const video = videoRows[0];
 
-    // Kiểm tra đã mua chưa
+    // 2. Kiểm tra đã mua chưa
     const [existingPurchase] = await dbPool.query(
       `SELECT * FROM video_purchases 
        WHERE user_id = ? AND video_id = ? 
@@ -171,30 +171,39 @@ export const purchaseVideo = async (req, res) => {
       });
     }
 
-    // Tính expiry_date
+    // 3. Tính expiry_date
     let expiryDate = null;
+    let finalPrice = video.price;
+
     if (purchase_type === 'rent' && video.rental_duration) {
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + video.rental_duration);
       expiryDate = expiry;
+      finalPrice = video.price * 0.3; // Giá thuê = 30% giá mua
     }
 
-    // Tạo purchase record
+    // 4. Tạo purchase record với status = 'pending'
     const [result] = await dbPool.query(
       `INSERT INTO video_purchases 
-       (user_id, video_id, purchase_type, price_paid, expiry_date, payment_method, transaction_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'completed')`,
-      [userId, video_id, purchase_type, video.price, expiryDate, payment_method, transaction_id]
+       (user_id, video_id, purchase_type, price_paid, expiry_date, payment_method, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+      [userId, video_id, purchase_type, finalPrice, expiryDate, payment_method]
     );
 
+    const purchaseId = result.insertId;
+
+    // 5. Trả về thông tin để hiển thị QR
     res.json({
       success: true,
-      message: purchase_type === 'buy' ? 'Mua video thành công' : 'Thuê video thành công',
-      purchase_id: result.insertId,
+      message: purchase_type === 'buy' ? 'Vui lòng quét mã QR để thanh toán' : 'Vui lòng quét mã QR để thanh toán',
+      purchase_id: purchaseId,
+      video_id: video_id,
+      amount: finalPrice,
       expiry_date: expiryDate,
+      qr_payment_url: `/video-purchase/qr-payment?purchase_id=${purchaseId}&amount=${finalPrice}` // Link đến trang QR
     });
   } catch (error) {
-    console.error("❌ Error purchasing video:", error);
+    console.error("Error purchasing video:", error);
     res.status(500).json({
       success: false,
       message: "Lỗi khi mua video",
@@ -326,6 +335,35 @@ export const getAllVideosWithAccess = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Lỗi khi lấy danh sách video",
+    });
+  }
+};
+export const checkPurchaseStatus = async (req, res) => {
+  const { purchase_id } = req.params;
+
+  try {
+    const [rows] = await dbPool.query(
+      'SELECT status, video_id FROM video_purchases WHERE purchase_id = ?',
+      [purchase_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Giao dịch không tồn tại'
+      });
+    }
+
+    res.json({
+      success: true,
+      status: rows[0].status,
+      video_id: rows[0].video_id
+    });
+  } catch (error) {
+    console.error('Check purchase status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi kiểm tra trạng thái'
     });
   }
 };

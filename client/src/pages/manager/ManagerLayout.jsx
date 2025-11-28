@@ -8,7 +8,7 @@ const ManagerLayout = () => {
         <div className="min-h-screen flex flex-col">
           <AdminNavbar />
           <div className="flex flex-1 overflow-hidden">
-            <ManagerSidebar />
+        <ManagerSidebar />
             <div className="flex-1 overflow-y-auto p-6">
               <Outlet />
             </div>

@@ -71,6 +71,8 @@ const Header = () => {
             { to: "/movies", label: "Phim đang chiếu" },
             { to: "/rapchieu", label: "Rạp chiếu" },
             { to: "/recruiments", label: "Tuyển dụng" },
+                        { to: "/events", label: "Sự kiện" },
+
             { to: "/blog", label: "Bài viết" },
             { to: "/video", label: "Thư viện phim" },
             { to: "/membership", label: "Ưu đãi thành viên" },

@@ -95,126 +95,76 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
     }
   };
 
-  return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={`bg-white border-2 border-dashed rounded-lg p-3 min-h-[120px] transition-colors ${
-        isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-      }`}
-    >
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-2 p-2 bg-gray-50 rounded">
-          <div className="mb-2">
-            <label className="text-xs font-medium">Trạng thái:</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="ml-2 text-xs border rounded px-1 py-0.5"
-            >
-              <option value="pending">Chưa chấm công</option>
-              <option value="confirmed">Đã chấm công</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" className="text-xs" disabled={loading}>
-              Xác nhận
-            </Button>
-            <Button
-              variant="outline"
-              className="text-xs"
-              onClick={() => {
-                setShowForm(false);
-                setDraggedEmployee(null);
-              }}
-              disabled={loading}
-            >
-              Hủy
-            </Button>
-          </div>
-        </form>
-      )}
-      {showAttendanceForm && (
-        <form
-          onSubmit={(e) => handleAttendanceSubmit(e, showAttendanceForm)}
-          className="mb-2 p-2 bg-gray-50 rounded"
-        >
-          <div className="mb-2">
-            <label className="text-xs font-medium">Giờ bắt đầu:</label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="ml-2 text-xs border rounded px-1 py-0.5"
-              required
-            />
-          </div>
-          <div className="mb-2">
-            <label className="text-xs font-medium">Giờ kết thúc:</label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="ml-2 text-xs border rounded px-1 py-0.5"
-              required
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button type="submit" className="text-xs" disabled={loading}>
-              {loading ? 'Đang cập nhật...' : 'Cập nhật'}
-            </Button>
-            <Button
-              variant="outline"
-              className="text-xs"
-              onClick={() => setShowAttendanceForm(null)}
-              disabled={loading}
-            >
-              Hủy
-            </Button>
-          </div>
-        </form>
-      )}
-      <div className="space-y-2">
-        {employees.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-4">Kéo nhân viên vào đây</div>
-        ) : (
-          employees.map((employee) => (
-            <div
-              key={employee.id}
-              className="bg-blue-100 border border-blue-200 rounded px-2 py-1.5 text-xs group relative"
-            >
-              <div className="font-medium text-gray-900 pr-10">{employee.name}</div>
-              <div className="text-[10px] text-gray-500">{employee.position}</div>
-              <div className="text-[10px] text-gray-500">
-                {employee.startTime && employee.endTime
-                  ? `${employee.startTime} - ${employee.endTime}`
-                  : 'Chưa chấm công'}{' '}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onRemoveEmployee(date, shift, employee.id)}
-                className="absolute right-8 top-1/2 -translate-y-1/2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowAttendanceForm(employee.scheduleId)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                disabled={!employee.scheduleId}
-              >
-                <Clock className="h-3 w-3" />
-              </Button>
+ // ShiftCell.jsx – gọn đẹp nhất
+return (
+  <div
+    onDragOver={handleDragOver}
+    onDragLeave={handleDragLeave}
+    onDrop={handleDrop}
+    className={`border-l border-gray-800 min-h-48 p-4 transition-all ${
+      isDragOver 
+        ? 'bg-red-900/30 border-l-4 border-l-red-500' 
+        : 'hover:bg-gray-900/30'
+    }`}
+  >
+    <div className="space-y-2">
+      {employees.length === 0 ? (
+        <div className="text-center text-gray-600 text-xs pt-12">
+          Kéo nhân viên vào
+        </div>
+      ) : (
+        employees.map((emp) => (
+          <div
+            key={emp.id}
+            className="group relative bg-gradient-to-r from-red-900/40 to-black/60 
+                     border border-red-800/50 rounded-lg p-3 pr-10 
+                     hover:border-red-500 hover:shadow-lg hover:shadow-red-900/30 
+                     transition-all text-sm"
+          >
+            <div className="font-semibold text-white truncate">{emp.name}</div>
+            <div className="text-xs text-gray-400">{emp.position}</div>
+            <div className="text-xs text-red-400 font-medium">
+              {emp.startTime ? `${emp.startTime} - ${emp.endTime || '?'}` : 'Chưa chấm công'}
             </div>
-          ))
-        )}
-      </div>
+
+            {/* Nút xóa + chấm công */}
+            <button
+              onClick={() => onRemoveEmployee(date, shift, emp.id)}
+              className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 
+                       bg-red-600 hover:bg-red-700 p-2 rounded transition"
+            >
+              <X className="w-3 h-3" />
+            </button>
+            {emp.scheduleId && (
+              <button
+                onClick={() => setShowAttendanceForm(emp.scheduleId)}
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 
+                         bg-gray-700 hover:bg-gray-600 p-2 rounded transition"
+              >
+                <Clock className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        ))
+      )}
     </div>
-  );
+
+    {/* Form khi kéo thả */}
+    {showForm && draggedEmployee && (
+      <div className="mt-2 p-3 bg-black/70 border border-red-700 rounded-lg text-xs">
+        <p className="mb-2">Xếp <span className="text-red-400 font-bold">{draggedEmployee.name}</span>?</p>
+        <div className="flex gap-2">
+          <button onClick={handleSubmit} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded font-bold">
+            OK
+          </button>
+          <button onClick={() => { setShowForm(false); setDraggedEmployee(null); }} className="bg-gray-700 px-4 py-1.5 rounded">
+            Hủy
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
 };
 
 ShiftCell.propTypes = {

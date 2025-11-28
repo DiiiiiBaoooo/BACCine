@@ -57,7 +57,7 @@ import QuanLyLichLamViec from './pages/manager/QuanLyLichLamViec';
 import FaceRegister from './components/FaceRegister';
 import FaceCheckin from './pages/Employee/FaceCheckin';
 import FaceCheckOut from './pages/Employee/FaceCheckOut';
-
+import Event from './pages/Event';
 // IMPORT CHAT COMPONENTS
 import ChatWidget from './components/Chat/ChatWidget';
 import './components/Chat/Chat.css';
@@ -69,6 +69,10 @@ import ThuVienPhim from './pages/ThuVienPhim';
 import QuanLyThuVienPhim from './pages/admin/QuanLyThuVienPhim';
 import PaymentFail from './pages/Payment/PaymentFail';
 import VideoPurchasePage from './pages/VideoPurchasePage';
+import VideoQRPayment from './pages/VideoQrPayment';
+import EventRequest from './pages/manager/EventRequest';
+import MyEvent from './pages/MyEvent';
+import EventQRPayment from './pages/EventQRPayment';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -293,6 +297,7 @@ const App = () => {
           <Route path='qlnv' element={<EmployeeManagement cinemaId={cinema_Id} />} />
           <Route path='qldv' element={<QuanLyDichVu cinemaId={cinema_Id} />} />
           <Route path='qlllv' element={<QuanLyLichLamViec cinemaClusterId={cinema_Id} />} />
+          <Route path='qlsk' element={<EventRequest cinemaId={cinema_Id} />} />
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
@@ -305,7 +310,8 @@ const App = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/rapchieu" element={<RapPhim />} />
-
+          <Route path="/events" element={<Event />} />
+          <Route path='/my-events' element={<MyEvent />} />
         <Route path='/membership' element={<Membership />} />
         <Route path='/payment' element={<PaymentSelection />} />
         <Route path="/blogs/:cinema_id/:post_id" element={<BlogDetail />} />
@@ -319,6 +325,9 @@ const App = () => {
         <Route path="/video" element={<ThuVienPhim />} />
         <Route path="/xem-phim/:id" element={<XemPhim />} />
         <Route path="/video-purchase/:id" element={<VideoPurchasePage />} />
+        <Route path="/video-purchase/qr-payment" element={<VideoQRPayment />} />
+        <Route path='/event-payment/:id/:amount' element={<EventQRPayment />} />
+
 
          
         {/* Projectionist Routes */}
