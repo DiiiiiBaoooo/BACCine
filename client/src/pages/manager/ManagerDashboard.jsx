@@ -125,7 +125,7 @@ const ManagerDashboard = ({ cinemaId }) => {
                 <span className="text-5xl">Money</span>
               </div>
               <p className="text-xl opacity-90">Doanh thu hôm nay</p>
-              <p className="text-5xl font-bold mt-4 font-extrabold">
+              <p className="text-5xl  mt-4 font-extrabold">
                 {Number(stats.revenueToday).toLocaleString()}đ
               </p>
               {stats.revenueFromEventsToday > 0 && (
@@ -145,7 +145,7 @@ const ManagerDashboard = ({ cinemaId }) => {
                 <span className="text-5xl">Chart Increasing</span>
               </div>
               <p className="text-xl opacity-90">Doanh thu tháng này</p>
-              <p className="text-5xl font-bold mt-4 font-extrabold">
+              <p className="text-5xl  mt-4 font-extrabold">
                 {Number(stats.revenueThisMonth).toLocaleString()}đ
               </p>
               {stats.revenueFromEventsThisMonth > 0 && (
