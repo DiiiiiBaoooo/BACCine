@@ -69,7 +69,7 @@ import ThuVienPhim from './pages/ThuVienPhim';
 import QuanLyThuVienPhim from './pages/admin/QuanLyThuVienPhim';
 import PaymentFail from './pages/Payment/PaymentFail';
 import VideoPurchasePage from './pages/VideoPurchasePage';
-import VideoQRPayment from './pages/VideoQrPayment.jsx';
+import VideoQRPayment from './pages/VideoQRPayment';
 import EventRequest from './pages/manager/EventRequest';
 import MyEvent from './pages/MyEvent';
 import EventQRPayment from './pages/EventQRPayment';
