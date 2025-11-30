@@ -4,7 +4,6 @@ import axios from 'axios';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import EmployeeList from './EmployeeList';
 import WeeklySchedule from './WeeklySchedule';
-import Button from './ui/Button';
 
 const ScheduleManager = ({ cinemaClusterId }) => {
   const [employees, setEmployees] = useState([]);
@@ -12,11 +11,10 @@ const ScheduleManager = ({ cinemaClusterId }) => {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Set to Monday
+    const diff = day === 0 ? -6 : 1 - day;
     const monday = new Date(today);
     monday.setDate(today.getDate() + diff);
     monday.setHours(0, 0, 0, 0);
-    console.log('Initialized currentWeekStart:', monday.toISOString().split('T')[0]);
     return monday;
   });
   const [loading, setLoading] = useState(false);
@@ -27,7 +25,6 @@ const ScheduleManager = ({ cinemaClusterId }) => {
 
   const getDateString = (date) => {
     if (!(date instanceof Date) || isNaN(date)) {
-      console.error('Invalid date object:', date);
       return new Date().toISOString().split('T')[0];
     }
     const year = date.getFullYear();
@@ -36,10 +33,8 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Parse date string without timezone issues
   const parseDateString = (dateStr) => {
     if (!dateStr) return null;
-    // Remove time part if exists
     const datePart = dateStr.split('T')[0];
     const [year, month, day] = datePart.split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -48,7 +43,7 @@ const ScheduleManager = ({ cinemaClusterId }) => {
   const getWeekDateRange = () => {
     const start = new Date(currentWeekStart);
     const end = new Date(currentWeekStart);
-    end.setDate(start.getDate() + 6); // 7 days: Monday to Sunday
+    end.setDate(start.getDate() + 6);
     return { start: getDateString(start), end: getDateString(end) };
   };
 
@@ -71,7 +66,7 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     }
     
     const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6); // 7 days
+    endDate.setDate(startDate.getDate() + 6);
     return date >= startDate && date <= endDate;
   };
 
@@ -83,7 +78,6 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     try {
       setLoading(true);
       const { start, end } = getWeekDateRange();
-      console.log(`Fetching schedule for ${start} to ${end}`);
       
       const url = showAllSchedules
         ? `${API_BASE_URL}/schedule/${cinemaClusterId}`
@@ -93,11 +87,9 @@ const ScheduleManager = ({ cinemaClusterId }) => {
       const mappedSchedule = res.data.reduce((acc, entry) => {
         const employee = employees.find((emp) => emp.id === entry.employee_id.toString());
         if (!employee) {
-          console.warn(`Employee not found for employee_id: ${entry.employee_id}`);
           return acc;
         }
         
-        // Get date string from shift_date (already in YYYY-MM-DD format from backend)
         let shiftDate = entry.shift_date;
         if (shiftDate.includes('T')) {
           shiftDate = shiftDate.split('T')[0];
@@ -105,12 +97,10 @@ const ScheduleManager = ({ cinemaClusterId }) => {
         
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(shiftDate)) {
-          console.warn(`Invalid shift_date from backend: ${entry.shift_date}`);
           return acc;
         }
         
         if (!showAllSchedules && !isDateInWeekRange(shiftDate)) {
-          console.warn(`shift_date out of week range: ${shiftDate}`);
           return acc;
         }
         
@@ -136,7 +126,6 @@ const ScheduleManager = ({ cinemaClusterId }) => {
         }];
       }, []);
       
-      console.log('Mapped schedule:', JSON.stringify(mappedSchedule, null, 2));
       setSchedule(mappedSchedule);
       setError(null);
     } catch (err) {
@@ -185,13 +174,11 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(date)) {
-      console.error(`Invalid date format in handleDrop: ${date}`);
       alert('Ngày không hợp lệ. Vui lòng thử lại.');
       return;
     }
     
     if (!isDateInWeekRange(date, dayIndex)) {
-      console.error(`Date out of week range or incorrect for dayIndex ${dayIndex}: ${date}`);
       alert('Ngày không nằm trong tuần hiện tại hoặc không khớp với ngày được chọn.');
       return;
     }
@@ -239,7 +226,6 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     setCurrentWeekStart((prev) => {
       const newDate = new Date(prev);
       newDate.setDate(prev.getDate() - 7);
-      console.log('Previous week:', getDateString(newDate));
       return newDate;
     });
   };
@@ -248,7 +234,6 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     setCurrentWeekStart((prev) => {
       const newDate = new Date(prev);
       newDate.setDate(prev.getDate() + 7);
-      console.log('Next week:', getDateString(newDate));
       return newDate;
     });
   };
@@ -256,7 +241,7 @@ const ScheduleManager = ({ cinemaClusterId }) => {
   const formatWeekRange = () => {
     const startDate = new Date(currentWeekStart);
     const endDate = new Date(currentWeekStart);
-    endDate.setDate(currentWeekStart.getDate() + 6); // 7 days (Monday to Sunday)
+    endDate.setDate(currentWeekStart.getDate() + 6);
     const formatDate = (date) => {
       return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
@@ -295,24 +280,6 @@ const ScheduleManager = ({ cinemaClusterId }) => {
       if (payload.length === 0) {
         throw new Error('Không có lịch làm việc để lưu');
       }
-      
-      for (const entry of payload) {
-        if (
-          !entry.employee_id ||
-          !entry.cinema_cluster_id ||
-          !entry.shift_date ||
-          !entry.shift_type ||
-          !entry.status ||
-          entry.cinema_cluster_id !== cinemaClusterId.toString()
-        ) {
-          throw new Error(`Invalid schedule data: ${JSON.stringify(entry)}`);
-        }
-        if (!dateRegex.test(entry.shift_date)) {
-          throw new Error(`Invalid shift_date format: ${entry.shift_date}. Use YYYY-MM-DD`);
-        }
-      }
-
-      console.log('Saving schedule payload:', JSON.stringify(payload, null, 2));
 
       const response = await axios.post(`${API_BASE_URL}/schedule/${cinemaClusterId}`, payload);
       if (response.status === 200) {
@@ -336,48 +303,64 @@ const ScheduleManager = ({ cinemaClusterId }) => {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-50">
       <EmployeeList employees={employees} loading={loading} error={error} />
       <div className="flex-1 flex flex-col">
-       <div className="bg-black/90 backdrop-blur-xl border-b border-red-900/50 px-6 py-5">
-  <div className="flex items-center justify-between">
-    <h1 className="text-2xl font-black text-white">
-      LỊCH LÀM VIỆC <span className="text-red-500">BAC CINEMA</span>
-    </h1>
+        {/* Header compact */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold text-gray-900">
+              LỊCH LÀM VIỆC <span className="text-red-600">BAC CINEMA</span>
+            </h1>
 
-    <div className="flex items-center gap-3">
-      <button
-        onClick={() => setShowAllSchedules(!showAllSchedules)}
-        className="px-4 py-2 rounded-lg text-sm ${showAllSchedules ? 'bg-red-600' : 'bg-gray-800'} text-white`}"
-      >
-        {showAllSchedules ? 'Ẩn lịch cũ' : 'Tất cả lịch'}
-      </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAllSchedules(!showAllSchedules)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  showAllSchedules 
+                    ? 'bg-red-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {showAllSchedules ? 'Ẩn lịch cũ' : 'Tất cả lịch'}
+              </button>
 
-      <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-2">
-        <button onClick={goToPreviousWeek} className="p-2 hover:bg-red-900/50 rounded-lg">
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <span className="font-bold text-red-400 w-40 text-center">{formatWeekRange()}</span>
-        <button onClick={goToNextWeek} className="p-2 hover:bg-red-900/50 rounded-lg">
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                <button 
+                  onClick={goToPreviousWeek} 
+                  className="p-1.5 hover:bg-white rounded transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4 text-gray-700" />
+                </button>
+                <span className="font-semibold text-red-600 text-xs w-32 text-center">
+                  {formatWeekRange()}
+                </span>
+                <button 
+                  onClick={goToNextWeek} 
+                  className="p-1.5 hover:bg-white rounded transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4 text-gray-700" />
+                </button>
+              </div>
 
-      <button
-        onClick={handleSaveSchedule}
-        disabled={loading}
-        className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 
-                 px-8 py-3 rounded-xl font-bold shadow-lg shadow-red-900/50 
-                 disabled:opacity-50 transition-all"
-      >
-        {loading ? 'Đang lưu...' : 'LƯU LỊCH'}
-      </button>
-    </div>
-  </div>
-</div>
+              <button
+                onClick={handleSaveSchedule}
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 text-white px-5 py-1.5 rounded-lg 
+                         text-xs font-bold shadow-sm disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Đang lưu...' : 'LƯU LỊCH'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {error && (
-          <div className="p-4 text-red-600 text-sm">{error}</div>
+          <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
+            {error}
+          </div>
         )}
+
         <WeeklySchedule
           schedule={schedule}
           onDrop={handleDrop}

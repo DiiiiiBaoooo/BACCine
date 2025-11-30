@@ -1,31 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Star, MessageSquare, CheckCircle } from 'lucide-react';
+import { Star, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import { 
   getMyTickets, 
   checkReviewEligibility, 
   submitReview, 
   getUserReview,
-  updateReview 
+  updateReview,
+  checkCancelTicket,
+  cancelTicket
 } from '../lib/api';
 import useAuthUser from '../hooks/useAuthUser';
 import ReviewModal from '../components/ReviewModal';
-
-
+import CancelTicketModal from '../components/CancelTicketModal';
 const TicketDetails = () => {
   const { orderId } = useParams();
+  const navigate = useNavigate();
   const { isLoading: isAuthLoading, authUser } = useAuthUser();
   const queryClient = useQueryClient();
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const { data: ticketData, isLoading: isTicketsLoading, error } = useQuery({
     queryKey: ['myTickets', authUser?.id],
     queryFn: getMyTickets,
     enabled: !!authUser?.id,
     retry: false,
+  });
+
+  // Check cancel eligibility
+  const { data: cancelInfo } = useQuery({
+    queryKey: ['cancelEligibility', orderId],
+    queryFn: () => checkCancelTicket(orderId),
+    enabled: !!orderId && !!authUser?.id,
   });
 
   // Check review eligibility
@@ -41,41 +51,58 @@ const TicketDetails = () => {
     queryFn: () => getUserReview(orderId),
     enabled: !!orderId && !!authUser?.id,
   });
+
   const order = React.useMemo(() => {
     if (!ticketData?.tickets?.length) return null;
     return ticketData.tickets.find(t => String(t.order_id) === String(orderId)) || null;
   }, [ticketData?.tickets, orderId]);
-  // Submit/Update review mutation
- // 2. Thay toàn bộ reviewMutation bằng cái này
- console.log(order);
- 
-const reviewMutation = useMutation({
-  mutationFn: async (reviewData) => {
-    if (!order) throw new Error("Không tìm thấy thông tin vé. Vui lòng tải lại trang.");
 
-    const existingReview = userReviewData?.review;
+  // Cancel ticket mutation
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelTicket(orderId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['myTickets'] });
+      setShowCancelModal(false);
+      
+      // Show success message with voucher code
+      alert(`Hủy vé thành công!\n\nMã voucher: ${data.data.voucherCode}\nGiá trị: ${data.data.refundAmount.toLocaleString('vi-VN')} VND\nHết hạn: ${format(parseISO(data.data.expiryDate), 'dd/MM/yyyy', { locale: vi })}\n\nVoucher đã được lưu vào tài khoản của bạn.`);
+      
+      navigate('/tickets');
+    },
+    onError: (error) => {
+      alert(error.message || 'Hủy vé thất bại. Vui lòng thử lại.');
+    },
+  });
 
-    if (existingReview) {
-      return updateReview(existingReview.review_id, reviewData);
-    }
+  // Review mutation
+  const reviewMutation = useMutation({
+    mutationFn: async (reviewData) => {
+      if (!order) throw new Error("Không tìm thấy thông tin vé. Vui lòng tải lại trang.");
 
-    return submitReview({
-      orderId: order.order_id,
-      movieId: order.movie_id,
-      showtimeId: order.showtime_id,
-      rating: reviewData.rating,
-      comment: reviewData.comment || null,
-    });
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['userReview', orderId] });
-    queryClient.invalidateQueries({ queryKey: ['reviewEligibility', orderId] });
-    alert('Đánh giá đã được gửi thành công!');
-  },
-  onError: (error) => {
-    alert(error.message || 'Gửi đánh giá thất bại');
-  },
-});
+      const existingReview = userReviewData?.review;
+
+      if (existingReview) {
+        return updateReview(existingReview.review_id, reviewData);
+      }
+
+      return submitReview({
+        orderId: order.order_id,
+        movieId: order.movie_id,
+        showtimeId: order.showtime_id,
+        rating: reviewData.rating,
+        comment: reviewData.comment || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userReview', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['reviewEligibility', orderId] });
+      setShowReviewModal(false);
+      alert('Đánh giá đã được gửi thành công!');
+    },
+    onError: (error) => {
+      alert(error.message || 'Gửi đánh giá thất bại');
+    },
+  });
 
   if (isAuthLoading || isTicketsLoading) {
     return (
@@ -85,22 +112,7 @@ const reviewMutation = useMutation({
     );
   }
 
-  if (error || !ticketData?.success || ticketData?.count === 0) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold text-red-500 mb-4">404</h1>
-          <h2 className="text-2xl font-semibold mb-4">Không tìm thấy vé</h2>
-          <Link to="/tickets" className="inline-flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg">
-            Quay lại trang chủ
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-
-  if (!order) {
+  if (error || !ticketData?.success || ticketData?.count === 0 || !order) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -119,7 +131,7 @@ const reviewMutation = useMutation({
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center max-w-md">
           <h1 className="text-6xl font-bold text-yellow-500 mb-4">
-            {order.order_status === 'cancelled' ? 'Hủy vé' : 'Chưa sẵn sàng'}
+            {order.order_status === 'cancelled' ? 'Đã hủy' : 'Chưa sẵn sàng'}
           </h1>
           <h2 className="text-2xl font-semibold mb-4">
             {order.order_status === 'cancelled' ? 'Vé đã bị hủy' : 'Vé chưa được xác nhận'}
@@ -135,6 +147,7 @@ const reviewMutation = useMutation({
   const qrData = order.qrCode;
   const canReview = eligibilityData?.canReview;
   const existingReview = userReviewData?.review;
+  const canCancel = cancelInfo?.canCancel;
 
   // Check if ticket is used (showtime ended)
   const startTime = new Date(order.GioBatDau);
@@ -155,20 +168,46 @@ const reviewMutation = useMutation({
     <>
       <div className="min-h-screen bg-black text-white py-8 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="mb-8 flex items-center gap-4">
-            <Link
-              to="/tickets"
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-900 hover:bg-red-500 border border-gray-700 hover:border-red-500 transition-all"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Vé của bạn</h1>
-              <p className="text-gray-400 text-sm mt-1">Mã đơn hàng: {order.order_id}</p>
+       <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+  <div className="flex items-center gap-4">
+    <Link
+      to="/tickets"
+      className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-900 hover:bg-red-500 border border-gray-700 hover:border-red-500 transition-all"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+    </Link>
+    <div>
+      <h1 className="text-3xl font-bold text-white">Vé của bạn</h1>
+      <p className="text-gray-400 text-sm mt-1">Mã đơn hàng: {order.order_id}</p>
+    </div>
+  </div>
+
+  {/* Nút Hủy vé - chỉ hiện khi được phép hủy và chưa sử dụng */}
+  {canCancel && !isUsed && (
+    <button
+      onClick={() => setShowCancelModal(true)}
+      className="px-6 py-3 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg font-medium transition-colors border border-red-500/30 flex items-center gap-2 whitespace-nowrap"
+    >
+      <XCircle className="w-5 h-5" />
+      Hủy vé này
+    </button>
+  )}
+</div>
+
+          {/* Cancel Button - Only show if can cancel
+          {canCancel && !isUsed && (
+            <div className="mb-6">
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="w-full px-4 py-3 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg font-medium transition-colors border border-red-500/30 flex items-center justify-center gap-2"
+              >
+                <XCircle className="w-5 h-5" />
+                Hủy vé này
+              </button>
             </div>
-          </div>
+          )} */}
 
           <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden shadow-2xl shadow-red-500/20 border border-red-500/30 mb-6">
             <div className="grid md:grid-cols-[1fr_auto_400px] gap-0">
@@ -394,6 +433,15 @@ const reviewMutation = useMutation({
         onSubmit={(reviewData) => reviewMutation.mutate(reviewData)}
         existingReview={existingReview}
         movieTitle={order.movie_title}
+      />
+
+      {/* Cancel Ticket Modal */}
+      <CancelTicketModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={() => cancelMutation.mutate()}
+        cancelInfo={cancelInfo}
+        isLoading={cancelMutation.isPending}
       />
     </>
   );

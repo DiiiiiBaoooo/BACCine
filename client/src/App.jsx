@@ -73,6 +73,7 @@ import VideoQRPayment from './pages/VideoQRPayment';
 import EventRequest from './pages/manager/EventRequest';
 import MyEvent from './pages/MyEvent';
 import EventQRPayment from './pages/EventQRPayment';
+import MyUuDai from './pages/MyUuDai';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -327,6 +328,7 @@ const App = () => {
         <Route path="/video-purchase/:id" element={<VideoPurchasePage />} />
         <Route path="/video-purchase/qr-payment" element={<VideoQRPayment />} />
         <Route path='/event-payment/:id/:amount' element={<EventQRPayment />} />
+                  <Route path="/uudai" element={<MyUuDai />} />
 
 
          

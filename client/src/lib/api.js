@@ -1,3 +1,4 @@
+import axios from "axios";
 import { axiosInstance } from "./axios";
 export const login =async (loginData)=>{
     const response = await axiosInstance.post("/api/auth/login",loginData);
@@ -299,3 +300,53 @@ export const initiateEventPayment = async (variables) => {
  * @param {number|string} eventId - ID yêu cầu sự kiện
  * @returns {Promise<{success: boolean, message: string, data: Object}>}
  */
+// Thêm vào file lib/api.js của bạn
+
+/**
+ * Kiểm tra xem vé có thể hủy được không
+ * @param {number|string} orderId - Order ID
+ * @returns {Promise<{canCancel: boolean, reason?: string, refundAmount?: number, hoursRemaining?: string, movieTitle?: string, showtimeStart?: string}>}
+ */
+export const checkCancelTicket = async (orderId) => {
+  try {
+    const response = await axiosInstance.get(`/api/user/check-cancellable/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Check cancel ticket error:', error);
+    throw error.response?.data || { message: 'Không thể kiểm tra trạng thái hủy vé' };
+  }
+};
+
+/**
+ * Hủy vé và nhận voucher hoàn tiền
+ * @param {number|string} orderId - Order ID
+ * @returns {Promise<{success: boolean, message: string, data: {orderId: string, refundAmount: number, voucherCode: string, expiryDate: string}}>}
+ */
+export const cancelTicket = async (orderId) => {
+  try {
+    const response = await axiosInstance.post(`/api/user/cancel/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Cancel ticket error:', error);
+    throw error.response?.data || { message: 'Hủy vé thất bại' };
+  }
+};
+// lib/api.js
+export const getMyVouchers = async (userId) => {
+  const response = await axiosInstance.get(`/api/membershiptiers/history/${userId}`);
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Không thể tải ưu đãi');
+  }
+
+  return response.data; // { success: true, history: [...] }
+};
+export const getEmployeeDashboard = async () => {
+  const response = await axiosInstance.get(`/api/employee/dashboard`);
+  
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Không thể tải dashboard');
+  }
+
+  return response.data.data; // trả về đúng phần data
+};

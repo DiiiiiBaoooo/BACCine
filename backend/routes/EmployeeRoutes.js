@@ -1,5 +1,6 @@
 import express from 'express';
-import { createEmployee, deleteEmployee, getEmployeeOnline, getEmployees, getEmployeeStatistics, updateEmployeeRole } from '../controller/Employee.js';
+import { createEmployee, deleteEmployee, getEmployeeDashboard, getEmployeeOnline, getEmployees, getEmployeeStatistics, updateEmployeeRole } from '../controller/Employee.js';
+import { protectRoute } from '../middleware/protectRoute.js';
 
 const EmployeeRoute = express.Router();
 
@@ -10,7 +11,7 @@ EmployeeRoute.get('/online', getEmployeeOnline);
 // Route to create a new employee
 EmployeeRoute.post('/', createEmployee);
 EmployeeRoute.get('/statistics', getEmployeeStatistics);
-
+EmployeeRoute.get('/dashboard',protectRoute,getEmployeeDashboard)
 // Route to update employee role/position
 EmployeeRoute.put('/:id', updateEmployeeRole);
 

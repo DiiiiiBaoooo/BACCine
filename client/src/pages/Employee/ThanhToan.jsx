@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, CreditCard, Banknote, QrCode } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import useAuthUser from '../../hooks/useAuthUser';
 
 const ThanhToan = () => {
   const { state } = useLocation();
@@ -11,7 +12,7 @@ const ThanhToan = () => {
   const [contactInfo, setContactInfo] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [error, setError] = useState('');
-
+const{authUser} = useAuthUser();
   const validateContactInfo = () => {
     if (!contactInfo) return true; // Contact info is optional
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,7 +30,8 @@ const ThanhToan = () => {
       // Prepare API payload
       const payload = {
         cinema_id: cinemaId,
-        user_id: null, // Set to null or retrieve from auth context if available
+        user_id: null, 
+        employeeId:    authUser.id,// Set to null or retrieve from auth context if available
         showtime_id: bookingData.showtimeId,
         tickets: bookingData.seats.map((seat, index) => ({
           seat_id: seat, // Assuming seat is the seat_id (e.g., "A1")
@@ -63,6 +65,7 @@ const ThanhToan = () => {
         service_total: response.data.data.service_total,
         discount_amount: response.data.data.discount_amount,
         grand_total: response.data.data.grand_total,
+        employeeId:authUser?.id || null,
         timestamp: new Date().toISOString(),
       };
 

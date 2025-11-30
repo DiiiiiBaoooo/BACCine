@@ -9,7 +9,7 @@ const EmployeeList = ({ employees }) => {
   };
 
   return (
-    <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
+    <div className="w-40 border-r border-gray-200 bg-white flex flex-col">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-blue-500" />

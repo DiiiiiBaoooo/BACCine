@@ -1,20 +1,16 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { Clock, X, LogOut } from 'lucide-react';
+import { Clock, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Shift = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClusterId }) => {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [status, setStatus] = useState('pending');
-  const [loading, setLoading] = useState(false);
-  const [draggedEmployee, setDraggedEmployee] = useState(null);
   const navigate = useNavigate();
 
   // Define shift time mappings
   const shiftTimes = {
-    morning: { start: '08:00', end: '13:00' },
-    afternoon: { start: '13:00', end: '18:00' },
+    morning: { start: '08:00', end: '12:00' },
+    afternoon: { start: '12:00', end: '18:00' },
     evening: { start: '18:00', end: '23:00' },
   };
 
@@ -29,24 +25,40 @@ const Shift = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaCluster
   // Map status to Vietnamese display text
   const statusDisplay = {
     pending: 'Chưa chấm công',
-    confirmed: 'Đã chấm công',
-    completed: 'Hoàn tất',
+    confirmed: 'Đang làm việc',
+    completed: 'Đã hoàn thành',
     cancelled: 'Đã hủy',
   };
 
-  // Map status to Tailwind CSS classes
+  // Map status to color styles (đen-đỏ-trắng)
   const getStatusStyles = (status) => {
     switch (status) {
       case 'pending':
-        return 'bg-blue-100 border-blue-200';
+        return 'bg-gray-100 border-gray-300 text-gray-900'; // Xám nhạt - chưa chấm công
       case 'confirmed':
-        return 'bg-green-100 border-green-200';
+        return 'bg-red-50 border-red-400 text-red-900'; // Đỏ nhạt - đang làm việc
       case 'completed':
-        return 'bg-gray-100 border-gray-200';
+        return 'bg-white border-gray-400 text-gray-600'; // Trắng - đã hoàn thành
       case 'cancelled':
-        return 'bg-red-100 border-red-200';
+        return 'bg-gray-200 border-gray-400 text-gray-500 line-through'; // Xám đậm - đã hủy
       default:
-        return 'bg-blue-100 border-blue-200';
+        return 'bg-gray-100 border-gray-300 text-gray-900';
+    }
+  };
+
+  // Status badge color
+  const getStatusBadgeStyles = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-gray-200 text-gray-700'; 
+      case 'confirmed':
+        return 'bg-red-600 text-white'; 
+      case 'completed':
+        return 'bg-gray-600 text-white'; 
+      case 'cancelled':
+        return 'bg-gray-400 text-white';
+      default:
+        return 'bg-gray-200 text-gray-700';
     }
   };
 
@@ -62,44 +74,6 @@ const Shift = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaCluster
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    const employeeData = e.dataTransfer.getData('employee');
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      console.error(`Invalid date format in handleDrop: ${date}`);
-      alert('Ngày không hợp lệ. Vui lòng thử lại.');
-      return;
-    }
-    if (employeeData) {
-      try {
-        const employee = JSON.parse(employeeData);
-        if (!employee.id || !employee.name || !employee.position) {
-          alert('Dữ liệu nhân viên không hợp lệ');
-          return;
-        }
-        setDraggedEmployee(employee);
-        setShowForm(true);
-      } catch (error) {
-        console.error('Error parsing employee data:', error);
-        alert('Dữ liệu nhân viên không hợp lệ');
-      }
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (draggedEmployee?.id) {
-      console.log(`Submitting employee ${draggedEmployee.id} for date ${date}, shift ${shift}`);
-      const dateObj = new Date(date);
-      const weekStart = new Date(date);
-      weekStart.setDate(dateObj.getDate() - dateObj.getDay() + (dateObj.getDay() === 0 ? -6 : 1));
-      const dayIndex = Math.round((dateObj.getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000));
-      onDrop(date, shift, draggedEmployee, { status, cinemaClusterId: cinemaClusterId.toString(), dayIndex });
-      setShowForm(false);
-      setStatus('pending');
-      setDraggedEmployee(null);
-    } else {
-      alert('Không có dữ liệu nhân viên để xếp lịch');
-    }
   };
 
   const handleClockClick = (employeeId, scheduleId) => {
@@ -123,109 +97,54 @@ const Shift = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaCluster
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`bg-white border-2 border-dashed rounded-lg p-3 min-h-[120px] transition-colors ${
-        isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+      className={`border-l border-gray-700 min-h-32 p-2 transition-all ${
+        isDragOver ? 'bg-red-50' : 'hover:bg-gray-50'
       }`}
     >
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-2 p-2 bg-gray-50 rounded">
-          <div className="mb-2">
-            <label className="text-xs font-medium text-gray-900">Trạng thái:</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="ml-2 text-xs border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="pending">Chưa chấm công</option>
-              <option value="confirmed">Đã chấm công</option>
-              <option value="completed">Hoàn tất</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className={`text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={loading}
-            >
-              Xác nhận
-            </button>
-            <button
-              type="button"
-              className={`text-xs px-3 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              onClick={() => {
-                setShowForm(false);
-                setDraggedEmployee(null);
-              }}
-              disabled={loading}
-            >
-              Hủy
-            </button>
-          </div>
-        </form>
-      )}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {employees.length === 0 ? (
-          <div className="text-xs text-gray-500 text-center py-4">Không có ca làm việc</div>
+          <div className="text-center text-gray-400 text-[10px] pt-8">
+            Không có ca làm việc
+          </div>
         ) : (
           employees.map((employee) => (
             <div
               key={employee.id}
-              className={`border rounded px-2 py-1.5 text-xs group relative ${getStatusStyles(employee.status)}`}
+              className={`group relative border rounded p-2 transition-all text-[11px] ${getStatusStyles(employee.status)}`}
             >
-              <div className="font-medium text-gray-900 pr-16">{employee.name}</div>
-              <div className="text-[10px] text-gray-500">{employee.position}</div>
-              <div className="text-[10px] text-gray-500">
-                {getShiftDisplayTime(shift, employee)} ({statusDisplay[employee.status] || 'Không xác định'})
+              <div className="font-semibold truncate leading-tight pr-14">{employee.name}</div>
+              <div className="text-[10px] opacity-75 leading-tight">{employee.position}</div>
+              <div className="text-[10px] opacity-75 leading-tight mt-0.5">
+                {getShiftDisplayTime(shift, employee)}
               </div>
-              <button
-                onClick={() => onRemoveEmployee(date, shift, employee.id)}
-                className="absolute right-14 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 rounded-full"
-              >
-                <X className="h-3 w-3 text-gray-600" />
-              </button>
-              {employee.status === 'pending' && (
-                <button
-                  onClick={() => handleClockClick(employee.id, employee.scheduleId)}
-                  className={`absolute right-8 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 rounded-full ${
-                    !employee.scheduleId ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={!employee.scheduleId}
-                >
-                  <Clock className="h-3 w-3 text-gray-600" />
-                </button>
-              )}
-              {employee.status === 'confirmed' && (
-                <button
-                  onClick={() => handleCheckoutClick(employee.id, employee.scheduleId)}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 rounded-full ${
-                    !employee.scheduleId ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={!employee.scheduleId}
-                >
-                  <LogOut className="h-3 w-3 text-gray-600" />
-                </button>
-              )}
-              {employee.status === 'completed' && (
-                <>
+              
+              {/* Status badge */}
+              <div className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${getStatusBadgeStyles(employee.status)}`}>
+                {statusDisplay[employee.status]}
+              </div>
+
+              {/* Action buttons */}
+              <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {employee.status === 'pending' && employee.scheduleId && (
                   <button
-                    className="absolute right-8 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center opacity-0 cursor-not-allowed"
-                    disabled
+                    onClick={() => handleClockClick(employee.id, employee.scheduleId)}
+                    className="bg-red-600 hover:bg-red-700 p-1.5 rounded transition"
+                    title="Chấm công vào"
                   >
-                    <Clock className="h-3 w-3 text-gray-400" />
+                    <Clock className="w-3 h-3 text-white" />
                   </button>
+                )}
+                
+                {employee.status === 'confirmed' && employee.scheduleId && (
                   <button
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center opacity-0 cursor-not-allowed"
-                    disabled
+                    onClick={() => handleCheckoutClick(employee.id, employee.scheduleId)}
+                    className="bg-gray-600 hover:bg-gray-700 p-1.5 rounded transition"
+                    title="Chấm công ra"
                   >
-                    <LogOut className="h-3 w-3 text-gray-400" />
+                    <LogOut className="w-3 h-3 text-white" />
                   </button>
-                </>
-              )}
+                )}
+              </div>
             </div>
           ))
         )}

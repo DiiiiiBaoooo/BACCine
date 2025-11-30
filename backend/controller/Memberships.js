@@ -261,6 +261,7 @@ export const getFortuneHistory = async (req, res) => {
           reward_type,
           voucher_code,
           created_at,
+          used,
           expires_at
        FROM gift 
        WHERE user_id = ? 

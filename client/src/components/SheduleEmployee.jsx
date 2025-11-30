@@ -2,26 +2,22 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import EmployeeList from './EmployeeList';
-import WeeklySchedule from './WeeklySchedule';
-import Button from './ui/Button';
 import useAuthUser from '../hooks/useAuthUser';
 import Weekly from './Weekly';
 
 const ScheduleEmployee = ({ cinemaClusterId }) => {
   const { isLoading: isAuthLoading, authUser } = useAuthUser();
-  const employeeId= authUser.employee_id;
+  const employeeId = authUser?.employee_id;
 
   const [employees, setEmployees] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
     const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Set to Monday
+    const diff = day === 0 ? -6 : 1 - day;
     const monday = new Date(today);
     monday.setDate(today.getDate() + diff);
     monday.setHours(0, 0, 0, 0);
-    console.log('Initialized currentWeekStart:', monday.toISOString().split('T')[0]);
     return monday;
   });
   const [loading, setLoading] = useState(false);
@@ -32,7 +28,6 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
 
   const getDateString = (date) => {
     if (!(date instanceof Date) || isNaN(date)) {
-      console.error('Invalid date object:', date);
       return new Date().toISOString().split('T')[0];
     }
     const year = date.getFullYear();
@@ -41,10 +36,8 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Parse date string without timezone issues
   const parseDateString = (dateStr) => {
     if (!dateStr) return null;
-    // Remove time part if exists
     const datePart = dateStr.split('T')[0];
     const [year, month, day] = datePart.split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -53,56 +46,42 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
   const getWeekDateRange = () => {
     const start = new Date(currentWeekStart);
     const end = new Date(currentWeekStart);
-    end.setDate(start.getDate() + 6); // 7 days: Monday to Sunday
+    end.setDate(start.getDate() + 6);
     return { start: getDateString(start), end: getDateString(end) };
   };
 
-  const isDateInWeekRange = (dateStr, expectedDayIndex = null) => {
+  const isDateInWeekRange = (dateStr) => {
     const { start } = getWeekDateRange();
     const date = parseDateString(dateStr);
     const startDate = parseDateString(start);
     
     if (!date || !startDate) return false;
-
-    if (expectedDayIndex !== null) {
-      const expectedDate = new Date(startDate);
-      expectedDate.setDate(startDate.getDate() + expectedDayIndex);
-      const expectedDateStr = getDateString(expectedDate);
-      const inputDateStr = dateStr.split('T')[0];
-      
-      if (inputDateStr !== expectedDateStr) {
-        console.warn(`Date ${inputDateStr} does not match expected date ${expectedDateStr} for dayIndex ${expectedDayIndex}`);
-      }
-    }
     
     const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6); // 7 days
+    endDate.setDate(startDate.getDate() + 6);
     return date >= startDate && date <= endDate;
   };
 
   const fetchSchedule = async () => {
-    if (!cinemaClusterId) {
-      setError('cinemaClusterId is required');
+    if (!cinemaClusterId || !employeeId) {
+      setError('cinemaClusterId và employeeId là bắt buộc');
       return;
     }
     try {
       setLoading(true);
       const { start, end } = getWeekDateRange();
-      console.log(`Fetching schedule for ${start} to ${end}`);
       
       const url = showAllSchedules
-        ? `${API_BASE_URL}/schedule/${cinemaClusterId}`
+        ? `${API_BASE_URL}/schedule/${cinemaClusterId}/${employeeId}`
         : `${API_BASE_URL}/schedule/${cinemaClusterId}/${employeeId}?start=${start}&end=${end}`;
       const res = await axios.get(url);
       
       const mappedSchedule = res.data.reduce((acc, entry) => {
         const employee = employees.find((emp) => emp.id === entry.employee_id.toString());
         if (!employee) {
-          console.warn(`Employee not found for employee_id: ${entry.employee_id}`);
           return acc;
         }
         
-        // Get date string from shift_date (already in YYYY-MM-DD format from backend)
         let shiftDate = entry.shift_date;
         if (shiftDate.includes('T')) {
           shiftDate = shiftDate.split('T')[0];
@@ -110,12 +89,10 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
         
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(shiftDate)) {
-          console.warn(`Invalid shift_date from backend: ${entry.shift_date}`);
           return acc;
         }
         
         if (!showAllSchedules && !isDateInWeekRange(shiftDate)) {
-          console.warn(`shift_date out of week range: ${shiftDate}`);
           return acc;
         }
         
@@ -141,7 +118,6 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
         }];
       }, []);
       
-      console.log('Mapped schedule:', JSON.stringify(mappedSchedule, null, 2));
       setSchedule(mappedSchedule);
       setError(null);
     } catch (err) {
@@ -179,72 +155,26 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
   }, [cinemaClusterId]);
 
   useEffect(() => {
-    if (employees.length > 0 && cinemaClusterId) fetchSchedule();
-  }, [employees, currentWeekStart, cinemaClusterId, showAllSchedules]);
+    if (employees.length > 0 && cinemaClusterId && employeeId) {
+      fetchSchedule();
+    }
+  }, [employees, currentWeekStart, cinemaClusterId, employeeId, showAllSchedules]);
 
-  const handleDrop = (date, shift, employee, { status, cinemaClusterId, refresh, dayIndex }) => {
+  const handleDrop = (date, shift, employee, { refresh }) => {
     if (refresh) {
       fetchSchedule();
       return;
     }
-    
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      console.error(`Invalid date format in handleDrop: ${date}`);
-      alert('Ngày không hợp lệ. Vui lòng thử lại.');
-      return;
-    }
-    
-    if (!isDateInWeekRange(date, dayIndex)) {
-      console.error(`Date out of week range or incorrect for dayIndex ${dayIndex}: ${date}`);
-      alert('Ngày không nằm trong tuần hiện tại hoặc không khớp với ngày được chọn.');
-      return;
-    }
-    
-    setSchedule((prev) => {
-      const existingEntry = prev.find((e) => e.date === date && e.shift === shift);
-      if (existingEntry) {
-        const alreadyAssigned = existingEntry.employees.some((e) => e.id === employee.id);
-        if (alreadyAssigned) {
-          alert('Nhân viên đã được xếp lịch cho ca này!');
-          return prev;
-        }
-        return prev.map((e) =>
-          e.date === date && e.shift === shift
-            ? {
-                ...e,
-                employees: [...e.employees, { ...employee, startTime: null, endTime: null, status, scheduleId: null }],
-              }
-            : e
-        );
-      } else {
-        return [...prev, { 
-          date, 
-          shift, 
-          cinemaClusterId: cinemaClusterId.toString(), 
-          employees: [{ ...employee, startTime: null, endTime: null, status, scheduleId: null }] 
-        }];
-      }
-    });
   };
 
-  const handleRemoveEmployee = (date, shift, employeeId) => {
-    setSchedule((prev) =>
-      prev
-        .map((e) =>
-          e.date === date && e.shift === shift
-            ? { ...e, employees: e.employees.filter((emp) => emp.id !== employeeId) }
-            : e
-        )
-        .filter((e) => e.employees.length > 0)
-    );
+  const handleRemoveEmployee = () => {
+    // Nhân viên không được phép xóa lịch
   };
 
   const goToPreviousWeek = () => {
     setCurrentWeekStart((prev) => {
       const newDate = new Date(prev);
       newDate.setDate(prev.getDate() - 7);
-      console.log('Previous week:', getDateString(newDate));
       return newDate;
     });
   };
@@ -253,7 +183,6 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
     setCurrentWeekStart((prev) => {
       const newDate = new Date(prev);
       newDate.setDate(prev.getDate() + 7);
-      console.log('Next week:', getDateString(newDate));
       return newDate;
     });
   };
@@ -261,117 +190,84 @@ const ScheduleEmployee = ({ cinemaClusterId }) => {
   const formatWeekRange = () => {
     const startDate = new Date(currentWeekStart);
     const endDate = new Date(currentWeekStart);
-    endDate.setDate(currentWeekStart.getDate() + 6); // 7 days (Monday to Sunday)
+    endDate.setDate(currentWeekStart.getDate() + 6);
     const formatDate = (date) => {
       return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     };
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
-  const handleSaveSchedule = async () => {
-    if (!cinemaClusterId) {
-      setError('cinemaClusterId is required to save schedule');
-      return;
-    }
-    try {
-      setLoading(true);
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      const payload = schedule.flatMap((entry) =>
-        entry.employees.map((employee) => {
-          if (!dateRegex.test(entry.date)) {
-            throw new Error(`Invalid shift_date format: ${entry.date}. Use YYYY-MM-DD`);
-          }
-          if (!isDateInWeekRange(entry.date)) {
-            throw new Error(`shift_date out of week range: ${entry.date}`);
-          }
-          return {
-            employee_id: employee.id,
-            cinema_cluster_id: cinemaClusterId.toString(),
-            shift_date: entry.date,
-            shift_type: entry.shift,
-            status: employee.status,
-            start_time: employee.startTime || null,
-            end_time: employee.endTime || null,
-            employee_cinema_cluster_id: employee.employee_cinema_cluster_id || null,
-          };
-        })
-      );
-
-      if (payload.length === 0) {
-        throw new Error('Không có lịch làm việc để lưu');
-      }
-      
-      for (const entry of payload) {
-        if (
-          !entry.employee_id ||
-          !entry.cinema_cluster_id ||
-          !entry.shift_date ||
-          !entry.shift_type ||
-          !entry.status ||
-          entry.cinema_cluster_id !== cinemaClusterId.toString()
-        ) {
-          throw new Error(`Invalid schedule data: ${JSON.stringify(entry)}`);
-        }
-        if (!dateRegex.test(entry.shift_date)) {
-          throw new Error(`Invalid shift_date format: ${entry.shift_date}. Use YYYY-MM-DD`);
-        }
-      }
-
-      console.log('Saving schedule payload:', JSON.stringify(payload, null, 2));
-
-      const response = await axios.post(`${API_BASE_URL}/schedule/${cinemaClusterId}`, payload);
-      if (response.status === 200) {
-        alert('Lịch làm việc đã được lưu!');
-        fetchSchedule();
-      }
-    } catch (error) {
-      console.error('Error saving schedule:', error);
-      setError(error.response?.data?.error || error.message || 'Có lỗi xảy ra khi lưu lịch!');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (!cinemaClusterId) {
     return (
       <div className="p-4 text-red-600 text-sm">
-        Lỗi: Vui lòng cung cấp cinemaClusterId để quản lý lịch làm việc.
+        Lỗi: Vui lòng cung cấp cinemaClusterId để xem lịch làm việc.
+      </div>
+    );
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-600">Đang tải...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col">
-        <div className="border-b border-gray-200 bg-white px-6 py-4">
+        {/* Header compact */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold text-gray-900">Quản Lý Lịch Làm Việc</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">{formatWeekRange()}</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAllSchedules(!showAllSchedules)}
-                  className="text-xs"
+            <h1 className="text-lg font-bold text-gray-900">
+              LỊCH LÀM VIỆC <span className="text-red-600">CỦA TÔI</span>
+            </h1>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAllSchedules(!showAllSchedules)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  showAllSchedules 
+                    ? 'bg-red-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {showAllSchedules ? 'Tuần hiện tại' : 'Tất cả lịch'}
+              </button>
+
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                <button 
+                  onClick={goToPreviousWeek} 
+                  className="p-1.5 hover:bg-white rounded transition-colors"
                 >
-                  {showAllSchedules ? 'Chỉ hiện tuần hiện tại' : 'Hiện tất cả lịch'}
-                </Button>
-                <Button variant="outline" size="icon" onClick={goToPreviousWeek} className="h-8 w-8 bg-transparent">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={goToNextWeek} className="h-8 w-8 bg-transparent">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button onClick={handleSaveSchedule} className="ml-4" disabled={loading}>
-                  {loading ? 'Đang lưu...' : 'Lưu Lịch'}
-                </Button>
+                  <ChevronLeft className="w-4 h-4 text-gray-700" />
+                </button>
+                <span className="font-semibold text-red-600 text-xs w-32 text-center">
+                  {formatWeekRange()}
+                </span>
+                <button 
+                  onClick={goToNextWeek} 
+                  className="p-1.5 hover:bg-white rounded transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4 text-gray-700" />
+                </button>
               </div>
             </div>
           </div>
         </div>
+
         {error && (
-          <div className="p-4 text-red-600 text-sm">{error}</div>
+          <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
+            {error}
+          </div>
         )}
+
+        {loading && (
+          <div className="mx-4 mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs">
+            Đang tải lịch làm việc...
+          </div>
+        )}
+
         <Weekly
           schedule={schedule}
           onDrop={handleDrop}

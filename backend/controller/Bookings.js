@@ -22,6 +22,7 @@ export const createBooking = async (req, res) => {
       payment_method,
       promotion_id,
       phone,
+      employeeId,
       status: clientStatus,
       grand_total: clientGrandTotal
     } = req.body;
@@ -57,17 +58,36 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Suất chiếu không tồn tại' });
     }
 
+    // 2. Kiểm tra employee_id nếu có
+    if (employeeId) {
+      const [employeeRows] = await connection.query('SELECT id FROM users WHERE id = ? AND role = "employee"', [employeeId]);
+      if (employeeRows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Nhân viên không tồn tại hoặc không hợp lệ' });
+      }
+    }
+
     // 3. Kiểm tra ghế
     const seatNumbers = tickets.map(t => t.seat_id);
     const [seatRows] = await connection.query(
-      `SELECT seat_id, seat_number, status, reservation_id, tp.base_price as ticket_price
-       FROM show_seats s 
-       JOIN seat_types st ON s.seat_type_id = st.id 
-       JOIN ticket_prices tp ON st.id = tp.seat_type_id
-       WHERE showtime_id = ? AND seat_number IN (?) AND tp.cinema_id = ?`,
-      [showtime_id, seatNumbers, cinema_id]
+      `
+      SELECT 
+        s.seat_id,
+        s.seat_number,
+        s.status,
+        s.reservation_id,
+        CASE 
+          WHEN DAYOFWEEK(DATE(st.start_time)) IN (1, 7) THEN tp.weekend_price  -- Chủ nhật = 1, Thứ 7 = 7
+          ELSE tp.base_price 
+        END AS ticket_price
+      FROM show_seats s
+      JOIN showtimes st ON s.showtime_id = st.id
+      JOIN seat_types seat_type ON s.seat_type_id = seat_type.id
+      JOIN ticket_prices tp ON seat_type.id = tp.seat_type_id AND tp.cinema_id = ?
+      WHERE s.showtime_id = ?
+        AND s.seat_number IN (?)
+      `,
+      [cinema_id, showtime_id, seatNumbers]
     );
-
     if (seatRows.length !== seatNumbers.length) {
       return res.status(400).json({ success: false, message: 'Một hoặc nhiều ghế không tồn tại' });
     }
@@ -136,12 +156,12 @@ export const createBooking = async (req, res) => {
     // 8. Bắt đầu transaction
     await connection.beginTransaction();
 
-    // 9. Tạo đơn hàng
+    // 9. Tạo đơn hàng (CÓ THÊM employee_id)
     const [bookingResult] = await connection.query(
       `INSERT INTO orders (
-        user_id, showtime_id, order_date, status, payment_method, total_amount
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [user_id || null, showtime_id, new Date(), finalStatus, payment_method, grand_total]
+        user_id, employee_id, showtime_id, order_date, status, payment_method, total_amount
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [user_id || null, employeeId || null, showtime_id, new Date(), finalStatus, payment_method, grand_total]
     );
     const bookingId = bookingResult.insertId;
 
@@ -207,6 +227,7 @@ export const createBooking = async (req, res) => {
         data: {
           order_id: bookingId,
           user_id,
+          employee_id: employeeId || null,
           showtime_id,
           tickets,
           services,
@@ -247,6 +268,7 @@ export const createBooking = async (req, res) => {
       data: {
         order_id: bookingId,
         user_id,
+        employee_id: employeeId || null,
         showtime_id,
         tickets,
         services,
@@ -269,7 +291,6 @@ export const createBooking = async (req, res) => {
     connection.release();
   }
 };
-
 export const getDetailOrder = async (req, res) => {
     const connection = await dbPool.getConnection();
     try {

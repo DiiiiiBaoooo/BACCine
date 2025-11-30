@@ -270,3 +270,190 @@ export const getTicketByOrderId = async (req, res) => {
     });
   }
 };
+export const cancelTicket = async (req, res) => {
+  const { orderId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    // Bắt đầu transaction
+    await dbPool.query('START TRANSACTION');
+
+    // 1. Kiểm tra đơn hàng có tồn tại và thuộc về user không
+    const [orderCheck] = await dbPool.query(
+      `SELECT o.*, s.start_time, s.movie_id, m.title as movie_title
+       FROM orders o
+       JOIN showtimes s ON o.showtime_id = s.id
+       JOIN movies m ON s.movie_id = m.id
+       WHERE o.order_id = ? AND o.user_id = ? AND o.status = 'confirmed'`,
+      [orderId, userId]
+    );
+
+    if (orderCheck.length === 0) {
+      await dbPool.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng hoặc đơn hàng đã bị hủy'
+      });
+    }
+
+    const order = orderCheck[0];
+    const showtimeStart = new Date(order.start_time);
+    const now = new Date();
+    const timeDiff = showtimeStart - now;
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+    // 2. Kiểm tra thời gian hủy (phải trước 1 tiếng)
+    if (hoursDiff < 1) {
+      await dbPool.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ có thể hủy vé trước suất chiếu ít nhất 1 tiếng'
+      });
+    }
+
+    // 3. Lấy tổng giá trị vé từ orderticket
+    const [ticketPrices] = await dbPool.query(
+      'SELECT total_amount as total_ticket_price FROM orders WHERE order_id = ?',
+      [orderId]
+    );
+
+    const totalTicketPrice = ticketPrices[0].total_ticket_price || 0;
+    console.log(totalTicketPrice);
+    
+    if (Number(totalTicketPrice) === 0) {
+      await dbPool.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Vé có giá trị không thể hủy'
+      });
+    }
+
+    // 4. Cập nhật trạng thái đơn hàng thành 'cancelled'
+    await dbPool.query(
+      'UPDATE orders SET status = "cancelled", updated_at = NOW() WHERE order_id = ?',
+      [orderId]
+    );
+
+    // 5. Giải phóng ghế đã đặt
+    await dbPool.query(
+      `UPDATE show_seats ss
+       JOIN orderticket ot ON ss.seat_id = ot.seat_id
+       SET ss.status = 'available', ss.reservation_id = NULL
+       WHERE ot.order_id = ?`,
+      [orderId]
+    );
+
+    // 6. Tạo voucher giảm giá
+    const voucherCode = generateVoucherCode();
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30); // Voucher hết hạn sau 30 ngày
+
+    await dbPool.query(
+      `INSERT INTO gift (user_id, reward, reward_type, points_spent, voucher_code, 
+       discount_type, discount_value, created_at, used, expires_at)
+       VALUES (?, ?, 'voucher', 0, ?, 'fixed', ?, NOW(), 0, ?)`,
+      [
+        userId,
+        `Hoàn tiền hủy vé ${order.movie_title}`,
+        voucherCode,
+        totalTicketPrice,
+        expiryDate
+      ]
+    );
+
+    // 7. Commit transaction
+    await dbPool.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Hủy vé thành công',
+      data: {
+        orderId: orderId,
+        refundAmount: totalTicketPrice,
+        voucherCode: voucherCode,
+        expiryDate: expiryDate
+      }
+    });
+
+  } catch (error) {
+    await dbPool.query('ROLLBACK');
+    console.error('Error cancelling ticket:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Có lỗi xảy ra khi hủy vé',
+      error: error.message
+    });
+  }
+}
+function generateVoucherCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = 'BAC'; // Prefix
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+export const checkCancelTicket = async (req, res) => {
+  const { orderId } = req.params;
+  const userId = req.user.id;
+  try {
+     const [orderCheck] = await dbPool.query(
+      `SELECT o.*, s.start_time, s.movie_id, m.title as movie_title
+       FROM orders o
+       JOIN showtimes s ON o.showtime_id = s.id
+       JOIN movies m ON s.movie_id = m.id
+       WHERE o.order_id = ? AND o.user_id = ? AND o.status = 'confirmed'`,
+      [orderId, userId]
+    );
+
+    if (orderCheck.length === 0) {
+      return res.json({
+        canCancel: false,
+        reason: 'Không tìm thấy đơn hàng hoặc đơn hàng đã bị hủy'
+      });
+    }
+ const order = orderCheck[0];
+    const showtimeStart = new Date(order.start_time);
+    const now = new Date();
+    const timeDiff = showtimeStart - now;
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+    if (hoursDiff < 1) {
+      return res.json({
+        canCancel: false,
+        reason: 'Chỉ có thể hủy vé trước suất chiếu ít nhất 1 tiếng',
+        hoursRemaining: hoursDiff.toFixed(2)
+      });
+    }
+
+    // Lấy giá trị hoàn lại
+    const [ticketPrices] = await dbPool.query(
+      'SELECT total_amount as total_ticket_price FROM orders WHERE order_id = ?',
+      [orderId]
+    );
+        const totalTicketPrice = ticketPrices[0].total_ticket_price || 0;
+
+if (Number(totalTicketPrice) === 0) {
+    return res.json({
+        canCancel: false,
+        reason: 'Không thể hủy vé miễn phí',
+        hoursRemaining: hoursDiff.toFixed(2)
+      });
+    }
+    res.json({
+      canCancel: true,
+      refundAmount: ticketPrices[0].total_ticket_price || 0,
+      hoursRemaining: hoursDiff.toFixed(2),
+      movieTitle: order.movie_title,
+      showtimeStart: order.start_time
+    });
+
+  } catch (error) {
+      console.error('Error checking cancellable:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Có lỗi xảy ra',
+      error: error.message
+    });
+  }
+}

@@ -2,15 +2,14 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import ShiftCell from './ShiftCell';
 
-const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const SHIFTS = [
-  { key: 'morning', label: 'Sáng' },
-  { key: 'afternoon', label: 'Chiều' },
-  { key: 'evening', label: 'Tối' },
+  { key: 'morning', label: 'Sáng', time: '6h-12h' },
+  { key: 'afternoon', label: 'Chiều', time: '12h-18h' },
+  { key: 'evening', label: 'Tối', time: '18h-24h' },
 ];
 
 const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaClusterId, showAllSchedules }) => {
-  // Parse date string to get day without timezone issues
   const parseDateString = (dateStr) => {
     if (!dateStr) return new Date();
     const [year, month, day] = dateStr.split('-').map(Number);
@@ -19,26 +18,20 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
 
   const getDateForDay = (dayIndex) => {
     const date = parseDateString(getDateString(dayIndex));
-    const day = date.getDate();
-    console.log(`getDateForDay(${dayIndex}): ${getDateString(dayIndex)} (display: ${day})`);
-    return day;
+    return date.getDate();
   };
 
   const getDateString = (dayIndex) => {
     const date = new Date(weekStart);
     date.setDate(date.getDate() + dayIndex);
-    // Format as YYYY-MM-DD in local timezone
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    console.log(`getDateString(${dayIndex}): ${dateStr}`);
-    return dateStr;
+    return `${year}-${month}-${day}`;
   };
 
   const getEmployeesForShift = (date, shift) => {
     const entry = schedule.find((e) => e.date === date && e.shift === shift);
-    console.log(`getEmployeesForShift(${date}, ${shift}):`, entry?.employees || []);
     return entry?.employees || [];
   };
 
@@ -47,63 +40,62 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
     return null;
   }
 
- // WeeklySchedule.jsx (chỉ thay phần return)
-return (
-  <div className="flex-1 overflow-auto bg-gradient-to-b from-black to-gray-950">
-    <div className="p-6">
-      <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-red-900/30 overflow-hidden shadow-2xl">
-        {/* Header ngày */}
-        <div className="grid grid-cols-8 gap-0 border-b border-red-900/30">
-          <div className="py-5 px-6 font-bold text-gray-400 text-sm">CA LÀM</div>
-          {DAYS.map((day, i) => {
-            const dateStr = getDateString(i);
-            const dayNum = new Date(dateStr).getDate();
-            const isToday = dateStr === new Date().toISOString().split('T')[0];
-            return (
-              <div
-                key={day}
-                className={`py-5 text-center border-l border-red-900/30 ${
-                  isToday ? 'bg-red-600/20' : ''
-                }`}
-              >
-                <div className="font-bold text-lg text-white">{dayNum}</div>
-                <div className="text-xs text-gray-400 mt-1">{day}</div>
-                {isToday && <div className="text-[10px] text-red-400 font-bold mt-1">HÔM NAY</div>}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Các ca */}
-        {SHIFTS.map((shift) => (
-          <div key={shift.key} className="grid grid-cols-8 gap-0 border-b border-gray-800 last:border-0">
-            {/* Tên ca */}
-            <div className="py-6 px-6 bg-gradient-to-r from-red-900/20 to-transparent flex flex-col">
-              <div className="font-bold text-red-400 text-lg">{shift.label}</div>
-              <div className="text-xs text-gray-500">{shift.time}</div>
-            </div>
-
-            {/* 7 ngày */}
-            {DAYS.map((_, dayIndex) => {
-              const date = getDateString(dayIndex);
+  return (
+    <div className="flex-1 overflow-auto bg-white">
+      <div className="p-3">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          {/* Header ngày */}
+          <div className="grid grid-cols-8 gap-0 border-b border-gray-200 bg-gray-50">
+            <div className="py-2 px-3 font-bold text-gray-700 text-[11px]">CA LÀM</div>
+            {DAYS.map((day, i) => {
+              const dateStr = getDateString(i);
+              const dayNum = new Date(dateStr).getDate();
+              const isToday = dateStr === new Date().toISOString().split('T')[0];
               return (
-                <ShiftCell
-                  key={`${dayIndex}-${shift.key}`}
-                  date={date}
-                  shift={shift.key}
-                  employees={getEmployeesForShift(date, shift.key)}
-                  onDrop={(date, shift, emp, opt) => onDrop(date, shift, emp, { ...opt, dayIndex })}
-                  onRemoveEmployee={onRemoveEmployee}
-                  cinemaClusterId={cinemaClusterId}
-                />
+                <div
+                  key={day}
+                  className={`py-2 text-center border-l border-gray-200 ${
+                    isToday ? 'bg-red-50' : ''
+                  }`}
+                >
+                  <div className="font-bold text-sm text-gray-900">{dayNum}</div>
+                  <div className="text-[10px] text-gray-500">{day}</div>
+                  {isToday && <div className="text-[9px] text-red-600 font-bold">HÔM NAY</div>}
+                </div>
               );
             })}
           </div>
-        ))}
+
+          {/* Các ca */}
+          {SHIFTS.map((shift) => (
+            <div key={shift.key} className="grid grid-cols-8 gap-0 border-b border-gray-200 last:border-0">
+              {/* Tên ca */}
+              <div className="py-3 px-3 bg-gray-50 border-r border-gray-200 flex flex-col justify-center">
+                <div className="font-bold text-gray-900 text-xs">{shift.label}</div>
+                <div className="text-[10px] text-gray-500">{shift.time}</div>
+              </div>
+
+              {/* 7 ngày */}
+              {DAYS.map((_, dayIndex) => {
+                const date = getDateString(dayIndex);
+                return (
+                  <ShiftCell
+                    key={`${dayIndex}-${shift.key}`}
+                    date={date}
+                    shift={shift.key}
+                    employees={getEmployeesForShift(date, shift.key)}
+                    onDrop={(date, shift, emp, opt) => onDrop(date, shift, emp, { ...opt, dayIndex })}
+                    onRemoveEmployee={onRemoveEmployee}
+                    cinemaClusterId={cinemaClusterId}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 WeeklySchedule.propTypes = {

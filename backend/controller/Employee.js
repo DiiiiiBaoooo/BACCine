@@ -218,3 +218,233 @@ export const getEmployeeOnline = async (req,res)=>{
     res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 }
+export const getEmployeeDashboard = async (req, res) => {
+  const connection = await dbPool.getConnection();
+  try {
+const employee_id = req.user.id;
+    // Validate employee_id
+    if (!employee_id || isNaN(employee_id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "ID nhân viên không hợp lệ" 
+      });
+    }
+
+    // Kiểm tra nhân viên tồn tại và có role = employee
+    const [employeeCheck] = await connection.query(
+      'SELECT id, role FROM users WHERE id = ? AND role = "employee"',
+      [employee_id]
+    );
+
+    if (employeeCheck.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Nhân viên không tồn tại" 
+      });
+    }
+
+    // ========== PHẦN 1: THỐNG KÊ ĐỔN HÀNG ==========
+    
+    // Tổng đơn hàng theo thời gian
+    const [ordersStats] = await connection.query(`
+      SELECT 
+        COUNT(CASE WHEN DATE(order_date) = CURDATE() THEN 1 END) as total_orders_today,
+        COUNT(CASE WHEN YEARWEEK(order_date, 1) = YEARWEEK(CURDATE(), 1) THEN 1 END) as total_orders_this_week,
+        COUNT(CASE WHEN YEAR(order_date) = YEAR(CURDATE()) AND MONTH(order_date) = MONTH(CURDATE()) THEN 1 END) as total_orders_this_month
+      FROM orders
+      WHERE employee_id = ? AND status = 'confirmed'
+    `, [employee_id]);
+
+    // ========== PHẦN 2: THỐNG KÊ VÉ ==========
+    
+    // Tổng vé đã bán theo thời gian
+    const [ticketsStats] = await connection.query(`
+      SELECT 
+        COUNT(CASE WHEN DATE(o.order_date) = CURDATE() THEN 1 END) as total_tickets_today,
+        COUNT(CASE WHEN YEARWEEK(o.order_date, 1) = YEARWEEK(CURDATE(), 1) THEN 1 END) as total_tickets_this_week,
+        COUNT(CASE WHEN YEAR(o.order_date) = YEAR(CURDATE()) AND MONTH(o.order_date) = MONTH(CURDATE()) THEN 1 END) as total_tickets_this_month
+      FROM orderticket ot
+      JOIN orders o ON ot.order_id = o.order_id
+      WHERE o.employee_id = ? AND o.status = 'confirmed'
+    `, [employee_id]);
+
+    // ========== PHẦN 3: THỐNG KÊ DOANH THU ==========
+    
+    // Doanh thu theo thời gian
+    const [revenueStats] = await connection.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN DATE(order_date) = CURDATE() THEN total_amount ELSE 0 END), 0) as total_revenue_today,
+        COALESCE(SUM(CASE WHEN YEARWEEK(order_date, 1) = YEARWEEK(CURDATE(), 1) THEN total_amount ELSE 0 END), 0) as total_revenue_this_week,
+        COALESCE(SUM(CASE WHEN YEAR(order_date) = YEAR(CURDATE()) AND MONTH(order_date) = MONTH(CURDATE()) THEN total_amount ELSE 0 END), 0) as total_revenue_this_month
+      FROM orders
+      WHERE employee_id = ? AND status = 'confirmed'
+    `, [employee_id]);
+
+    // ========== PHẦN 4: THỐNG KÊ CA LÀM VIỆC ==========
+    
+    // Lấy thông tin ca làm việc
+    const [shiftsStats] = await connection.query(`
+      SELECT 
+        COUNT(*) as total_shifts,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_shifts,
+        SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_shifts,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_shifts,
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_shifts
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE ecc.employee_id = ?
+    `, [employee_id]);
+
+    // ========== PHẦN 5: BIỂU ĐỒ - DOANH THU 7 NGÀY GẦN NHẤT ==========
+    
+    const [revenueChart] = await connection.query(`
+      SELECT 
+        DATE(order_date) as date,
+        COUNT(*) as orders,
+        SUM(total_amount) as revenue
+      FROM orders
+      WHERE employee_id = ? 
+        AND status = 'confirmed'
+        AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      GROUP BY DATE(order_date)
+      ORDER BY date ASC
+    `, [employee_id]);
+
+    // ========== PHẦN 6: BIỂU ĐỒ - VÉ THEO TUẦN (4 tuần gần nhất) ==========
+    
+    const [ticketsWeeklyChart] = await connection.query(`
+      SELECT 
+        CONCAT('Tuần ', WEEK(o.order_date, 1)) as week,
+        COUNT(*) as total_tickets
+      FROM orderticket ot
+      JOIN orders o ON ot.order_id = o.order_id
+      WHERE o.employee_id = ? 
+        AND o.status = 'confirmed'
+        AND o.order_date >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
+      GROUP BY WEEK(o.order_date, 1)
+      ORDER BY WEEK(o.order_date, 1) ASC
+    `, [employee_id]);
+
+    // ========== PHẦN 7: TOP 5 PHIM BÁN CHẠY NHẤT ==========
+    
+    const [topMovies] = await connection.query(`
+      SELECT 
+        m.title,
+        m.poster_path,
+        COUNT(ot.order_ticket_id) as tickets_sold,
+        SUM(ot.ticket_price) as revenue
+      FROM orderticket ot
+      JOIN orders o ON ot.order_id = o.order_id
+      JOIN showtimes s ON ot.showtime_id = s.id
+      JOIN movies m ON s.movie_id = m.id
+      WHERE o.employee_id = ? 
+        AND o.status = 'confirmed'
+        AND MONTH(o.order_date) = MONTH(CURDATE())
+      GROUP BY m.id
+      ORDER BY tickets_sold DESC
+      LIMIT 5
+    `, [employee_id]);
+
+    // ========== PHẦN 8: CA LÀM VIỆC SẮP TỚI ==========
+    
+    const [upcomingShifts] = await connection.query(`
+      SELECT 
+        s.shift_date,
+        s.shift_type,
+        s.start_time,
+        s.end_time,
+        s.status,
+        cc.name as cinema_name
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      JOIN cinema_clusters cc ON ecc.cinema_cluster_id = cc.id
+      WHERE ecc.employee_id = ?
+        AND s.shift_date >= CURDATE()
+        AND s.status IN ('pending', 'confirmed')
+      ORDER BY s.shift_date ASC, s.start_time ASC
+      LIMIT 5
+    `, [employee_id]);
+
+    // ========== TÍNH TỶ LỆ HOÀN THÀNH CA ==========
+    
+    const shifts = shiftsStats[0];
+    const completion_rate = shifts.total_shifts > 0 
+      ? ((shifts.completed_shifts / shifts.total_shifts) * 100).toFixed(2)
+      : 0;
+
+    // ========== TRẢ VỀ KẾT QUẢ ==========
+    
+    return res.status(200).json({
+      success: true,
+      message: "Lấy thống kê dashboard thành công",
+      data: {
+        // Thống kê tổng quan
+        summary: {
+          orders: {
+            today: ordersStats[0].total_orders_today,
+            this_week: ordersStats[0].total_orders_this_week,
+            this_month: ordersStats[0].total_orders_this_month
+          },
+          tickets: {
+            today: ticketsStats[0].total_tickets_today,
+            this_week: ticketsStats[0].total_tickets_this_week,
+            this_month: ticketsStats[0].total_tickets_this_month
+          },
+          revenue: {
+            today: parseFloat(revenueStats[0].total_revenue_today),
+            this_week: parseFloat(revenueStats[0].total_revenue_this_week),
+            this_month: parseFloat(revenueStats[0].total_revenue_this_month)
+          },
+          shifts: {
+            total: shifts.total_shifts,
+            completed: shifts.completed_shifts,
+            confirmed: shifts.confirmed_shifts,
+            pending: shifts.pending_shifts,
+            cancelled: shifts.cancelled_shifts,
+            completion_rate: parseFloat(completion_rate)
+          }
+        },
+        
+        // Biểu đồ
+        charts: {
+          revenue_7_days: revenueChart.map(item => ({
+            date: item.date,
+            orders: item.orders,
+            revenue: parseFloat(item.revenue)
+          })),
+          tickets_weekly: ticketsWeeklyChart.map(item => ({
+            week: item.week,
+            tickets: item.total_tickets
+          }))
+        },
+        
+        // Top phim
+        top_movies: topMovies.map(movie => ({
+          title: movie.title,
+          poster_path: movie.poster_path,
+          tickets_sold: movie.tickets_sold,
+          revenue: parseFloat(movie.revenue)
+        })),
+        
+        // Ca làm việc sắp tới
+        upcoming_shifts: upcomingShifts.map(shift => ({
+          date: shift.shift_date,
+          type: shift.shift_type,
+          start_time: shift.start_time,
+          end_time: shift.end_time,
+          status: shift.status,
+          cinema: shift.cinema_name
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting employee dashboard:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: `Lỗi server: ${error.message}` 
+    });
+  } finally {
+    connection.release();
+  }
+};

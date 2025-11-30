@@ -37,7 +37,7 @@ const RasaChatbot = ({ currentUser }) => {
   const sendMessageToRasa = async (message) => {
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/api/chatbot/message`,
+        `${import.meta.env.VITE_BASE_URL}api/chatbot/message`,
         {
           sender: senderId.current,
           message: message,

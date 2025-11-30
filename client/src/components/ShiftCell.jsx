@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { X, Clock } from 'lucide-react';
 import axios from 'axios';
-import Button from './ui/Button';
 
 const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClusterId }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -54,7 +53,6 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
   const handleSubmit = (e) => {
     e.preventDefault();
     if (draggedEmployee?.id) {
-      console.log(`Submitting employee ${draggedEmployee.id} for date ${date}, shift ${shift}`);
       const dateObj = new Date(date);
       const weekStart = new Date(date);
       weekStart.setDate(dateObj.getDate() - dateObj.getDay() + (dateObj.getDay() === 0 ? -6 : 1));
@@ -95,76 +93,112 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
     }
   };
 
- // ShiftCell.jsx – gọn đẹp nhất
-return (
-  <div
-    onDragOver={handleDragOver}
-    onDragLeave={handleDragLeave}
-    onDrop={handleDrop}
-    className={`border-l border-gray-800 min-h-48 p-4 transition-all ${
-      isDragOver 
-        ? 'bg-red-900/30 border-l-4 border-l-red-500' 
-        : 'hover:bg-gray-900/30'
-    }`}
-  >
-    <div className="space-y-2">
-      {employees.length === 0 ? (
-        <div className="text-center text-gray-600 text-xs pt-12">
-          Kéo nhân viên vào
-        </div>
-      ) : (
-        employees.map((emp) => (
-          <div
-            key={emp.id}
-            className="group relative bg-gradient-to-r from-red-900/40 to-black/60 
-                     border border-red-800/50 rounded-lg p-3 pr-10 
-                     hover:border-red-500 hover:shadow-lg hover:shadow-red-900/30 
-                     transition-all text-sm"
-          >
-            <div className="font-semibold text-white truncate">{emp.name}</div>
-            <div className="text-xs text-gray-400">{emp.position}</div>
-            <div className="text-xs text-red-400 font-medium">
-              {emp.startTime ? `${emp.startTime} - ${emp.endTime || '?'}` : 'Chưa chấm công'}
-            </div>
-
-            {/* Nút xóa + chấm công */}
-            <button
-              onClick={() => onRemoveEmployee(date, shift, emp.id)}
-              className="absolute top-2 right-8 opacity-0 group-hover:opacity-100 
-                       bg-red-600 hover:bg-red-700 p-2 rounded transition"
-            >
-              <X className="w-3 h-3" />
-            </button>
-            {emp.scheduleId && (
-              <button
-                onClick={() => setShowAttendanceForm(emp.scheduleId)}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 
-                         bg-gray-700 hover:bg-gray-600 p-2 rounded transition"
-              >
-                <Clock className="w-3 h-3" />
-              </button>
-            )}
+  return (
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`border-l border-gray-700 min-h-32 p-2 transition-all ${
+        isDragOver 
+          ? 'bg-red-50 border-l-2 border-l-red-600' 
+          : 'hover:bg-gray-50'
+      }`}
+    >
+      <div className="space-y-1.5">
+        {employees.length === 0 ? (
+          <div className="text-center text-gray-400 text-[10px] pt-8">
+            Kéo nhân viên vào
           </div>
-        ))
+        ) : (
+          employees.map((emp) => (
+            <div
+              key={emp.id}
+              className="group relative bg-white border border-gray-200 rounded p-2 pr-8
+                       hover:border-red-500 hover:shadow-sm transition-all text-[11px]"
+            >
+              <div className="font-semibold text-gray-900 truncate leading-tight">{emp.name}</div>
+              <div className="text-[10px] text-gray-500 leading-tight">{emp.position}</div>
+              <div className="text-[10px] text-red-600 font-medium leading-tight mt-0.5">
+                {emp.startTime ? `${emp.startTime} - ${emp.endTime || '?'}` : 'Chưa chấm công'}
+              </div>
+
+              {/* Nút xóa + chấm công */}
+              <button
+                onClick={() => onRemoveEmployee(date, shift, emp.id)}
+                className="absolute top-1.5 right-7 opacity-0 group-hover:opacity-100 
+                         bg-red-600 hover:bg-red-700 p-1 rounded transition"
+              >
+                <X className="w-2.5 h-2.5 text-white" />
+              </button>
+              {emp.scheduleId && (
+                <button
+                  onClick={() => setShowAttendanceForm(emp.scheduleId)}
+                  className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 
+                           bg-gray-600 hover:bg-gray-700 p-1 rounded transition"
+                >
+                  <Clock className="w-2.5 h-2.5 text-white" />
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Form khi kéo thả */}
+      {showForm && draggedEmployee && (
+        <div className="mt-2 p-2 bg-gray-50 border border-red-300 rounded text-[10px]">
+          <p className="mb-1.5">Xếp <span className="text-red-600 font-bold">{draggedEmployee.name}</span>?</p>
+          <div className="flex gap-1.5">
+            <button onClick={handleSubmit} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded font-bold">
+              OK
+            </button>
+            <button onClick={() => { setShowForm(false); setDraggedEmployee(null); }} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded">
+              Hủy
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Form chấm công */}
+      {showAttendanceForm && (
+        <div className="mt-2 p-2 bg-gray-50 border border-gray-300 rounded text-[10px]">
+          <p className="font-semibold mb-1.5 text-gray-900">Chấm công</p>
+          <form onSubmit={(e) => handleAttendanceSubmit(e, showAttendanceForm)} className="space-y-1.5">
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-[10px]"
+              required
+            />
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-[10px]"
+              required
+            />
+            <div className="flex gap-1.5">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded font-bold disabled:opacity-50"
+              >
+                {loading ? 'Đang lưu...' : 'Lưu'}
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowAttendanceForm(null)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded"
+              >
+                Hủy
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
-
-    {/* Form khi kéo thả */}
-    {showForm && draggedEmployee && (
-      <div className="mt-2 p-3 bg-black/70 border border-red-700 rounded-lg text-xs">
-        <p className="mb-2">Xếp <span className="text-red-400 font-bold">{draggedEmployee.name}</span>?</p>
-        <div className="flex gap-2">
-          <button onClick={handleSubmit} className="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded font-bold">
-            OK
-          </button>
-          <button onClick={() => { setShowForm(false); setDraggedEmployee(null); }} className="bg-gray-700 px-4 py-1.5 rounded">
-            Hủy
-          </button>
-        </div>
-      </div>
-    )}
-  </div>
-);
+  );
 };
 
 ShiftCell.propTypes = {

@@ -85,7 +85,6 @@ def normalize_entity(entity_value: str, entity_type: str) -> str:
     if entity_type == 'cinema_name':
         # Mapping các biến thể tên rạp
         cinema_mappings = {
-            'bac': 'BAC Quang Trung',
             'bac quang trung': 'BAC Quang Trung',
             'rạp bac': 'BAC Quang Trung',
             'cgv': 'CGV',
