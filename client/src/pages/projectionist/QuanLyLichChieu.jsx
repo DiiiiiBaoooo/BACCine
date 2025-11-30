@@ -417,7 +417,7 @@ for (const [date, times] of Object.entries(dateTimeSelection)) {
               <option value="" className="bg-gray-800">Tất cả trạng thái</option>
               <option value="Ongoing" className="bg-gray-800">Đang diễn ra</option>
               <option value="Scheduled" className="bg-gray-800">Đã lên lịch</option>
-              <option value="Finished" className="bg-gray-800">Đã kết thúc</option>
+              <option value="Completed" className="bg-gray-800">Đã kết thúc</option>
               <option value="Cancelled" className="bg-gray-800">Đã hủy</option>
             </select>
           </div>
