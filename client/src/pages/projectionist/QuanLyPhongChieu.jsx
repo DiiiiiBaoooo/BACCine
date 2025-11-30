@@ -17,7 +17,7 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
   const [newRoom, setNewRoom] = useState({
     name: '',
     capacity: '',
-    status: 'Active',
+    status: 'AVAILABLE',
     type: '2D',
     cinema_clusters_id: cinemaId
   });
