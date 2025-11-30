@@ -74,7 +74,7 @@ import EventRequest from './pages/manager/EventRequest';
 import MyEvent from './pages/MyEvent';
 import EventQRPayment from './pages/EventQRPayment';
 import MyUuDai from './pages/MyUuDai';
-import OpenAIChatbot from './components/OpenAIChatBot';
+import OpenAIChatbot from './components/OpenAIChatbot';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {

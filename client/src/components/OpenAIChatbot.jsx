@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { MessageCircle, X, Send, RotateCcw, Loader } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import './OpenAIChatbot.css';
+import './OpenAIChatBot.css';
 
 const OpenAIChatbot = ({ currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
