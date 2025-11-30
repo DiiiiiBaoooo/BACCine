@@ -2,7 +2,7 @@ import React from 'react'
 import { assets } from '../assets/assets'
 
 import { NavLink } from 'react-router-dom'
-import { BadgeDollarSign, Briefcase, CalendarCheck, FileUser, IdCardLanyard, LayoutDashboardIcon, Popcorn, StickyNote, TicketIcon } from 'lucide-react'
+import { BadgeDollarSign, Briefcase, CalendarCheck, CalendarClock, FileUser, FilmIcon, IdCardLanyard, LayoutDashboardIcon, Popcorn, StickyNote, TicketIcon } from 'lucide-react'
 
 const ManagerSidebar = () => {
   const user = {
@@ -21,7 +21,10 @@ const ManagerSidebar = () => {
     {name:"Quản lý lịch làm việc", path:'/manager/qlllv',icon:CalendarCheck},
 
     {name: "Quản lý dịch vụ",path:'/manager/qldv',icon:Popcorn},
-        {name: "Quản lý sự kiện",path:'/manager/qlsk',icon:BadgeDollarSign}
+        {name: "Quản lý sự kiện",path:'/manager/qlsk',icon:BadgeDollarSign},
+         { name: 'Quản lý phòng chiếu', path: '/manager/qlpc', icon: FilmIcon },
+            { name: 'Quản lý lịch chiếu', path: '/manager/qllc', icon: CalendarClock },
+        
 
     
   ]

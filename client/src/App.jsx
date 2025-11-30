@@ -299,6 +299,8 @@ const App = () => {
           <Route path='qldv' element={<QuanLyDichVu cinemaId={cinema_Id} />} />
           <Route path='qlllv' element={<QuanLyLichLamViec cinemaClusterId={cinema_Id} />} />
           <Route path='qlsk' element={<EventRequest cinemaId={cinema_Id} />} />
+          <Route path='qlpc' element={<QuanLyPhongChieu cinemaId={cinema_Id} />} />
+          <Route path='qllc' element={<QuanLyLichChieu cinemaId={cinema_Id} />} />
         </Route>
 
         <Route path="/signup" element={<SignUp />} />
@@ -333,18 +335,7 @@ const App = () => {
 
          
         {/* Projectionist Routes */}
-        <Route
-          path="/projectionist/*"
-          element={
-            <ProtecteEmployeeRoute requiredRole="employee" requiredPosition="Projectionist">
-              <ProjectionistLayout />
-            </ProtecteEmployeeRoute>
-          }
-        >
-          <Route index element={<ProjectionistDashboard />} />
-          <Route path='qlpc' element={<QuanLyPhongChieu cinemaId={cinema_Id} />} />
-          <Route path='qllc' element={<QuanLyLichChieu cinemaId={cinema_Id} />} />
-        </Route>
+  
       </Routes>
 
       {/* CHAT WIDGET - Hiển thị cho employee/manager */}

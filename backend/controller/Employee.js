@@ -221,8 +221,8 @@ export const getEmployeeOnline = async (req,res)=>{
 export const getEmployeeDashboard = async (req, res) => {
   const connection = await dbPool.getConnection();
   try {
-const employee_id = req.user.id;
-    // Validate employee_id
+    const employee_id = req.user.id;
+    
     if (!employee_id || isNaN(employee_id)) {
       return res.status(400).json({ 
         success: false, 
@@ -230,7 +230,7 @@ const employee_id = req.user.id;
       });
     }
 
-    // Kiểm tra nhân viên tồn tại và có role = employee
+    // Kiểm tra nhân viên tồn tại
     const [employeeCheck] = await connection.query(
       'SELECT id, role FROM users WHERE id = ? AND role = "employee"',
       [employee_id]
@@ -244,8 +244,6 @@ const employee_id = req.user.id;
     }
 
     // ========== PHẦN 1: THỐNG KÊ ĐỔN HÀNG ==========
-    
-    // Tổng đơn hàng theo thời gian
     const [ordersStats] = await connection.query(`
       SELECT 
         COUNT(CASE WHEN DATE(order_date) = CURDATE() THEN 1 END) as total_orders_today,
@@ -256,8 +254,6 @@ const employee_id = req.user.id;
     `, [employee_id]);
 
     // ========== PHẦN 2: THỐNG KÊ VÉ ==========
-    
-    // Tổng vé đã bán theo thời gian
     const [ticketsStats] = await connection.query(`
       SELECT 
         COUNT(CASE WHEN DATE(o.order_date) = CURDATE() THEN 1 END) as total_tickets_today,
@@ -269,8 +265,6 @@ const employee_id = req.user.id;
     `, [employee_id]);
 
     // ========== PHẦN 3: THỐNG KÊ DOANH THU ==========
-    
-    // Doanh thu theo thời gian
     const [revenueStats] = await connection.query(`
       SELECT 
         COALESCE(SUM(CASE WHEN DATE(order_date) = CURDATE() THEN total_amount ELSE 0 END), 0) as total_revenue_today,
@@ -281,8 +275,6 @@ const employee_id = req.user.id;
     `, [employee_id]);
 
     // ========== PHẦN 4: THỐNG KÊ CA LÀM VIỆC ==========
-    
-    // Lấy thông tin ca làm việc
     const [shiftsStats] = await connection.query(`
       SELECT 
         COUNT(*) as total_shifts,
@@ -295,58 +287,70 @@ const employee_id = req.user.id;
       WHERE ecc.employee_id = ?
     `, [employee_id]);
 
-    // ========== PHẦN 5: BIỂU ĐỒ - DOANH THU 7 NGÀY GẦN NHẤT ==========
-    
+    // ========== PHẦN 5: BIỂU ĐỒ DOANH THU 7 NGÀY - FIX ==========
     const [revenueChart] = await connection.query(`
       SELECT 
-        DATE(order_date) as date,
-        COUNT(*) as orders,
-        SUM(total_amount) as revenue
-      FROM orders
-      WHERE employee_id = ? 
-        AND status = 'confirmed'
-        AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-      GROUP BY DATE(order_date)
-      ORDER BY date ASC
-    `, [employee_id]);
+        d.date,
+        COUNT(o.order_id) as orders,
+        COALESCE(SUM(o.total_amount), 0) as revenue
+      FROM (
+        SELECT DATE(order_date) as date
+        FROM orders
+        WHERE employee_id = ? 
+          AND status = 'confirmed'
+          AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        GROUP BY DATE(order_date)
+      ) d
+      LEFT JOIN orders o ON DATE(o.order_date) = d.date 
+        AND o.employee_id = ? 
+        AND o.status = 'confirmed'
+      GROUP BY d.date
+      ORDER BY d.date ASC
+    `, [employee_id, employee_id]);
 
-    // ========== PHẦN 6: BIỂU ĐỒ - VÉ THEO TUẦN (4 tuần gần nhất) ==========
-    
+    // ========== PHẦN 6: BIỂU ĐỒ VÉ THEO TUẦN - FIX ==========
     const [ticketsWeeklyChart] = await connection.query(`
       SELECT 
-        CONCAT('Tuần ', WEEK(o.order_date, 1)) as week,
-        COUNT(*) as total_tickets
-      FROM orderticket ot
-      JOIN orders o ON ot.order_id = o.order_id
-      WHERE o.employee_id = ? 
+        w.week_num,
+        COUNT(ot.order_ticket_id) as total_tickets
+      FROM (
+        SELECT DISTINCT WEEK(order_date, 1) as week_num
+        FROM orders
+        WHERE employee_id = ?
+          AND status = 'confirmed'
+          AND order_date >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
+      ) w
+      LEFT JOIN orders o ON WEEK(o.order_date, 1) = w.week_num
+        AND o.employee_id = ?
         AND o.status = 'confirmed'
         AND o.order_date >= DATE_SUB(CURDATE(), INTERVAL 4 WEEK)
-      GROUP BY WEEK(o.order_date, 1)
-      ORDER BY WEEK(o.order_date, 1) ASC
-    `, [employee_id]);
+      LEFT JOIN orderticket ot ON ot.order_id = o.order_id
+      GROUP BY w.week_num
+      ORDER BY w.week_num ASC
+    `, [employee_id, employee_id]);
 
-    // ========== PHẦN 7: TOP 5 PHIM BÁN CHẠY NHẤT ==========
-    
+    // ========== PHẦN 7: TOP 5 PHIM BÁN CHẠY ==========
     const [topMovies] = await connection.query(`
       SELECT 
+        m.id,
         m.title,
         m.poster_path,
         COUNT(ot.order_ticket_id) as tickets_sold,
-        SUM(ot.ticket_price) as revenue
+        COALESCE(SUM(ot.ticket_price), 0) as revenue
       FROM orderticket ot
       JOIN orders o ON ot.order_id = o.order_id
       JOIN showtimes s ON ot.showtime_id = s.id
       JOIN movies m ON s.movie_id = m.id
       WHERE o.employee_id = ? 
         AND o.status = 'confirmed'
+        AND YEAR(o.order_date) = YEAR(CURDATE())
         AND MONTH(o.order_date) = MONTH(CURDATE())
-      GROUP BY m.id
+      GROUP BY m.id, m.title, m.poster_path
       ORDER BY tickets_sold DESC
       LIMIT 5
     `, [employee_id]);
 
     // ========== PHẦN 8: CA LÀM VIỆC SẮP TỚI ==========
-    
     const [upcomingShifts] = await connection.query(`
       SELECT 
         s.shift_date,
@@ -366,19 +370,16 @@ const employee_id = req.user.id;
     `, [employee_id]);
 
     // ========== TÍNH TỶ LỆ HOÀN THÀNH CA ==========
-    
     const shifts = shiftsStats[0];
     const completion_rate = shifts.total_shifts > 0 
       ? ((shifts.completed_shifts / shifts.total_shifts) * 100).toFixed(2)
       : 0;
 
     // ========== TRẢ VỀ KẾT QUẢ ==========
-    
     return res.status(200).json({
       success: true,
       message: "Lấy thống kê dashboard thành công",
       data: {
-        // Thống kê tổng quan
         summary: {
           orders: {
             today: ordersStats[0].total_orders_today,
@@ -404,8 +405,6 @@ const employee_id = req.user.id;
             completion_rate: parseFloat(completion_rate)
           }
         },
-        
-        // Biểu đồ
         charts: {
           revenue_7_days: revenueChart.map(item => ({
             date: item.date,
@@ -413,20 +412,16 @@ const employee_id = req.user.id;
             revenue: parseFloat(item.revenue)
           })),
           tickets_weekly: ticketsWeeklyChart.map(item => ({
-            week: item.week,
+            week: `Tuần ${item.week_num}`,
             tickets: item.total_tickets
           }))
         },
-        
-        // Top phim
         top_movies: topMovies.map(movie => ({
           title: movie.title,
           poster_path: movie.poster_path,
           tickets_sold: movie.tickets_sold,
           revenue: parseFloat(movie.revenue)
         })),
-        
-        // Ca làm việc sắp tới
         upcoming_shifts: upcomingShifts.map(shift => ({
           date: shift.shift_date,
           type: shift.shift_type,
