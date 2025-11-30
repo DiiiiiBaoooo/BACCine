@@ -152,86 +152,78 @@ const fetchNowPlayingMovies = async () => {
   };
 
   // Thêm lịch chiếu mới
-  const handleAddShowtime = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      if (!selectedMovie) {
-        toast.error("Vui lòng chọn một bộ phim");
-        return;
-      }
-      if (!selectedRoom) {
-        toast.error("Vui lòng chọn một phòng chiếu");
-        return;
-      }
-      if (Object.keys(dateTimeSelection).length === 0) {
-        toast.error("Vui lòng chọn ít nhất một ngày và giờ");
-        return;
-      }
+// Thay thế phần handleAddShowtime trong QuanLyLichChieu.jsx
 
-      // Validate that the selected room is Active
-      const selectedRoomData = rooms.find(room => room.id === selectedRoom);
-      if (selectedRoomData && selectedRoomData.status === 'Maintenance') {
-        toast.error("Phòng chiếu đang bảo trì, không thể chọn");
-        return;
-      }
-
-      const showtimes = [];
-      Object.entries(dateTimeSelection).forEach(([date, times]) => {
-        times.forEach((time) => {
-          const startTime = `${date} ${time}`;
-          const startDateTime = new Date(startTime);
-
-          // Convert to UTC+7 (Vietnam time)
-          const vnOffset = 7 * 60; // minutes
-          const localOffset = startDateTime.getTimezoneOffset(); // minutes
-          const diff = (vnOffset + localOffset) * 60 * 1000; // convert to milliseconds
-          const startVN = new Date(startDateTime.getTime() + diff);
-          const endVN = new Date(startVN.getTime() + 2 * 60 * 60 * 1000); // Add 2 hours for end time
-
-          // Format dates to YYYY-MM-DD HH:mm:ss
-          const formatDateTime = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-          };
-
-          showtimes.push({
-            movie_id: selectedMovie,
-            room_id: selectedRoom,
-            start_time: formatDateTime(startVN),
-            end_time: formatDateTime(endVN),
-            status: 'Scheduled', // Default status for new showtimes
-          });
-        });
-      });
-
-      const response = await axios.post("/api/showtimes", showtimes);
-
-      if (response.data.success) {
-        toast.success("Thêm lịch chiếu thành công");
-        setIsModalOpen(false);
-        setSelectedMovie(null);
-        setSelectedRoom(null);
-        setDateTimeSelection({});
-        fetchShowtimes();
-      } else {
-        setError(response.data.message);
-        toast.error(response.data.message);
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Không thể thêm lịch chiếu";
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+const handleAddShowtime = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    if (!selectedMovie) {
+      toast.error("Vui lòng chọn một bộ phim");
+      return;
     }
-  };
+    if (!selectedRoom) {
+      toast.error("Vui lòng chọn một phòng chiếu");
+      return;
+    }
+    if (Object.keys(dateTimeSelection).length === 0) {
+      toast.error("Vui lòng chọn ít nhất một ngày và giờ");
+      return;
+    }
 
+    // Validate that the selected room is Active
+    const selectedRoomData = rooms.find(room => room.id === selectedRoom);
+    if (selectedRoomData && selectedRoomData.status === 'Maintenance') {
+      toast.error("Phòng chiếu đang bảo trì, không thể chọn");
+      return;
+    }
+
+// Trong handleAddShowtime, thay toàn bộ phần tạo showtimes bằng đoạn này:
+const showtimes = [];
+for (const [date, times] of Object.entries(dateTimeSelection)) {
+  for (const time of times) {
+    // Cách đúng 100%: ép rõ đây là giờ Việt Nam (+07:00)
+    const localDateTime = `${date}T${time.padEnd(8, ':00')}`; // 19:30 → 19:30:00
+    const vietnamTime = new Date(localDateTime + '+07:00'); // ép múi giờ VN
+
+    // Format thành chuỗi MySQL hiểu là UTC nhưng thực chất là giờ VN
+    const start_time = vietnamTime.toISOString().slice(0, 19).replace('T', ' ');
+
+    // Tính end_time (ví dụ + runtime phim, ở đây tạm +2h như cũ)
+    const endDateTime = new Date(vietnamTime.getTime() + 2 * 60 * 60 * 1000);
+    const end_time = endDateTime.toISOString().slice(0, 19).replace('T', ' ');
+
+    showtimes.push({
+      movie_id: selectedMovie,
+      room_id: selectedRoom,
+      start_time,    // đúng giờ VN, không lệch
+      end_time,
+      status: 'Scheduled',
+    });
+  }
+}
+
+    const response = await axios.post("/api/showtimes", showtimes);
+
+    if (response.data.success) {
+      toast.success("Thêm lịch chiếu thành công");
+      setIsModalOpen(false);
+      setSelectedMovie(null);
+      setSelectedRoom(null);
+      setDateTimeSelection({});
+      fetchShowtimes();
+    } else {
+      setError(response.data.message);
+      toast.error(response.data.message);
+    }
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || "Không thể thêm lịch chiếu";
+    setError(errorMessage);
+    toast.error(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
   // Mở modal cập nhật
   const openUpdateModal = (showtime) => {
     setSelectedShowtime(showtime);

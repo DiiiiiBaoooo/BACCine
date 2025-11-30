@@ -284,8 +284,8 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
             >
               <option value="" className="bg-gray-800">Tất cả trạng thái</option>
               <option value="AVAILABLE" className="bg-gray-800">Hoạt động</option>
-              <option value="MAINTANCE" className="bg-gray-800">Bảo trì</option>
-              <option value="Closed" className="bg-gray-800">Đóng cửa</option>
+              <option value="MAINTENANCE" className="bg-gray-800">Bảo trì</option>
+              <option value="CLOSED" className="bg-gray-800">Đóng cửa</option>
             </select>
           </div>
           
@@ -331,14 +331,14 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          room.status === 'Active' 
+                          room.status === 'AVAILABLE' 
                             ? 'bg-green-900 text-green-300' 
-                            : room.status === 'Maintenance'
+                            : room.status === 'MAINTENANCE'
                             ? 'bg-yellow-900 text-yellow-300'
                             : 'bg-red-900 text-red-300'
                         }`}>
-                          {room.status === 'Active' ? 'Hoạt động' : 
-                           room.status === 'Maintenance' ? 'Bảo trì' : 'Đóng cửa'}
+                          {room.status === 'AVAILABLE' ? 'Hoạt động' : 
+                           room.status === 'MAINTENANCE' ? 'Bảo trì' : 'Đóng cửa'}
                         </span>
                       </td>
                       
@@ -410,9 +410,9 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
                     onChange={handleNewRoomChange}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Active" className="bg-gray-900">Hoạt động</option>
-                    <option value="Maintenance" className="bg-gray-900">Bảo trì</option>
-                    <option value="Closed" className="bg-gray-900">Đóng cửa</option>
+                    <option value="AVAILABLE" className="bg-gray-900">Hoạt động</option>
+                    <option value="MAINTENANCE" className="bg-gray-900">Bảo trì</option>
+                    <option value="CLOSED" className="bg-gray-900">Đóng cửa</option>
                   </select>
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
@@ -487,9 +487,9 @@ const QuanLyPhongChieu = ({ cinemaId }) => {
                       onChange={handleUpdateChange}
                       className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Active" className="bg-gray-900">Hoạt động</option>
-                      <option value="Maintenance" className="bg-gray-900">Bảo trì</option>
-                      <option value="Closed" className="bg-gray-900">Đóng cửa</option>
+                      <option value="AVAILABLE" className="bg-gray-900">Hoạt động</option>
+                      <option value="MAINTENANCE" className="bg-gray-900">Bảo trì</option>
+                      <option value="CLOSED" className="bg-gray-900">Đóng cửa</option>
                     </select>
                   </div>
                 </div>
