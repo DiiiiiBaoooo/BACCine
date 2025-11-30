@@ -34,7 +34,7 @@ const QuanLyLichChieu = ({ cinemaId }) => {
     const total_showtimes = showtimeList.length;
     const total_ongoing = showtimeList.filter(showtime => showtime.status === 'Ongoing').length;
     const total_scheduled = showtimeList.filter(showtime => showtime.status === 'Scheduled').length;
-    const total_finished = showtimeList.filter(showtime => showtime.status === 'Finished').length;
+    const total_finished = showtimeList.filter(showtime => showtime.status === 'Completed').length;
     const total_cancelled = showtimeList.filter(showtime => showtime.status === 'Cancelled').length;
 
     return {
@@ -479,13 +479,13 @@ const handleAddShowtime = async (e) => {
                             ? 'bg-green-900 text-green-300' 
                             : showtime.status === 'Scheduled'
                             ? 'bg-yellow-900 text-yellow-300'
-                            : showtime.status === 'Finished'
+                            : showtime.status === 'Completed'
                             ? 'bg-red-900 text-red-300'
                             : 'bg-gray-600 text-gray-300'
                         }`}>
                           {showtime.status === 'Ongoing' ? 'Đang diễn ra' : 
                            showtime.status === 'Scheduled' ? 'Đã lên lịch' : 
-                           showtime.status === 'Finished' ? 'Đã kết thúc' : 'Đã hủy'}
+                           showtime.status === 'Completed' ? 'Đã kết thúc' : 'Đã hủy'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -493,14 +493,14 @@ const handleAddShowtime = async (e) => {
                           <button
                             onClick={() => openUpdateModal(showtime)}
                             className="text-blue-400 hover:text-blue-300"
-                            disabled={showtime.status === 'Ongoing' || showtime.status === 'Finished'}
+                            disabled={showtime.status === 'Ongoing' || showtime.status === 'Completed'}
                           >
                             Sửa
                           </button>
                           <button
                             onClick={() => handleDeleteShowtime(showtime.id)}
                             className="text-red-400 hover:text-red-300"
-                            disabled={showtime.status === 'Ongoing' || showtime.status === 'Finished'}
+                            disabled={showtime.status === 'Ongoing' || showtime.status === 'Completed'}
                           >
                             Xóa
                           </button>
@@ -578,26 +578,26 @@ const handleAddShowtime = async (e) => {
                         <div
                           key={room.id}
                           className={`relative p-4 border rounded-lg ${
-                            room.status === 'Maintenance'
+                            room.status === 'MAINTENANCE'
                               ? 'border-gray-600 opacity-50 cursor-not-allowed'
                               : selectedRoom === room.id
                               ? 'border-blue-500 bg-blue-900/50 cursor-pointer'
                               : 'border-gray-600 cursor-pointer'
                           } hover:border-blue-400 transition duration-300`}
                           onClick={() => {
-                            if (room.status !== 'Maintenance') {
+                            if (room.status !== 'MAINTENANCE') {
                               setSelectedRoom(room.id);
                             }
                           }}
                         >
                           <p className="font-medium text-white">{room.name}</p>
                           <p className="text-sm text-gray-400">Sức chứa: {room.capacity} ghế</p>
-                          {room.status === 'Maintenance' && (
+                          {room.status === 'MAINTENANCE' && (
                             <div className="absolute top-2 right-2 flex items-center justify-center bg-red-600 h-6 px-2 rounded">
                               <span className="text-white text-xs">Đang bảo trì</span>
                             </div>
                           )}
-                          {selectedRoom === room.id && room.status !== 'Maintenance' && (
+                          {selectedRoom === room.id && room.status !== 'MAINTENANCE' && (
                             <div className="absolute top-2 right-2 flex items-center justify-center bg-blue-600 h-6 w-6 rounded">
                               <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
                             </div>
@@ -721,7 +721,7 @@ const handleAddShowtime = async (e) => {
                   >
                     <option value="Scheduled" className="bg-gray-900">Đã lên lịch</option>
                     <option value="Ongoing" className="bg-gray-900">Đang diễn ra</option>
-                    <option value="Finished" className="bg-gray-900">Đã kết thúc</option>
+                    <option value="Completed" className="bg-gray-900">Đã kết thúc</option>
                     <option value="Cancelled" className="bg-gray-900">Đã hủy</option>
                   </select>
                 </div>
