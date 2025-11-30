@@ -154,6 +154,8 @@ const fetchNowPlayingMovies = async () => {
   // Thêm lịch chiếu mới
 // Thay thế phần handleAddShowtime trong QuanLyLichChieu.jsx
 
+// Thay thế phần handleAddShowtime trong QuanLyLichChieu.jsx
+
 const handleAddShowtime = async (e) => {
   e.preventDefault();
   setLoading(true);
@@ -178,30 +180,35 @@ const handleAddShowtime = async (e) => {
       return;
     }
 
-// Trong handleAddShowtime, thay toàn bộ phần tạo showtimes bằng đoạn này:
-const showtimes = [];
-for (const [date, times] of Object.entries(dateTimeSelection)) {
-  for (const time of times) {
-    // Cách đúng 100%: ép rõ đây là giờ Việt Nam (+07:00)
-    const localDateTime = `${date}T${time.padEnd(8, ':00')}`; // 19:30 → 19:30:00
-    const vietnamTime = new Date(localDateTime + '+07:00'); // ép múi giờ VN
+    const showtimes = [];
+    Object.entries(dateTimeSelection).forEach(([date, times]) => {
+      times.forEach((time) => {
+        // ✅ GỬI TRỰC TIẾP ĐỊNH DẠNG YYYY-MM-DD HH:mm:ss
+        // Backend sẽ tự hiểu đây là giờ địa phương (UTC+7)
+        const startTime = `${date} ${time}`;
+        
+        // Tính end_time bằng cách thêm 2 giờ
+        const startDate = new Date(`${date}T${time}`);
+        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        
+        // Format end_time
+        const year = endDate.getFullYear();
+        const month = String(endDate.getMonth() + 1).padStart(2, '0');
+        const day = String(endDate.getDate()).padStart(2, '0');
+        const hours = String(endDate.getHours()).padStart(2, '0');
+        const minutes = String(endDate.getMinutes()).padStart(2, '0');
+        const seconds = String(endDate.getSeconds()).padStart(2, '0');
+        const endTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
-    // Format thành chuỗi MySQL hiểu là UTC nhưng thực chất là giờ VN
-    const start_time = vietnamTime.toISOString().slice(0, 19).replace('T', ' ');
-
-    // Tính end_time (ví dụ + runtime phim, ở đây tạm +2h như cũ)
-    const endDateTime = new Date(vietnamTime.getTime() + 2 * 60 * 60 * 1000);
-    const end_time = endDateTime.toISOString().slice(0, 19).replace('T', ' ');
-
-    showtimes.push({
-      movie_id: selectedMovie,
-      room_id: selectedRoom,
-      start_time,    // đúng giờ VN, không lệch
-      end_time,
-      status: 'Scheduled',
+        showtimes.push({
+          movie_id: selectedMovie,
+          room_id: selectedRoom,
+          start_time: startTime,
+          end_time: endTime,
+          status: 'Scheduled',
+        });
+      });
     });
-  }
-}
 
     const response = await axios.post("/api/showtimes", showtimes);
 
