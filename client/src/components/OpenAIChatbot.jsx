@@ -19,7 +19,7 @@ const OpenAIChatbot = ({ currentUser }) => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+  const API_BASE = import.meta.env.VITE_BASE_URL || 'http://localhost:3000';
 
   // Auto scroll to bottom
   useEffect(() => {
