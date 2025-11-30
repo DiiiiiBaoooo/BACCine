@@ -74,6 +74,7 @@ import EventRequest from './pages/manager/EventRequest';
 import MyEvent from './pages/MyEvent';
 import EventQRPayment from './pages/EventQRPayment';
 import MyUuDai from './pages/MyUuDai';
+import OpenAIChatbot from './components/OpenAIChatBot';
 
 // ProtectedRoute component to enforce authentication and role-based access
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -361,15 +362,15 @@ const App = () => {
         />
       )}
 
-      {/* {shouldShowRasaChat && authUser && (
-        <RasaChatbot
-          currentUser={{
-            id: authUser.id || authUser.user_id,
-            name: authUser.name || authUser.full_name || 'User',
-            cinemaId: cinema_Id
-          }}
-        />
-      )} */}
+    {shouldShowRasaChat && authUser && (
+  <OpenAIChatbot
+    currentUser={{
+      id: authUser.id || authUser.user_id,
+      name: authUser.name || authUser.full_name || 'User',
+      cinemaId: cinema_Id
+    }}
+  />
+)}
     </>
   );
 };
