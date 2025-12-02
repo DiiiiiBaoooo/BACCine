@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building, Film, CalendarClock, DollarSign, Users, TrendingUp, Armchair } from 'lucide-react';
+import { Building, Film, CalendarClock, DollarSign, Users, Armchair } from 'lucide-react';
 import axios from 'axios';
 import {
   BarChart,
@@ -36,10 +36,14 @@ const Dashboard = () => {
   const [occupancyByCinema, setOccupancyByCinema] = useState([]);
   const [topMovies, setTopMovies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
         const [
           statsRes,
           revenueCinemaRes,
@@ -58,15 +62,37 @@ const Dashboard = () => {
           axios.get('/api/admin/top-movies'),
         ]);
 
-        setStats(statsRes.data.stats);
-        setRevenueByCinema(revenueCinemaRes.data.data);
-        setMonthlyRevenue(monthlyRes.data.data);
-        setShowtimesByMovie(showtimesMovieRes.data.data);
-        setShowtimesByCinema(showtimesCinemaRes.data.data);
-        setOccupancyByCinema(occupancyRes.data.data);
-        setTopMovies(topMoviesRes.data.data);
+        // ✅ Kiểm tra và set dữ liệu an toàn
+        if (statsRes?.data?.stats) {
+          setStats(statsRes.data.stats);
+        }
+        
+        if (revenueCinemaRes?.data?.data && Array.isArray(revenueCinemaRes.data.data)) {
+          setRevenueByCinema(revenueCinemaRes.data.data);
+        }
+        
+        if (monthlyRes?.data?.data && Array.isArray(monthlyRes.data.data)) {
+          setMonthlyRevenue(monthlyRes.data.data);
+        }
+        
+        if (showtimesMovieRes?.data?.data && Array.isArray(showtimesMovieRes.data.data)) {
+          setShowtimesByMovie(showtimesMovieRes.data.data);
+        }
+        
+        if (showtimesCinemaRes?.data?.data && Array.isArray(showtimesCinemaRes.data.data)) {
+          setShowtimesByCinema(showtimesCinemaRes.data.data);
+        }
+        
+        if (occupancyRes?.data?.data && Array.isArray(occupancyRes.data.data)) {
+          setOccupancyByCinema(occupancyRes.data.data);
+        }
+        
+        if (topMoviesRes?.data?.data && Array.isArray(topMoviesRes.data.data)) {
+          setTopMovies(topMoviesRes.data.data);
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
       } finally {
         setLoading(false);
       }
@@ -77,20 +103,45 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex flex-col justify-center items-center h-screen bg-gray-950">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <div className="text-white text-xl">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen bg-gray-950">
+        <div className="text-red-400 text-xl mb-4">⚠️ {error}</div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Tải lại trang
+        </button>
       </div>
     );
   }
 
   // Stats cards
   const statItems = [
-    { title: 'Tổng số rạp', value: stats.totalCinemas, icon: Building, color: 'bg-blue-500' },
-    { title: 'Tổng phim đã chiếu', value: stats.totalMovies, icon: Film, color: 'bg-purple-500' },
-    { title: 'Tổng suất chiếu', value: stats.totalShowtimes, icon: CalendarClock, color: 'bg-green-500' },
-    { title: 'Tổng doanh thu', value: `${Number(stats.totalRevenue).toLocaleString()}đ`, icon: DollarSign, color: 'bg-yellow-500' },
-    { title: 'Tổng nhân viên', value: stats.totalEmployees, icon: Users, color: 'bg-red-500' },
-    { title: 'Tỷ lệ lấp ghế', value: `${stats.occupancyRate}%`, icon: Armchair, color: 'bg-indigo-500' },
+    { title: 'Tổng số rạp', value: stats.totalCinemas || 0, icon: Building, color: 'bg-blue-500' },
+    { title: 'Tổng phim đã chiếu', value: stats.totalMovies || 0, icon: Film, color: 'bg-purple-500' },
+    { title: 'Tổng suất chiếu', value: stats.totalShowtimes || 0, icon: CalendarClock, color: 'bg-green-500' },
+    { 
+      title: 'Tổng doanh thu', 
+      value: `${Number(stats.totalRevenue || 0).toLocaleString()}đ`, 
+      icon: DollarSign, 
+      color: 'bg-yellow-500' 
+    },
+    { title: 'Tổng nhân viên', value: stats.totalEmployees || 0, icon: Users, color: 'bg-red-500' },
+    { 
+      title: 'Tỷ lệ lấp ghế', 
+      value: `${stats.occupancyRate || 0}%`, 
+      icon: Armchair, 
+      color: 'bg-indigo-500' 
+    },
   ];
 
   // Colors for charts
@@ -144,111 +195,154 @@ const Dashboard = () => {
         {/* Doanh thu theo rạp */}
         <div className="bg-gray-900 text-white rounded-2xl shadow-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Doanh thu theo rạp</h2>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={revenueByCinema}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="cinema_name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ color: '#fff' }} />
-              <Bar dataKey="revenue" fill="#4f46e5" name="Doanh thu (VNĐ)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {revenueByCinema.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={revenueByCinema}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="cinema_name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Bar dataKey="revenue" fill="#4f46e5" name="Doanh thu (VNĐ)" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              Không có dữ liệu
+            </div>
+          )}
         </div>
 
         {/* Doanh thu theo tháng */}
         <div className="bg-gray-900 text-white rounded-2xl shadow-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Doanh thu theo tháng</h2>
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={monthlyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ color: '#fff' }} />
-              <Line type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={3} name="Doanh thu (VNĐ)" />
-            </LineChart>
-          </ResponsiveContainer>
+          {monthlyRevenue.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={monthlyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="month" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Line type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={3} name="Doanh thu (VNĐ)" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              Không có dữ liệu
+            </div>
+          )}
         </div>
 
         {/* Suất chiếu theo phim */}
         <div className="bg-gray-900 text-white rounded-2xl shadow-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Tổng suất chiếu theo phim</h2>
-          <ResponsiveContainer width="100%" height={320}>
-            <PieChart>
-              <Pie
-                data={showtimesByMovie}
-                dataKey="total_showtimes"
-                nameKey="movie_title"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                label={(entry) => `${entry.movie_title}: ${entry.total_showtimes}`}
-              >
-                {showtimesByMovie.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          {showtimesByMovie.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie
+                  data={showtimesByMovie}
+                  dataKey="total_showtimes"
+                  nameKey="movie_title"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={(entry) => `${entry.movie_title}: ${entry.total_showtimes}`}
+                >
+                  {showtimesByMovie.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              Không có dữ liệu
+            </div>
+          )}
         </div>
 
         {/* Suất chiếu theo rạp */}
         <div className="bg-gray-900 text-white rounded-2xl shadow-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Suất chiếu theo rạp</h2>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={showtimesByCinema}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="cinema_name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ color: '#fff' }} />
-              <Bar dataKey="scheduled" fill={STATUS_COLORS.scheduled} name="Scheduled" stackId="a" />
-              <Bar dataKey="ongoing" fill={STATUS_COLORS.ongoing} name="Ongoing" stackId="a" />
-              <Bar dataKey="completed" fill={STATUS_COLORS.completed} name="Completed" stackId="a" />
-              <Bar dataKey="cancelled" fill={STATUS_COLORS.cancelled} name="Cancelled" stackId="a" />
-            </BarChart>
-          </ResponsiveContainer>
+          {showtimesByCinema.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={showtimesByCinema}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="cinema_name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Bar dataKey="scheduled" fill={STATUS_COLORS.scheduled} name="Scheduled" stackId="a" />
+                <Bar dataKey="ongoing" fill={STATUS_COLORS.ongoing} name="Ongoing" stackId="a" />
+                <Bar dataKey="completed" fill={STATUS_COLORS.completed} name="Completed" stackId="a" />
+                <Bar dataKey="cancelled" fill={STATUS_COLORS.cancelled} name="Cancelled" stackId="a" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              Không có dữ liệu
+            </div>
+          )}
         </div>
 
         {/* Tỷ lệ lấp đầy ghế */}
         <div className="bg-gray-900 text-white rounded-2xl shadow-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Tỷ lệ lấp đầy ghế theo rạp</h2>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={occupancyByCinema}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="cinema_name" stroke="#9ca3af" />
-              <YAxis stroke="#9ca3af" domain={[0, 100]} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ color: '#fff' }} />
-              <Bar dataKey="occupancy_rate" fill="#a855f7" name="Tỷ lệ lấp đầy (%)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {occupancyByCinema.length > 0 ? (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={occupancyByCinema}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="cinema_name" stroke="#9ca3af" />
+                <YAxis stroke="#9ca3af" domain={[0, 100]} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ color: '#fff' }} />
+                <Bar dataKey="occupancy_rate" fill="#a855f7" name="Tỷ lệ lấp đầy (%)" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500">
+              Không có dữ liệu
+            </div>
+          )}
         </div>
 
         {/* Top phim */}
         <div className="bg-gray-900 text-white rounded-2xl shadow-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Top 5 phim doanh thu cao</h2>
           <div className="space-y-3 max-h-80 overflow-y-auto">
-            {topMovies.map((movie, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
-                <div className="w-12 h-16 bg-gray-700 rounded overflow-hidden flex-shrink-0">
-                  {movie.poster_path ? (
-                    <img src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`} alt={movie.movie_title} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
-                  )}
+            {topMovies.length > 0 ? (
+              topMovies.map((movie, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition">
+                  <div className="w-12 h-16 bg-gray-700 rounded overflow-hidden flex-shrink-0">
+                    {movie.poster_path ? (
+                      <img 
+                        src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`} 
+                        alt={movie.movie_title} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/placeholder-poster.jpg';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{movie.movie_title}</p>
+                    <p className="text-xs text-gray-400">{movie.total_orders} đơn hàng</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold text-green-400">{Number(movie.revenue).toLocaleString()}đ</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{movie.movie_title}</p>
-                  <p className="text-xs text-gray-400">{movie.total_orders} đơn hàng</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-green-400">{Number(movie.revenue).toLocaleString()}đ</p>
-                </div>
+              ))
+            ) : (
+              <div className="h-60 flex items-center justify-center text-gray-500">
+                Không có dữ liệu
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
