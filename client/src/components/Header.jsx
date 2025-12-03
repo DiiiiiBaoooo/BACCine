@@ -122,6 +122,12 @@ const Header = () => {
                     >
                      Sự kiện của tôi
                     </Link>
+                     <Link
+                      to="/uudai"
+                      className="block  px-6 py-3 text-white hover:bg-white/10 hover:text-red-400 transition-all duration-200  hover:pl-8"
+                    >
+                     Ưu đãi
+                    </Link>
                     <Link
                       to="/tickets"
                       className="block px-6 py-3 text-white hover:bg-white/10 hover:text-red-400 transition-all duration-200 hover:pl-8"
