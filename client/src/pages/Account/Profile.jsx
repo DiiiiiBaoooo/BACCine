@@ -12,6 +12,7 @@ const Profile = () => {
 
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [formState, setFormState] = useState({
     name: authUser?.name || '',
     phone: authUser?.phone || '',
@@ -48,27 +49,50 @@ const Profile = () => {
     onboardingMutation(formState);
   };
 
+  // Load provinces on mount
   useEffect(() => {
     axios
-      .get('https://provinces.open-api.vn/api/v1/p/')
+      .get('https://provinces.open-api.vn/api/p/')
       .then((res) => setProvinces(res.data))
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        toast.error('Không thể tải danh sách tỉnh/thành phố');
+      });
   }, []);
 
+  // Load districts when province changes
   useEffect(() => {
     if (formState.province_code) {
+      setLoadingDistricts(true);
       axios
-        .get(`https://provinces.open-api.vn/api/v1/d/?p=${formState.province_code}`)
-        .then((res) => setDistricts(res.data))
-        .catch((err) => console.error(err));
+        .get(`https://provinces.open-api.vn/api/p/${formState.province_code}?depth=2`)
+        .then((res) => {
+          setDistricts(res.data.districts || []);
+          setLoadingDistricts(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setDistricts([]);
+          setLoadingDistricts(false);
+          toast.error('Không thể tải danh sách quận/huyện');
+        });
     } else {
       setDistricts([]);
     }
   }, [formState.province_code]);
 
+  const handleProvinceChange = (e) => {
+    const newProvinceCode = e.target.value;
+    setFormState({
+      ...formState,
+      province_code: newProvinceCode,
+      district_code: '', // Reset district khi đổi tỉnh
+    });
+  };
+
   const handleRandomAvatar = () => {
-    const seed = Math.random().toString(36).substring(2, 10);
-    const randomAvatar = `https://robohash.org/${seed}.png`;
+    const seed = Math.floor(Math.random() * 99) + 1;
+    const randomAvatar = `https://avatar.iran.liara.run/public/${seed}`;
     setFormState({ ...formState, profilePicture: randomAvatar });
     toast.success('Đã tạo avatar ngẫu nhiên!');
   };
@@ -198,9 +222,7 @@ const Profile = () => {
                     <div className="relative">
                       <select
                         value={formState.province_code}
-                        onChange={(e) =>
-                          setFormState({ ...formState, province_code: e.target.value, district_code: '' })
-                        }
+                        onChange={handleProvinceChange}
                         className="w-full bg-black/50 text-white border border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/30 p-4 rounded-xl focus:outline-none transition-all duration-200 appearance-none cursor-pointer"
                       >
                         <option value="">Chọn Tỉnh/Thành phố</option>
@@ -221,18 +243,37 @@ const Profile = () => {
                           setFormState({ ...formState, district_code: e.target.value })
                         }
                         className="w-full bg-black/50 text-white border border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/30 p-4 rounded-xl focus:outline-none transition-all duration-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!formState.province_code}
+                        disabled={!formState.province_code || loadingDistricts}
                       >
-                        <option value="">Chọn Quận/Huyện</option>
+                        <option value="">
+                          {loadingDistricts 
+                            ? 'Đang tải...' 
+                            : !formState.province_code 
+                              ? 'Vui lòng chọn tỉnh trước'
+                              : 'Chọn Quận/Huyện'
+                          }
+                        </option>
                         {districts.map((d) => (
                           <option key={d.code} value={d.code} className="bg-gray-900">
                             {d.name}
                           </option>
                         ))}
                       </select>
-                      <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                      {loadingDistricts ? (
+                        <LoaderIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none animate-spin" />
+                      ) : (
+                        <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                      )}
                     </div>
                   </div>
+
+                  {/* Helper text */}
+                  {!formState.province_code && (
+                    <p className="text-xs text-yellow-500 flex items-center gap-1">
+                      <span>⚠️</span>
+                      Vui lòng chọn Tỉnh/Thành phố trước để hiển thị danh sách Quận/Huyện
+                    </p>
+                  )}
                 </div>
 
                 {/* Submit Button */}

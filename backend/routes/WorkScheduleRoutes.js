@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddWorkScheduleInCine, checkFaceDescriptor, faceCheckin, faceCheckout, getWorkScheduleInCine, getWorkScheduleofEmployee, registerFaceDescriptor, UpdateWorkScheduleInCine } from '../controller/WorkSchedule.js';
+import { AddWorkScheduleInCine, checkFaceDescriptor, exportAttendanceReport, faceCheckin, faceCheckout, getAttendanceDetail, getAttendanceHistory, getAttendanceStats, getWorkScheduleInCine, getWorkScheduleofEmployee, registerFaceDescriptor, UpdateWorkScheduleInCine } from '../controller/WorkSchedule.js';
 
 const WorkScheduleRoute = express.Router();
 
@@ -7,7 +7,10 @@ const WorkScheduleRoute = express.Router();
 WorkScheduleRoute.get('/:cinemaClusterId', getWorkScheduleInCine);
 WorkScheduleRoute.get('/:cinemaClusterId/:employeeId', getWorkScheduleofEmployee);
 WorkScheduleRoute.get('/employee/face/check/:employeeId', checkFaceDescriptor);
-
+WorkScheduleRoute.get('/attendance/history/:cinemaClusterId', getAttendanceHistory);
+WorkScheduleRoute.get('/attendance/stats/:cinemaClusterId', getAttendanceStats);
+WorkScheduleRoute.get('/attendance/detail/:scheduleId', getAttendanceDetail);
+WorkScheduleRoute.get('/attendance/export/:cinemaClusterId', exportAttendanceReport);
 
 // Add or update schedule entries for a cinema cluster
 WorkScheduleRoute.post('/:cinemaClusterId', AddWorkScheduleInCine);

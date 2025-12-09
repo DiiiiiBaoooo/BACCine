@@ -73,6 +73,7 @@ const EmployeeDashboard = () => {
     { name: 'Đã xác nhận', value: summary.shifts.confirmed, color: '#3b82f6' },
     { name: 'Chờ xác nhận', value: summary.shifts.pending, color: '#f59e0b' },
     { name: 'Đã hủy', value: summary.shifts.cancelled, color: '#ef4444' },
+    { name: 'Vắng mặt', value: summary.shifts.absent, color: '#6b7280' },
   ].filter(item => item.value > 0);
 
   return (
@@ -220,12 +221,13 @@ const EmployeeDashboard = () => {
       const confirmed = Number(s.confirmed) || 0;
       const pending   = Number(s.pending)   || 0;
       const cancelled = Number(s.cancelled) || 0;
-
+      const absent = Number(s.absent) || 0;
       const pieData = [
         { name: 'Hoàn thành',    value: completed, color: '#10b981' },
         { name: 'Đang trong ca',   value: confirmed, color: '#3b82f6' },
         { name: 'Chưa chấm công',  value: pending,   color: '#f59e0b' },
         { name: 'Đã hủy',        value: cancelled, color: '#ef4444' },
+        { name: 'Vắng mặt',      value: absent,    color: '#6b7280' },
       ].filter(item => item.value > 0);
 
       return pieData.length === 0 ? (

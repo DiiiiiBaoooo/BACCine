@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { Plus, Upload, X, Play, Search, Film } from "lucide-react"
+import { toast } from "react-toastify"
 
 const QuanLyThuVienPhim = () => {
   const [videos, setVideos] = useState([])
@@ -10,6 +11,7 @@ const QuanLyThuVienPhim = () => {
   const [previewImage, setPreviewImage] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState("")
   const [formData, setFormData] = useState({
     videoTitle: "",
     folderName: "",
@@ -17,7 +19,7 @@ const QuanLyThuVienPhim = () => {
     videoFile: null,
     price: "",
     rentalDuration: "",
-    isFree: false, // Mới: Miễn phí
+    isFree: false,
   })
   const navigate = useNavigate()
 
@@ -27,7 +29,7 @@ const QuanLyThuVienPhim = () => {
         const res = await axios.get("/api/video")
         setVideos(res.data)
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách phim:", error)
+        toast.error(error.response?.data?.message || "Lỗi khi tải thư viện phim")
       }
     }
     fetchVideos()
@@ -36,6 +38,7 @@ const QuanLyThuVienPhim = () => {
   const filteredVideos = videos.filter((video) =>
     video.video_title.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData((prev) => ({
@@ -73,12 +76,13 @@ const QuanLyThuVienPhim = () => {
     e.preventDefault()
 
     if (!formData.videoTitle || !formData.folderName || !formData.posterImage || !formData.videoFile) {
-      alert("Vui lòng điền đầy đủ thông tin và chọn cả ảnh poster và file video")
+      toast.error("Vui lòng điền đầy đủ thông tin và chọn cả ảnh poster và file video")
       return
     }
 
     setIsLoading(true)
     setUploadProgress(0)
+    setProgressMessage("Đang chuẩn bị...")
 
     try {
       const uploadFormData = new FormData()
@@ -90,51 +94,83 @@ const QuanLyThuVienPhim = () => {
       uploadFormData.append("price", formData.price || "0")
       uploadFormData.append("rentalDuration", formData.isFree ? "NULL" : (formData.rentalDuration || "NULL"))
 
-      const res = await axios.post("/api/video", uploadFormData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-          setUploadProgress(percent)
-        }
+      // Sử dụng fetch thay vì axios để xử lý SSE
+       const baseURL = axios.defaults.VITE_BASE_URL || "http://localhost:3000"
+      const response = await fetch(`${baseURL}/api/video`, {
+        method: "POST",
+        body: uploadFormData,
       })
 
-      if (res.status === 200) {
-        alert("Thêm phim thành công!")
-        setFormData({
-          videoTitle: "",
-          folderName: "",
-          posterImage: null,
-          videoFile: null,
-          price: "",
-          rentalDuration: "",
-          isFree: false,
-        })
-        setPreviewImage(null)
-        setIsModalOpen(false)
-        setUploadProgress(0)
-        const fetchRes = await axios.get("/api/video")
-        setVideos(fetchRes.data)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6))
+            
+            if (data.status === 'success') {
+              // Upload thành công
+              toast.success("Thêm phim thành công!")
+              setFormData({
+                videoTitle: "",
+                folderName: "",
+                posterImage: null,
+                videoFile: null,
+                price: "",
+                rentalDuration: "",
+                isFree: false,
+              })
+              setPreviewImage(null)
+              setIsModalOpen(false)
+              setUploadProgress(0)
+              setProgressMessage("")
+              
+              // Refresh danh sách phim
+              const fetchRes = await axios.get("/api/video")
+              setVideos(fetchRes.data)
+            } else if (data.stage === 'error') {
+              // Có lỗi xảy ra
+              toast.error(data.message || "Lỗi khi thêm phim")
+            } else {
+              // Cập nhật progress
+              setUploadProgress(data.percent)
+              setProgressMessage(data.message)
+            }
+          }
+        }
       }
     } catch (error) {
-      alert(error.response?.data?.message || "Lỗi khi thêm phim")
+      console.error("Error:", error)
+      toast.error("Lỗi khi thêm phim")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleWatch = (folderName) => {
-    navigate(`/xem-phim/${folderName}`)
+  const handleWatch = (video_id) => {
+    navigate(`/xem-phim/${video_id}`)
   }
 
   const closeModal = () => {
     setIsModalOpen(false)
     setPreviewImage(null)
     setUploadProgress(0)
+    setProgressMessage("")
     setFormData({
       videoTitle: "",
       folderName: "",
       posterImage: null,
       videoFile: null,
+      price: "",
+      rentalDuration: "",
+      isFree: false,
     })
   }
 
@@ -220,15 +256,13 @@ const QuanLyThuVienPhim = () => {
                   </h2>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleWatch(video.s3_folder_name)}
+                      onClick={() => handleWatch(video.video_id)}
                       className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-xs py-1 rounded flex items-center justify-center gap-1"
                     >
                       <Play size={14} />
                       Xem
                     </button>
-                    <button
-                      className="px-3 border border-slate-600 hover:bg-slate-700 text-slate-300 bg-transparent rounded"
-                    >
+                    <button className="px-3 border border-slate-600 hover:bg-slate-700 text-slate-300 bg-transparent rounded">
                       <X size={14} />
                     </button>
                   </div>
@@ -331,11 +365,7 @@ const QuanLyThuVienPhim = () => {
                   {/* Preview ảnh */}
                   {previewImage && (
                     <div className="mt-4 relative aspect-video rounded-lg overflow-hidden bg-slate-700 border border-slate-600">
-                      <img
-                        src={previewImage}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
@@ -366,67 +396,82 @@ const QuanLyThuVienPhim = () => {
                     </label>
                   </div>
                 </div>
-{/* === GIÁ VÀ LOẠI PHIM === */}
-<div className="space-y-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
-  <div className="flex items-center gap-3">
-    <input
-      type="checkbox"
-      id="isFree"
-      name="isFree"
-      checked={formData.isFree}
-      onChange={handleInputChange}
-      disabled={isLoading}
-      className="w-5 h-5 text-cyan-500 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500"
-    />
-    <label htmlFor="isFree" className="text-sm font-medium text-slate-300">
-      Miễn phí
-    </label>
-  </div>
 
-  {!formData.isFree && (
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <label className="block text-xs font-medium text-slate-300 mb-1">Giá (VND)</label>
-        <input
-          type="number"
-          name="price"
-          value={formData.price}
-          onChange={handleInputChange}
-          placeholder="50000"
-          min="0"
-          disabled={isLoading}
-          className="w-full bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 rounded-lg py-2 px-3 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-slate-300 mb-1">Thời gian thuê (ngày)</label>
-        <input
-          type="number"
-          name="rentalDuration"
-          value={formData.rentalDuration}
-          onChange={handleInputChange}
-          placeholder="7"
-          min="1"
-          disabled={isLoading}
-          className="w-full bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 rounded-lg py-2 px-3 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none"
-        />
-        <p className="text-xs text-slate-500 mt-1">Để trống = MUA vĩnh viễn</p>
-      </div>
-    </div>
-  )}
-</div>
-                {/* Progress Bar */}
-                {isLoading && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-slate-400">
-                      <span>Đang xử lý...</span>
-                      <span>{uploadProgress}%</span>
+                {/* Giá và loại phim */}
+                <div className="space-y-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="isFree"
+                      name="isFree"
+                      checked={formData.isFree}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                      className="w-5 h-5 text-cyan-500 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500"
+                    />
+                    <label htmlFor="isFree" className="text-sm font-medium text-slate-300">
+                      Miễn phí
+                    </label>
+                  </div>
+
+                  {!formData.isFree && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">Giá (VND)</label>
+                        <input
+                          type="number"
+                          name="price"
+                          value={formData.price}
+                          onChange={handleInputChange}
+                          placeholder="50000"
+                          min="0"
+                          disabled={isLoading}
+                          className="w-full bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 rounded-lg py-2 px-3 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">Thời gian thuê (ngày)</label>
+                        <input
+                          type="number"
+                          name="rentalDuration"
+                          value={formData.rentalDuration}
+                          onChange={handleInputChange}
+                          placeholder="7"
+                          min="1"
+                          disabled={isLoading}
+                          className="w-full bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 rounded-lg py-2 px-3 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Để trống = MUA vĩnh viễn</p>
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                  )}
+                </div>
+
+                {/* Progress Bar - Hiển thị chi tiết hơn */}
+                {isLoading && (
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>{progressMessage}</span>
+                      <span className="font-semibold">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
                       <div 
-                        className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full transition-all duration-300"
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 h-full transition-all duration-300 flex items-center justify-end"
                         style={{ width: `${uploadProgress}%` }}
-                      />
+                      >
+                        {uploadProgress > 10 && (
+                          <span className="text-[10px] font-bold text-white pr-2">
+                            {uploadProgress}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Các giai đoạn */}
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span className={uploadProgress >= 20 ? 'text-cyan-400' : ''}>Poster</span>
+                      <span className={uploadProgress >= 55 ? 'text-cyan-400' : ''}>Convert</span>
+                      <span className={uploadProgress >= 85 ? 'text-cyan-400' : ''}>Upload S3</span>
+                      <span className={uploadProgress >= 100 ? 'text-green-400' : ''}>Hoàn thành</span>
                     </div>
                   </div>
                 )}

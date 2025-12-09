@@ -111,10 +111,10 @@ WeeklySchedule.propTypes = {
           position: PropTypes.string.isRequired,
           startTime: PropTypes.string,
           endTime: PropTypes.string,
-          status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled','completed']).isRequired,
+          status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled','completed','absent']).isRequired,
           scheduleId: PropTypes.string,
         })
-      ).isRequired,
+      ).isRequired, 
     })
   ).isRequired,
   onDrop: PropTypes.func.isRequired,

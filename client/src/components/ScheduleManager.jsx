@@ -248,51 +248,56 @@ const ScheduleManager = ({ cinemaClusterId }) => {
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
-  const handleSaveSchedule = async () => {
-    if (!cinemaClusterId) {
-      setError('cinemaClusterId is required to save schedule');
-      return;
-    }
-    try {
-      setLoading(true);
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      const payload = schedule.flatMap((entry) =>
-        entry.employees.map((employee) => {
-          if (!dateRegex.test(entry.date)) {
-            throw new Error(`Invalid shift_date format: ${entry.date}. Use YYYY-MM-DD`);
-          }
-          if (!isDateInWeekRange(entry.date)) {
-            throw new Error(`shift_date out of week range: ${entry.date}`);
-          }
-          return {
+const handleSaveSchedule = async () => {
+  if (!cinemaClusterId) {
+    setError('cinemaClusterId is required');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // CHỈ LẤY NHỮNG NHÂN VIÊN CHƯA CÓ scheduleId → tức là mới thêm hoặc kéo thả
+    const newSchedules = schedule
+      .flatMap((entry) =>
+        entry.employees
+          .filter((emp) => !emp.scheduleId) // ← CHỈ LẤY MỚI
+          .map((employee) => ({
             employee_id: employee.id,
             cinema_cluster_id: cinemaClusterId.toString(),
             shift_date: entry.date,
             shift_type: entry.shift,
-            status: employee.status,
-            start_time: employee.startTime || null,
-            end_time: employee.endTime || null,
-            employee_cinema_cluster_id: employee.employee_cinema_cluster_id || null,
-          };
-        })
+            status: 'pending',        // ← luôn là pending khi tạo mới
+            start_time: null,
+            end_time: null,
+          }))
       );
 
-      if (payload.length === 0) {
-        throw new Error('Không có lịch làm việc để lưu');
-      }
-
-      const response = await axios.post(`${API_BASE_URL}/schedule/${cinemaClusterId}`, payload);
-      if (response.status === 200) {
-        alert('Lịch làm việc đã được lưu!');
-        fetchSchedule();
-      }
-    } catch (error) {
-      console.error('Error saving schedule:', error);
-      setError(error.response?.data?.error || error.message || 'Có lỗi xảy ra khi lưu lịch!');
-    } finally {
-      setLoading(false);
+    if (newSchedules.length === 0) {
+      alert('Không có lịch mới để lưu!');
+      return;
     }
-  };
+
+    console.log('Đang lưu lịch mới:', newSchedules); // debug xem có đúng không
+
+    const response = await axios.post(
+      `${API_BASE_URL}/schedule/${cinemaClusterId}`,
+      newSchedules
+    );
+
+    if (response.status === 200) {
+      alert('Lưu lịch thành công! Chỉ các lịch mới được thêm.');
+      fetchSchedule(); // refresh lại từ server → sẽ có scheduleId mới
+    }
+  } catch (error) {
+    console.error('Lỗi lưu lịch:', error);
+    const msg = error.response?.data?.error || error.message || 'Lưu thất bại';
+    setError(msg);
+    alert(msg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!cinemaClusterId) {
     return (

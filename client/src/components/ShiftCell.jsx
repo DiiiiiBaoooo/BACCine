@@ -211,7 +211,7 @@ ShiftCell.propTypes = {
       position: PropTypes.string.isRequired,
       startTime: PropTypes.string,
       endTime: PropTypes.string,
-      status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled']).isRequired,
+      status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled','absent','completed']).isRequired,
       scheduleId: PropTypes.string,
     })
   ).isRequired,

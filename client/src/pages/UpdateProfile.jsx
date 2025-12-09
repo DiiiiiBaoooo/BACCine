@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import useAuthUser from '../hooks/useAuthUser';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
@@ -22,35 +22,63 @@ const UpdateProfile = () => {
   const { mutate: onboardingMutation, isPending } = useMutation({
     mutationFn: completeOnboarding,
     onSuccess: () => {
-      toast.success('Profile updated successfully 🎉');
+      toast.success('Cập nhật thông tin thành công 🎉');
       queryClient.invalidateQueries({ queryKey: ['authUser'] });
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Update failed');
+      toast.error(error.response?.data?.message || 'Cập nhật thất bại');
     },
   });
- // Lấy danh sách tỉnh/thành
- useEffect(() => {
-  axios
-    .get('https://provinces.open-api.vn/api/v1/p/')
-    .then((res) => setProvinces(res.data))
-    .catch((err) => console.error(err));
-}, []);
 
-// Lấy danh sách quận/huyện theo province_code
-useEffect(() => {
-  if (formState.province_code) {
+  // Lấy danh sách tỉnh/thành
+  useEffect(() => {
     axios
-      .get(`https://provinces.open-api.vn/api/v1/d/?p=${formState.province_code}`)
-      .then((res) => setDistricts(res.data))
-      .catch((err) => console.error(err));
-  } else {
-    setDistricts([]);
-  }
-}, [formState.province_code]);
+      .get('https://provinces.open-api.vn/api/p/')
+      .then((res) => setProvinces(res.data))
+      .catch((err) => {
+        console.error(err);
+        toast.error('Không thể tải danh sách tỉnh/thành phố');
+      });
+  }, []);
+
+  // Lấy danh sách quận/huyện theo province_code
+  useEffect(() => {
+    if (formState.province_code) {
+      axios
+        .get(`https://provinces.open-api.vn/api/p/${formState.province_code}?depth=2`)
+        .then((res) => {
+          setDistricts(res.data.districts || []);
+        })
+        .catch((err) => {
+          console.error(err);
+          toast.error('Không thể tải danh sách quận/huyện');
+        });
+    } else {
+      setDistricts([]);
+    }
+  }, [formState.province_code]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Validate
+    if (!formState.name.trim()) {
+      toast.error('Vui lòng nhập họ tên');
+      return;
+    }
+    if (!formState.phone.trim()) {
+      toast.error('Vui lòng nhập số điện thoại');
+      return;
+    }
+    if (!formState.province_code) {
+      toast.error('Vui lòng chọn tỉnh/thành phố');
+      return;
+    }
+    if (!formState.district_code) {
+      toast.error('Vui lòng chọn quận/huyện');
+      return;
+    }
+
     onboardingMutation(formState);
   };
 
@@ -58,7 +86,17 @@ useEffect(() => {
     const seed = Math.random().toString(36).substring(2, 10);
     const randomAvatar = `https://robohash.org/${seed}.png`;
     setFormState({ ...formState, profilePicture: randomAvatar });
-    toast.success('Random profile picture generated!');
+    toast.success('Đã tạo avatar ngẫu nhiên!');
+  };
+
+  const handleProvinceChange = (e) => {
+    const newProvinceCode = e.target.value;
+    setFormState({
+      ...formState,
+      province_code: newProvinceCode,
+      district_code: '', // Reset district khi đổi province
+    });
+    setDistricts([]); // Clear districts cũ
   };
 
   return (
@@ -98,99 +136,87 @@ useEffect(() => {
 
             {/* Họ tên */}
             <div className="form-control relative">
-              <label
-                className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200
-                  pointer-events-none transform scale-75 origin-top-left"
-              >
+              <label className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200 pointer-events-none transform scale-75 origin-top-left">
                 Họ và tên
               </label>
               <input
                 type="text"
                 value={formState.name}
                 onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                className="input input-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50
-                  placeholder-transparent p-3 rounded-lg focus:outline-none transition-all duration-200"
+                className="input input-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 placeholder-transparent p-3 rounded-lg focus:outline-none transition-all duration-200"
                 placeholder="Nhập họ và tên"
+                required
               />
             </div>
 
             {/* Số điện thoại */}
             <div className="form-control relative">
-              <label
-                className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200
-                  pointer-events-none transform scale-75 origin-top-left"
-              >
+              <label className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200 pointer-events-none transform scale-75 origin-top-left">
                 Số điện thoại
               </label>
               <input
-                type="text"
+                type="tel"
                 value={formState.phone}
                 onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
-                className="input input-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50
-                  placeholder-transparent p-3 rounded-lg focus:outline-none transition-all duration-200"
+                className="input input-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 placeholder-transparent p-3 rounded-lg focus:outline-none transition-all duration-200"
                 placeholder="Nhập số điện thoại"
+                required
               />
             </div>
 
             {/* Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Province */}
-                  <div className="form-control relative">
-                    <label
-                      className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200
-                        pointer-events-none transform scale-75 origin-top-left"
-                    >
-                      Tỉnh/Thành phố
-                    </label>
-                    <select
-                      value={formState.province_code}
-                      onChange={(e) =>
-                        setFormState({ ...formState, province_code: e.target.value, district_code: '' })
-                      }
-                      className="select select-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50
-                        rounded-lg p-3 appearance-none transition-all duration-200"
-                    >
-                      <option value="" className="text-gray-500">Chọn Tỉnh/Thành phố</option>
-                      {provinces.map((p) => (
-                        <option key={p.code} value={p.code} className="text-white">
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              {/* Province */}
+              <div className="form-control relative">
+                <label className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200 pointer-events-none transform scale-75 origin-top-left z-10">
+                  Tỉnh/Thành phố *
+                </label>
+                <select
+                  value={formState.province_code}
+                  onChange={handleProvinceChange}
+                  className="select select-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 rounded-lg p-3 appearance-none transition-all duration-200"
+                  required
+                >
+                  <option value="" className="text-gray-500">-- Chọn tỉnh/thành phố --</option>
+                  {provinces.map((p) => (
+                    <option key={p.code} value={p.code} className="text-white">
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                  {/* District */}
-                  <div className="form-control relative">
-                    <label
-                      className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200
-                        pointer-events-none transform scale-75 origin-top-left"
-                    >
-                      Quận/Huyện
-                    </label>
-                    <select
-                      value={formState.district_code}
-                      onChange={(e) =>
-                        setFormState({ ...formState, district_code: e.target.value })
-                      }
-                      className="select select-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50
-                        rounded-lg p-3 appearance-none transition-all duration-200"
-                      disabled={!formState.province_code}
-                    >
-                      <option value="" className="text-gray-500">Chọn Quận/Huyện</option>
-                      {districts.map((d) => (
-                        <option key={d.code} value={d.code} className="text-white">
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
+              {/* District */}
+              <div className="form-control relative">
+                <label className="label absolute left-3 -top-2 bg-gray-800 text-gray-300 text-sm font-medium px-1 transition-all duration-200 pointer-events-none transform scale-75 origin-top-left z-10">
+                  Quận/Huyện *
+                </label>
+                <select
+                  value={formState.district_code}
+                  onChange={(e) => setFormState({ ...formState, district_code: e.target.value })}
+                  className="select select-bordered w-full bg-gray-900 text-white border-gray-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/50 rounded-lg p-3 appearance-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!formState.province_code || districts.length === 0}
+                  required
+                >
+                  <option value="" className="text-gray-500">
+                    {!formState.province_code 
+                      ? '-- Chọn tỉnh/thành phố trước --' 
+                      : districts.length === 0 
+                      ? '-- Đang tải... --'
+                      : '-- Chọn quận/huyện --'}
+                  </option>
+                  {districts.map((d) => (
+                    <option key={d.code} value={d.code} className="text-white">
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {/* Submit */}
             <button
-              className="w-full flex items-center justify-center bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-lg font-semibold transition-all duration-200 shadow-md
-                disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-lg font-semibold transition-all duration-200 shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={isPending}
               type="submit"
             >

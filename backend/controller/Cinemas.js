@@ -13,21 +13,31 @@ export const getAllCinemas = async (req, res) => {
         cc.phone AS cinema_phone,
         cc.rooms,
         cc.status,
-        cc.phone,
         cc.email,
         u.id AS manager_id,
         u.name AS manager_name,
         u.phone AS manager_phone,
         COUNT(ecc.employee_id) AS staffCount
       FROM cinema_clusters cc
-      JOIN users u ON cc.manager_id = u.id
+      LEFT JOIN users u ON cc.manager_id = u.id AND u.role = 'manager'  -- Thêm điều kiện role
       LEFT JOIN employee_cinema_cluster ecc ON cc.id = ecc.cinema_cluster_id
-      GROUP BY cc.id
+      GROUP BY cc.id, cc.name, cc.province_code, cc.district_code, cc.address, 
+               cc.description, cc.phone, cc.rooms, cc.status, cc.email,
+               u.id, u.name, u.phone
+      ORDER BY cc.name ASC
     `);
 
-    res.status(200).json({ success: true, cinemas: rows });
+    // Đảm bảo luôn trả về mảng, kể cả rạp chưa có quản lý
+    const cinemas = rows.map(row => ({
+      ...row,
+      manager_id: row.manager_id || null,
+      manager_name: row.manager_name || null,
+      manager_phone: row.manager_phone || null,
+    }));
+
+    res.status(200).json({ success: true, cinemas });
   } catch (error) {
-    console.log(error.message);
+    console.error("Lỗi getAllCinemas:", error.message);
     res.status(500).json({ success: false, message: "Lỗi server" });
   }
 };
@@ -41,6 +51,8 @@ export const getCinemas = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+// backend/controllers/cinemaController.js (hoặc file tương tự)
 
 export const addCinemaCluster = async (req, res) => {
   try {
@@ -56,61 +68,113 @@ export const addCinemaCluster = async (req, res) => {
       rooms,
     } = req.body;
 
-    // Insert into DB
+    // 1. Kiểm tra các trường bắt buộc
+    if (!name || !manager_id || !province_code || !district_code || !rooms) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng điền đầy đủ thông tin bắt buộc",
+      });
+    }
+
+    // 2. Kiểm tra tên rạp đã tồn tại chưa (không phân biệt hoa thường)
+    const [existingCinema] = await dbPool.query(
+      `SELECT id FROM cinema_clusters WHERE LOWER(name) = LOWER(?)`,
+      [name.trim()]
+    );
+
+    if (existingCinema.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Tên cụm rạp đã tồn tại. Vui lòng chọn tên khác.",
+      });
+    }
+
+    // 3. Kiểm tra quản lý đã được gán cho rạp khác chưa
+    const [managerInUse] = await dbPool.query(
+      `SELECT cc.id, cc.name AS cinema_name 
+       FROM cinema_clusters cc 
+       WHERE cc.manager_id = ? AND cc.id != ?`,
+      [manager_id, 0] // id = 0 để tránh ảnh hưởng khi thêm mới
+    );
+
+    if (managerInUse.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Quản lý này đang phụ trách rạp "${managerInUse[0].cinema_name}". Mỗi quản lý chỉ được gán cho một cụm rạp.`,
+      });
+    }
+
+    // 4. Kiểm tra manager_id có tồn tại và đúng role không
+    const [manager] = await dbPool.query(
+      `SELECT id, name FROM users WHERE id = ? AND role = 'manager'`,
+      [manager_id]
+    );
+
+    if (!manager.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Quản lý không tồn tại hoặc không hợp lệ",
+      });
+    }
+
+    // 5. Thêm cụm rạp mới
     const [result] = await dbPool.execute(
       `INSERT INTO cinema_clusters 
-      (name, description, manager_id, phone, email, province_code, district_code, address, rooms) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (name, description, manager_id, phone, email, province_code, district_code, address, rooms, status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
-        name,
-        description,
+        name.trim(),
+        description || null,
         manager_id,
-        phone,
-        email,
+        phone || null,
+        email || null,
         province_code,
         district_code,
-        address_details,
+        address_details || null,
         rooms,
       ]
     );
 
-    // Fetch the newly added cinema to include in the event
-    const [newCinema] = await dbPool.query(
+    // 6. Lấy thông tin rạp mới để emit socket
+    const [newCinemaRows] = await dbPool.query(
       `SELECT 
-        cc.id,
-        cc.name AS cinema_name,
-        cc.province_code,
-        cc.district_code,
-        cc.address,
-        cc.description,
-        cc.phone AS cinema_phone,
-        cc.rooms,
-        cc.status,
-        cc.phone,
-        cc.email,
-        u.id AS manager_id,
-        u.name AS manager_name,
-        u.phone AS manager_phone,
-        COUNT(ecc.employee_id) AS staffCount
-      FROM cinema_clusters cc
-      JOIN users u ON cc.manager_id = u.id
-      LEFT JOIN employee_cinema_cluster ecc ON cc.id = ecc.cinema_cluster_id
-      WHERE cc.id = ?
-      GROUP BY cc.id`,
+          cc.id,
+          cc.name AS cinema_name,
+          cc.province_code,
+          cc.district_code,
+          cc.address,
+          cc.description,
+          cc.phone,
+          cc.email,
+          cc.rooms,
+          cc.status,
+          u.id AS manager_id,
+          u.name AS manager_name,
+          COUNT(ecc.employee_id) AS staffCount
+       FROM cinema_clusters cc
+       JOIN users u ON cc.manager_id = u.id
+       LEFT JOIN employee_cinema_cluster ecc ON cc.id = ecc.cinema_cluster_id
+       WHERE cc.id = ?
+       GROUP BY cc.id`,
       [result.insertId]
     );
 
-    // Emit WebSocket event
-    global._io.emit("cinemaAdded", newCinema[0]);
+    const newCinema = newCinemaRows[0];
+
+    // Emit socket để cập nhật realtime
+    global._io?.emit("cinemaAdded", newCinema);
 
     return res.status(201).json({
       success: true,
-      message: "Thêm cụm rạp thành công",
-      data: result,
+      message: "Thêm cụm rạp thành công!",
+      cinema: newCinema,
     });
   } catch (error) {
-    console.log(error.message);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+    console.error("Lỗi thêm cụm rạp:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server, vui lòng thử lại sau",
+    });
   }
 };
 
@@ -120,6 +184,7 @@ export const updateCinemaCluster = async (req, res) => {
       name,
       description,
       phone,
+      manager_id,
       email,
       province_code,
       district_code,
@@ -129,14 +194,39 @@ export const updateCinemaCluster = async (req, res) => {
     const { id } = req.params;
 
     const [idCinema] = await dbPool.query(`SELECT id FROM cinema_clusters WHERE id = ?`, [id]);
+
     if (!idCinema.length) {
       return res.status(400).json({ success: false, message: "Chưa chọn rạp" });
     }
+const [nameExists] = await dbPool.query(
+  `SELECT id FROM cinema_clusters WHERE LOWER(name) = LOWER(?) AND id != ?`,
+  [name.trim(), id]
+);
 
+if (nameExists.length > 0) {
+  return res.status(400).json({
+    success: false,
+    message: "Tên cụm rạp đã được sử dụng bởi rạp khác",
+  });
+}
+
+// Kiểm tra quản lý có đang quản lý rạp khác không (nếu đổi quản lý)
+if (manager_id) {
+  const [managerInUse] = await dbPool.query(
+    `SELECT name FROM cinema_clusters WHERE manager_id = ? AND id != ?`,
+    [manager_id, id]
+  );
+  if (managerInUse.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: `Quản lý này đang phụ trách rạp "${managerInUse[0].name}"`,
+    });
+  }
+}
     const [result] = await dbPool.execute(
       `UPDATE cinema_clusters 
        SET name = ?, description = ?, phone = ?, email = ?, 
-           province_code = ?, district_code = ?, address = ?, rooms = ?
+           province_code = ?, district_code = ?, address = ?, rooms = ?,manager_id = ?
        WHERE id = ?`,
       [
         name,
@@ -147,6 +237,7 @@ export const updateCinemaCluster = async (req, res) => {
         district_code,
         address_details,
         rooms,
+        manager_id,
         id,
       ]
     );

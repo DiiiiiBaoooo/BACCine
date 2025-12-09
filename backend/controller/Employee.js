@@ -281,7 +281,9 @@ export const getEmployeeDashboard = async (req, res) => {
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_shifts,
         SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_shifts,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_shifts,
-        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_shifts
+        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_shifts,
+                SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_shifts
+
       FROM schedule s
       JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
       WHERE ecc.employee_id = ?
@@ -402,6 +404,7 @@ export const getEmployeeDashboard = async (req, res) => {
             confirmed: shifts.confirmed_shifts,
             pending: shifts.pending_shifts,
             cancelled: shifts.cancelled_shifts,
+            absent: shifts.absent_shifts,
             completion_rate: parseFloat(completion_rate)
           }
         },

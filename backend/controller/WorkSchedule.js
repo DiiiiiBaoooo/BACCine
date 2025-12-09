@@ -1,4 +1,39 @@
 import dbPool from "../config/mysqldb.js";
+const markAbsentForPastShifts = async (connection) => {
+  try {
+    
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+
+    // Cập nhật status = 'absent' cho các ca đã qua mà chưa checkout
+    // (hoặc chưa checkin nếu bạn muốn strict hơn)
+    const query = `
+      UPDATE schedule
+      SET status = 'absent', updated_at = CURRENT_TIMESTAMP
+      WHERE status IN ('pending', 'confirmed',"")
+        AND (
+          -- Ca đã qua hôm trước
+          shift_date < ?
+          OR
+          -- Ca hôm nay nhưng đã qua giờ kết thúc
+          (shift_date = ? AND end_time IS NOT NULL AND end_time < ?)
+        )
+    `;
+
+    const [result] = await connection.query(query, [
+      currentDate,
+      currentDate,
+      currentTime
+    ]);
+
+    console.log(`✅ Đã đánh dấu ${result.affectedRows} ca vắng mặt`);
+    return result.affectedRows;
+  } catch (error) {
+    console.error('❌ Lỗi markAbsentForPastShifts:', error);
+    throw error;
+  }
+};
 
 // Fetch schedules for a cinema cluster within a date range
 export const getWorkScheduleInCine = async (req, res) => {
@@ -52,18 +87,35 @@ export const getWorkScheduleofEmployee = async (req, res) => {
   }
 
   try {
-    const [rows] = await dbPool.query(
+        await markAbsentForPastShifts(dbPool);
+
+  const [rows] = await dbPool.query(
       `
-      SELECT s.id, s.cinema_cluster_id, s.employee_cinema_cluster_id, ecc.employee_id, 
-             DATE_FORMAT(s.shift_date, '%Y-%m-%d') as shift_date, 
-             s.shift_type, s.status, s.start_time, s.end_time
+      SELECT 
+        s.id, 
+        s.cinema_cluster_id, 
+        s.employee_cinema_cluster_id, 
+        ecc.employee_id, 
+        DATE_FORMAT(s.shift_date, '%Y-%m-%d') as shift_date, 
+        s.shift_type, 
+        s.status, 
+        s.start_time, 
+        s.end_time,
+        -- ⭐ THÊM FLAG ĐỂ FRONTEND BIẾT CA ĐÃ QUA
+        CASE 
+          WHEN s.shift_date < CURDATE() THEN true
+          WHEN s.shift_date = CURDATE() AND s.end_time < CURTIME() THEN true
+          ELSE false
+        END as is_past
       FROM schedule s
       JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
-      WHERE ecc.employee_id = ? AND s.cinema_cluster_id = ? AND s.shift_date BETWEEN ? AND ?
+      WHERE ecc.employee_id = ? 
+        AND s.cinema_cluster_id = ? 
+        AND s.shift_date BETWEEN ? AND ?
+      ORDER BY s.shift_date ASC, s.start_time ASC
       `,
       [employeeId, cinemaClusterId, start, end]
     );
-
     res.status(200).json(rows);
   } catch (error) {
     console.error("Error fetching employee schedules:", error);
@@ -234,7 +286,7 @@ const computeEuclideanDistance = (desc1, desc2) => {
 };
 
 export const faceCheckin = async (req, res) => {
-  const { descriptor, cinema_cluster_id, schedule_id } = req.body; // Thêm schedule_id
+  const { descriptor, cinema_cluster_id, schedule_id } = req.body;
 
   if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
     return res.status(400).json({ error: "Invalid descriptor" });
@@ -243,7 +295,66 @@ export const faceCheckin = async (req, res) => {
   const THRESHOLD = 0.6;
 
   try {
-    // Lấy tất cả active descriptors
+    // ⭐ 1. KIỂM TRA LỊCH TRÌNH CÓ TỒN TẠI VÀ PHẢI LÀ HÔM NAY
+    const [scheduleCheck] = await dbPool.query(
+      `
+      SELECT 
+        s.id, 
+        s.status, 
+        s.shift_date,
+        ecc.employee_id
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE s.id = ? AND s.cinema_cluster_id = ?
+      `,
+      [schedule_id, cinema_cluster_id]
+    );
+
+    if (scheduleCheck.length === 0) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+const getVietnamDate = (utcDateString) => {
+  const date = new Date(utcDateString);
+  // Chuyển sang giờ Việt Nam bằng cách +7 tiếng
+  const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  return vietnamDate.toISOString().split('T')[0];
+};
+    const schedule = scheduleCheck[0];
+const shiftDate = getVietnamDate(schedule.shift_date); // → "2025-12-09"
+const today= getVietnamDate(new Date().toISOString());
+console.log(shiftDate);
+console.log(today);
+
+
+
+
+    // ⭐ 2. CHỈ CHO PHÉP CHECKIN VÀO NGÀY HIỆN TẠI
+    if (shiftDate !== today) {
+      if (shiftDate < today) {
+        return res.status(400).json({ 
+          error: "Không thể chấm công cho ca đã qua" 
+        });
+      } else {
+        return res.status(400).json({ 
+          error: "Chỉ có thể chấm công vào ngày làm việc" 
+        });
+      }
+    }
+
+    // ⭐ 3. KIỂM TRA TRẠNG THÁI CA
+    if (schedule.status === 'completed') {
+      return res.status(400).json({ 
+        error: "Ca làm việc đã hoàn thành" 
+      });
+    }
+
+    if (schedule.status === 'absent') {
+      return res.status(400).json({ 
+        error: "Ca làm việc đã bị đánh dấu vắng mặt" 
+      });
+    }
+
+    // 4. Lấy tất cả active descriptors
     const [descriptors] = await dbPool.query(
       `
       SELECT efd.id, efd.employee_id, efd.descriptor
@@ -271,29 +382,19 @@ export const faceCheckin = async (req, res) => {
       return res.status(404).json({ error: "No matching employee found" });
     }
 
-    // Kiểm tra xem schedule_id có thuộc về employee này không
-    const [scheduleCheck] = await dbPool.query(
-      `
-      SELECT s.id, s.status, ecc.employee_id
-      FROM schedule s
-      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
-      WHERE s.id = ? AND s.cinema_cluster_id = ?
-      `,
-      [schedule_id, cinema_cluster_id]
-    );
-
-    if (scheduleCheck.length === 0) {
-      return res.status(404).json({ error: "Schedule not found" });
+    // 5. Kiểm tra nhân viên khớp với schedule
+    if (schedule.employee_id !== matchedEmployee) {
+      return res.status(403).json({ 
+        error: "Schedule does not belong to matched employee" 
+      });
     }
 
-    if (scheduleCheck[0].employee_id !== matchedEmployee) {
-      return res.status(403).json({ error: "Schedule does not belong to matched employee" });
-    }
-
-    // Cập nhật attendance cho schedule cụ thể
+    // 6. Cập nhật checkin time
     const now = new Date().toTimeString().slice(0, 8);
     await dbPool.query(
-      `UPDATE schedule SET start_time = ?, status = 'confirmed' WHERE id = ?`,
+      `UPDATE schedule 
+       SET start_time = ?, status = 'confirmed', updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
       [now, schedule_id]
     );
 
@@ -308,8 +409,9 @@ export const faceCheckin = async (req, res) => {
   }
 };
 
+// ========== TƯƠNG TỰ CHO FACE CHECKOUT ==========
 export const faceCheckout = async (req, res) => {
-  const { descriptor, cinema_cluster_id, schedule_id } = req.body; // Thêm schedule_id
+  const { descriptor, cinema_cluster_id, schedule_id } = req.body;
 
   if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
     return res.status(400).json({ error: "Invalid descriptor" });
@@ -318,7 +420,57 @@ export const faceCheckout = async (req, res) => {
   const THRESHOLD = 0.6;
 
   try {
-    // Lấy tất cả active descriptors
+    // ⭐ 1. KIỂM TRA LỊCH TRÌNH VÀ NGÀY
+    const [scheduleCheck] = await dbPool.query(
+      `
+      SELECT 
+        s.id, 
+        s.status, 
+        s.shift_date,
+        s.start_time,
+        ecc.employee_id
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE s.id = ? AND s.cinema_cluster_id = ?
+      `,
+      [schedule_id, cinema_cluster_id]
+    );
+
+    if (scheduleCheck.length === 0) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+
+const getVietnamDate = (utcDateString) => {
+  const date = new Date(utcDateString);
+  // Chuyển sang giờ Việt Nam bằng cách +7 tiếng
+  const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  return vietnamDate.toISOString().split('T')[0];
+};
+    const schedule = scheduleCheck[0];
+const shiftDate = getVietnamDate(schedule.shift_date); // → "2025-12-09"
+const today= getVietnamDate(new Date().toISOString());
+
+    // ⭐ 2. CHỈ CHO PHÉP CHECKOUT VÀO NGÀY HIỆN TẠI
+    if (shiftDate !== today) {
+      return res.status(400).json({ 
+        error: "Chỉ có thể checkout vào ngày làm việc" 
+      });
+    }
+
+    // ⭐ 3. KIỂM TRA ĐÃ CHECKIN CHƯA
+    if (schedule.status !== 'confirmed') {
+      return res.status(400).json({ 
+        error: "Chưa check-in ca làm việc này" 
+      });
+    }
+
+    if (!schedule.start_time) {
+      return res.status(400).json({ 
+        error: "Không tìm thấy thời gian check-in" 
+      });
+    }
+
+    // 4-6. Tương tự như checkin (matching face)
     const [descriptors] = await dbPool.query(
       `
       SELECT efd.id, efd.employee_id, efd.descriptor
@@ -346,39 +498,28 @@ export const faceCheckout = async (req, res) => {
       return res.status(404).json({ error: "No matching employee found" });
     }
 
-    // Kiểm tra xem schedule_id có thuộc về employee này không
-    const [scheduleCheck] = await dbPool.query(
-      `
-      SELECT s.id, s.status, ecc.employee_id
-      FROM schedule s
-      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
-      WHERE s.id = ? AND s.cinema_cluster_id = ?
-      `,
-      [schedule_id, cinema_cluster_id]
-    );
-
-    if (scheduleCheck.length === 0) {
-      return res.status(404).json({ error: "Schedule not found" });
+    if (schedule.employee_id !== matchedEmployee) {
+      return res.status(403).json({ 
+        error: "Schedule does not belong to matched employee" 
+      });
     }
 
-    if (scheduleCheck[0].employee_id !== matchedEmployee) {
-      return res.status(403).json({ error: "Schedule does not belong to matched employee" });
-    }
-
-    // Cập nhật attendance cho schedule cụ thể
+    // 7. Cập nhật checkout time
     const now = new Date().toTimeString().slice(0, 8);
     await dbPool.query(
-      `UPDATE schedule SET end_time = ?, status ='completed' WHERE id = ?`,
+      `UPDATE schedule 
+       SET end_time = ?, status = 'completed', updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
       [now, schedule_id]
     );
 
     res.status(200).json({ 
       employee_id: matchedEmployee, 
       distance: minDistance, 
-      message: "Check-in successful" 
+      message: "Check-out successful" 
     });
   } catch (error) {
-    console.error("Error in face checkin:", error);
+    console.error("Error in face checkout:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -400,5 +541,331 @@ export const checkFaceDescriptor = async (req, res) => {
   } catch (error) {
     console.error('Error checking face descriptor:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+export const getAttendanceHistory = async (req, res) => {
+  const { cinemaClusterId } = req.params;
+  const { 
+    start_date, 
+    end_date, 
+    employee_id, 
+    status, 
+    shift_type,
+    search_name,
+    page = 1,
+    limit = 50
+  } = req.query;
+
+  if (!cinemaClusterId) {
+    return res.status(400).json({ error: "cinemaClusterId is required" });
+  }
+
+  try {
+    let conditions = ['s.cinema_cluster_id = ?'];
+    let params = [cinemaClusterId];
+
+    // Bộ lọc ngày
+    if (start_date) {
+      conditions.push('s.shift_date >= ?');
+      params.push(start_date);
+    }
+    if (end_date) {
+      conditions.push('s.shift_date <= ?');
+      params.push(end_date);
+    }
+
+    // Bộ lọc nhân viên
+    if (employee_id) {
+      conditions.push('ecc.employee_id = ?');
+      params.push(employee_id);
+    }
+
+    // Bộ lọc trạng thái
+    if (status) {
+      conditions.push('s.status = ?');
+      params.push(status);
+    }
+
+    // Bộ lọc ca làm việc
+    if (shift_type) {
+      conditions.push('s.shift_type = ?');
+      params.push(shift_type);
+    }
+
+    // Tìm kiếm theo tên
+    if (search_name) {
+      conditions.push('name LIKE ?');
+      params.push(`%${search_name}%`);
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const offset = (page - 1) * limit;
+
+    // Đếm tổng số bản ghi
+    const [countResult] = await dbPool.query(
+      `
+      SELECT COUNT(*) as total
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      join users e on ecc.employee_id = e.id
+      WHERE ${whereClause}
+      `,
+      params
+    );
+
+    const total = countResult[0].total;
+
+    // Lấy dữ liệu phân trang
+   // Thay đoạn SELECT cũ bằng cái này:
+const [rows] = await dbPool.query(
+  `
+  SELECT 
+    s.id,
+    s.cinema_cluster_id,
+    ecc.employee_id,
+    e.name as employee_name,
+    e.email as employee_email,
+    DATE_FORMAT(s.shift_date, '%Y-%m-%d') as shift_date,
+    s.shift_type,
+    s.status,
+    s.start_time,
+    s.end_time,
+    s.created_at,
+    s.updated_at,
+    -- Tính đúng phút làm việc, không bị âm
+    IFNULL(
+      CASE 
+        WHEN s.start_time IS NOT NULL AND s.end_time IS NOT NULL THEN
+          IF(
+            TIME(s.end_time) < TIME(s.start_time),
+            TIMESTAMPDIFF(MINUTE, s.start_time, ADDTIME(s.end_time, '24:00:00')),
+            TIMESTAMPDIFF(MINUTE, s.start_time, s.end_time)
+          )
+        ELSE NULL
+      END,
+      NULL
+    ) as work_duration_minutes
+  FROM schedule s
+  JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+  JOIN users e ON ecc.employee_id = e.id
+  WHERE ${whereClause}
+  ORDER BY s.shift_date DESC, s.start_time DESC
+  LIMIT ? OFFSET ?
+  `,
+  [...params, parseInt(limit), parseInt(offset)]
+);
+
+    res.status(200).json({
+      data: rows,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching attendance history:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// API thống kê chấm công
+export const getAttendanceStats = async (req, res) => {
+  const { cinemaClusterId } = req.params;
+  const { start_date, end_date, employee_id } = req.query;
+
+  if (!cinemaClusterId) {
+    return res.status(400).json({ error: "cinemaClusterId is required" });
+  }
+
+  try {
+    let conditions = ['s.cinema_cluster_id = ?'];
+    let params = [cinemaClusterId];
+
+    if (start_date) {
+      conditions.push('s.shift_date >= ?');
+      params.push(start_date);
+    }
+    if (end_date) {
+      conditions.push('s.shift_date <= ?');
+      params.push(end_date);
+    }
+    if (employee_id) {
+      conditions.push('ecc.employee_id = ?');
+      params.push(employee_id);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const [stats] = await dbPool.query(
+      `
+      SELECT 
+        COUNT(*) as total_shifts,
+        SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_shifts,
+        SUM(CASE WHEN s.status = 'absent' THEN 1 ELSE 0 END) as absent_shifts,
+        SUM(CASE WHEN s.status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_shifts,
+        SUM(CASE WHEN s.status = 'pending' THEN 1 ELSE 0 END) as pending_shifts,
+        -- Tổng giờ làm việc
+      SUM(
+  CASE 
+    WHEN s.start_time IS NOT NULL AND s.end_time IS NOT NULL THEN
+      IF(
+        TIME(s.end_time) < TIME(s.start_time),
+        TIMESTAMPDIFF(MINUTE, s.start_time, ADDTIME(s.end_time, '24:00:00')),
+        TIMESTAMPDIFF(MINUTE, s.start_time, s.end_time)
+      )
+    ELSE 0
+  END
+) / 60.0 as total_work_hours,
+        -- Thống kê theo ca
+        SUM(CASE WHEN s.shift_type = 'morning' THEN 1 ELSE 0 END) as morning_shifts,
+        SUM(CASE WHEN s.shift_type = 'afternoon' THEN 1 ELSE 0 END) as afternoon_shifts,
+        SUM(CASE WHEN s.shift_type = 'evening' THEN 1 ELSE 0 END) as evening_shifts
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE ${whereClause}
+      `,
+      params
+    );
+
+    res.status(200).json(stats[0]);
+  } catch (error) {
+    console.error("Error fetching attendance stats:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// API lấy chi tiết một bản ghi chấm công
+export const getAttendanceDetail = async (req, res) => {
+  const { scheduleId } = req.params;
+
+  if (!scheduleId) {
+    return res.status(400).json({ error: "scheduleId is required" });
+  }
+
+  try {
+    const [rows] = await dbPool.query(
+      `
+      SELECT 
+        s.id,
+        s.cinema_cluster_id,
+        cc.name as cinema_cluster_name,
+        ecc.employee_id,
+        name as employee_name,
+        DATE_FORMAT(s.shift_date, '%Y-%m-%d') as shift_date,
+        s.shift_type,
+        s.status,
+        s.start_time,
+        s.end_time,
+        s.created_at,
+        s.updated_at,
+        CASE 
+          WHEN s.start_time IS NOT NULL AND s.end_time IS NOT NULL THEN
+            TIMESTAMPDIFF(MINUTE, s.start_time, s.end_time)
+          ELSE NULL
+        END as work_duration_minutes
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      JOIN cinema_cluster cc ON s.cinema_cluster_id = cc.id
+      join users e on ecc.employee_id = e.id
+      WHERE s.id = ?
+      `,
+      [scheduleId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Schedule not found" });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error fetching attendance detail:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// API xuất báo cáo chấm công (CSV)
+export const exportAttendanceReport = async (req, res) => {
+  const { cinemaClusterId } = req.params;
+  const { start_date, end_date, employee_id } = req.query;
+
+  if (!cinemaClusterId) {
+    return res.status(400).json({ error: "cinemaClusterId is required" });
+  }
+
+  try {
+    let conditions = ['s.cinema_cluster_id = ?'];
+    let params = [cinemaClusterId];
+
+    if (start_date) {
+      conditions.push('s.shift_date >= ?');
+      params.push(start_date);
+    }
+    if (end_date) {
+      conditions.push('s.shift_date <= ?');
+      params.push(end_date);
+    }
+    if (employee_id) {
+      conditions.push('ecc.employee_id = ?');
+      params.push(employee_id);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const [rows] = await dbPool.query(
+      `
+      SELECT 
+        e.name as 'Tên nhân viên',
+        DATE_FORMAT(s.shift_date, '%d/%m/%Y') as 'Ngày',
+        CASE 
+          WHEN s.shift_type = 'morning' THEN 'Sáng'
+          WHEN s.shift_type = 'afternoon' THEN 'Chiều'
+          WHEN s.shift_type = 'evening' THEN 'Tối'
+        END as 'Ca làm việc',
+        CASE 
+          WHEN s.status = 'completed' THEN 'Hoàn thành'
+          WHEN s.status = 'absent' THEN 'Vắng mặt'
+          WHEN s.status = 'confirmed' THEN 'Đã xác nhận'
+          WHEN s.status = 'pending' THEN 'Chờ xác nhận'
+        END as 'Trạng thái',
+        IFNULL(s.start_time, '') as 'Giờ vào',
+        IFNULL(s.end_time, '') as 'Giờ ra',
+        IFNULL(
+          CONCAT(
+            FLOOR(TIMESTAMPDIFF(MINUTE, s.start_time, s.end_time) / 60), 'h ',
+            TIMESTAMPDIFF(MINUTE, s.start_time, s.end_time) % 60, 'p'
+          ),
+          ''
+        ) as 'Tổng giờ'
+      FROM schedule s
+      JOIN employee_cinema_cluster 
+      WHERE ${whereClause}
+      ORDER BY s.shift_date DESC
+      `,
+      params
+    );
+
+    // Tạo CSV
+    const headers = Object.keys(rows[0] || {});
+    const csvRows = [
+      headers.join(','),
+      ...rows.map(row => 
+        headers.map(header => {
+          const value = row[header] || '';
+          return `"${value.toString().replace(/"/g, '""')}"`;
+        }).join(',')
+      )
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const bom = '\uFEFF'; // BOM for UTF-8
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=attendance_report_${Date.now()}.csv`);
+    res.send(bom + csvContent);
+  } catch (error) {
+    console.error("Error exporting attendance report:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

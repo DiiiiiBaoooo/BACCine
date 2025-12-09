@@ -33,6 +33,7 @@ import ManagerRoute from "./routes/ManagerRoutes.js";
 import reviewRoutes from './routes/reviewRoute.js';
 import EventRequestRoute from "./routes/EventRoutes.js";
 import OpenAIChatbotRoute from "./routes/ChatBotAIRoutes.js";
+import RoleRoute from "./routes/RoleRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;   // Cloud Run sẽ set PORT=8080
@@ -92,6 +93,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use("/api/events", EventRequestRoute);
 app.use("/api/inngest",serve({ client: inngest, functions }))
 app.use("/api/ai-chatbot", OpenAIChatbotRoute);
+app.use("/api/pq", RoleRoute);
+
 
 // Create HTTP server and attach Socket.IO
 const server = http.createServer(app);

@@ -1,288 +1,247 @@
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+// client/src/components/ScheduleEmployee.jsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import useAuthUser from '../hooks/useAuthUser';
-import Weekly from './Weekly';
 
 const ScheduleEmployee = ({ cinemaClusterId }) => {
-  const { isLoading: isAuthLoading, authUser } = useAuthUser();
+  const navigate = useNavigate();
+  const { authUser } = useAuthUser();
   const employeeId = authUser?.employee_id;
 
-  const [employees, setEmployees] = useState([]);
-  const [schedule, setSchedule] = useState([]);
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
-    const today = new Date();
-    const day = today.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diff);
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showAllSchedules, setShowAllSchedules] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedWeek, setSelectedWeek] = useState(new Date());
 
-  const API_BASE_URL = '/api';
+  // Tính tuần (Thứ 2 → Chủ nhật)
+  const getWeekRange = (date) => {
+    const start = new Date(date);
+    const day = start.getDay();
+    const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+    start.setDate(diff);
+    start.setHours(0, 0, 0, 0);
 
-  const getDateString = (date) => {
-    if (!(date instanceof Date) || isNaN(date)) {
-      return new Date().toISOString().split('T')[0];
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const parseDateString = (dateStr) => {
-    if (!dateStr) return null;
-    const datePart = dateStr.split('T')[0];
-    const [year, month, day] = datePart.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
-
-  const getWeekDateRange = () => {
-    const start = new Date(currentWeekStart);
-    const end = new Date(currentWeekStart);
+    const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    return { start: getDateString(start), end: getDateString(end) };
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
   };
 
-  const isDateInWeekRange = (dateStr) => {
-    const { start } = getWeekDateRange();
-    const date = parseDateString(dateStr);
-    const startDate = parseDateString(start);
-    
-    if (!date || !startDate) return false;
-    
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    return date >= startDate && date <= endDate;
-  };
-
-  const fetchSchedule = async () => {
-    if (!cinemaClusterId || !employeeId) {
-      setError('cinemaClusterId và employeeId là bắt buộc');
-      return;
-    }
+  const fetchSchedules = async () => {
+    if (!employeeId) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      const { start, end } = getWeekDateRange();
-      
-      const url = showAllSchedules
-        ? `${API_BASE_URL}/schedule/${cinemaClusterId}/${employeeId}`
-        : `${API_BASE_URL}/schedule/${cinemaClusterId}/${employeeId}?start=${start}&end=${end}`;
-      const res = await axios.get(url);
-      
-      const mappedSchedule = res.data.reduce((acc, entry) => {
-        const employee = employees.find((emp) => emp.id === entry.employee_id.toString());
-        if (!employee) {
-          return acc;
-        }
-        
-        let shiftDate = entry.shift_date;
-        if (shiftDate.includes('T')) {
-          shiftDate = shiftDate.split('T')[0];
-        }
-        
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(shiftDate)) {
-          return acc;
-        }
-        
-        if (!showAllSchedules && !isDateInWeekRange(shiftDate)) {
-          return acc;
-        }
-        
-        const employeeWithDetails = {
-          ...employee,
-          startTime: entry.start_time || null,
-          endTime: entry.end_time || null,
-          status: entry.status,
-          scheduleId: entry.id.toString(),
-        };
-        
-        const existing = acc.find((e) => e.date === shiftDate && e.shift === entry.shift_type);
-        if (existing) {
-          existing.employees.push(employeeWithDetails);
-          return acc;
-        }
-        
-        return [...acc, { 
-          date: shiftDate, 
-          shift: entry.shift_type, 
-          cinemaClusterId: cinemaClusterId.toString(), 
-          employees: [employeeWithDetails] 
-        }];
-      }, []);
-      
-      setSchedule(mappedSchedule);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching schedule:', err);
-      setError(err.response?.data?.error || 'Không thể tải lịch làm việc');
+      const { start, end } = getWeekRange(selectedWeek);
+      const startStr = start.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+      const endStr = end.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+      const { data } = await axios.get(
+        `/api/schedule/${cinemaClusterId}/${employeeId}?start=${startStr}&end=${endStr}`
+      );
+      setSchedules(data);
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      if (!cinemaClusterId) {
-        setError('cinemaClusterId is required');
-        return;
-      }
-      setLoading(true);
-      try {
-        const res = await axios.get(`${API_BASE_URL}/employee/cinema-cluster/${cinemaClusterId}`);
-        const mappedEmployees = res.data.map((emp) => ({
-          id: emp.employee_id.toString(),
-          name: emp.employee_name,
-          position: emp.position,
-        }));
-        setEmployees(mappedEmployees);
-        setError(null);
-      } catch (err) {
-        setError(err.response?.data?.error || 'Không thể tải danh sách nhân viên');
-      } finally {
-        setLoading(false);
-      }
+    fetchSchedules();
+  }, [selectedWeek, employeeId, cinemaClusterId]);
+
+  const isToday = (dateStr) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime() === today.getTime();
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      pending: { label: 'Chờ', color: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50', icon: Clock },
+      confirmed: { label: 'Đã vào', color: 'bg-blue-500/20 text-blue-400 border border-blue-500/50', icon: CheckCircle },
+      completed: { label: 'Hoàn thành', color: 'bg-green-500/20 text-green-400 border border-green-500/50', icon: CheckCircle },
+      cancelled: { label: 'Hủy', color: 'bg-gray-500/20 text-gray-400 border border-gray-500/50', icon: XCircle },
+      absent: { label: 'Vắng', color: 'bg-red-500 text-white', icon: AlertCircle },
     };
 
-    fetchEmployees();
-  }, [cinemaClusterId]);
+    const badge = badges[status] || badges.pending;
+    const Icon = badge.icon;
 
-  useEffect(() => {
-    if (employees.length > 0 && cinemaClusterId && employeeId) {
-      fetchSchedule();
-    }
-  }, [employees, currentWeekStart, cinemaClusterId, employeeId, showAllSchedules]);
-
-  const handleDrop = (date, shift, employee, { refresh }) => {
-    if (refresh) {
-      fetchSchedule();
-      return;
-    }
-  };
-
-  const handleRemoveEmployee = () => {
-    // Nhân viên không được phép xóa lịch
-  };
-
-  const goToPreviousWeek = () => {
-    setCurrentWeekStart((prev) => {
-      const newDate = new Date(prev);
-      newDate.setDate(prev.getDate() - 7);
-      return newDate;
-    });
-  };
-
-  const goToNextWeek = () => {
-    setCurrentWeekStart((prev) => {
-      const newDate = new Date(prev);
-      newDate.setDate(prev.getDate() + 7);
-      return newDate;
-    });
-  };
-
-  const formatWeekRange = () => {
-    const startDate = new Date(currentWeekStart);
-    const endDate = new Date(currentWeekStart);
-    endDate.setDate(currentWeekStart.getDate() + 6);
-    const formatDate = (date) => {
-      return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-    };
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
-  };
-
-  if (!cinemaClusterId) {
     return (
-      <div className="p-4 text-red-600 text-sm">
-        Lỗi: Vui lòng cung cấp cinemaClusterId để xem lịch làm việc.
+      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${badge.color}`}>
+        <Icon className="w-3.5 h-3.5" />
+        {badge.label}
+      </span>
+    );
+  };
+
+  const getShiftLabel = (type) => {
+    const shifts = { morning: 'Sáng', afternoon: 'Chiều', evening: 'Tối' };
+    return shifts[type] || type;
+  };
+
+  const goToPreviousWeek = () => setSelectedWeek(prev => { const d = new Date(prev); d.setDate(d.getDate() - 7); return d; });
+  const goToNextWeek = () => setSelectedWeek(prev => { const d = new Date(prev); d.setDate(d.getDate() + 7); return d; });
+  const goToToday = () => setSelectedWeek(new Date());
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl text-gray-400">Đang tải lịch làm việc...</p>
+        </div>
       </div>
     );
   }
 
-  if (isAuthLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Đang tải...</div>
-      </div>
-    );
-  }
+  const { start, end } = getWeekRange(selectedWeek);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col">
-        {/* Header compact */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-gray-900">
-              LỊCH LÀM VIỆC <span className="text-red-600">CỦA TÔI</span>
-            </h1>
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-7xl mx-auto p-6">
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAllSchedules(!showAllSchedules)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                  showAllSchedules 
-                    ? 'bg-red-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {showAllSchedules ? 'Tuần hiện tại' : 'Tất cả lịch'}
-              </button>
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
+            LỊCH LÀM VIỆC
+          </h1>
+          <p className="text-red-500 text-lg font-medium">Nhân viên: {authUser?.name || 'Bạn'}</p>
+        </div>
 
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
-                <button 
-                  onClick={goToPreviousWeek} 
-                  className="p-1.5 hover:bg-white rounded transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4 text-gray-700" />
-                </button>
-                <span className="font-semibold text-red-600 text-xs w-32 text-center">
-                  {formatWeekRange()}
+        {/* Week Navigation */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 mb-8 shadow-2xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <button onClick={goToPreviousWeek} className="p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            <div className="text-center">
+              <div className="flex items-center gap-3 mb-2">
+                <Calendar className="w-6 h-6 text-red-500" />
+                <span className="text-2xl font-bold text-white">
+                  {start.toLocaleDateString('vi-VN')} → {end.toLocaleDateString('vi-VN')}
                 </span>
-                <button 
-                  onClick={goToNextWeek} 
-                  className="p-1.5 hover:bg-white rounded transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4 text-gray-700" />
-                </button>
               </div>
+              <button
+                onClick={goToToday}
+                className="text-sm px-5 py-2 bg-red-600 hover:bg-red-700 rounded-full font-bold transition-all shadow-lg"
+              >
+                Hôm nay
+              </button>
             </div>
+
+            <button onClick={goToNextWeek} className="p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all">
+              <ChevronRight className="w-6 h-6" />
+            </button>
           </div>
         </div>
 
-        {error && (
-          <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
-            {error}
-          </div>
-        )}
+        {/* Schedule List */}
+        <div className="space-y-6">
+          {schedules.length === 0 ? (
+            <div className="text-center py-20 bg-zinc-900/50 border border-zinc-800 rounded-2xl">
+              <Calendar className="w-20 h-20 text-zinc-700 mx-auto mb-6" />
+              <p className="text-2xl text-zinc-500 font-medium">Không có ca làm việc trong tuần này</p>
+            </div>
+          ) : (
+            schedules.map((schedule) => {
+              const today = isToday(schedule.shift_date);
+              const isPast = new Date(schedule.shift_date) < new Date().setHours(0, 0, 0, 0);
+              const canCheckin = today && schedule.status === 'pending';
+              const canCheckout = today && schedule.status === 'confirmed';
 
-        {loading && (
-          <div className="mx-4 mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs">
-            Đang tải lịch làm việc...
-          </div>
-        )}
+              return (
+                <div
+                  key={schedule.id}
+                  className={`
+                    relative overflow-hidden rounded-2xl border transition-all duration-300
+                    ${today 
+                      ? 'bg-gradient-to-r from-red-900/40 to-black border-red-600 shadow-2xl shadow-red-900/30 scale-105' 
+                      : 'bg-zinc-900/80 border-zinc-800 hover:border-zinc-700'
+                    }
+                    ${isPast && schedule.status !== 'completed' ? 'opacity-60' : ''}
+                  `}
+                >
+                  {/* Highlight bar bên trái nếu là hôm nay */}
+                  {today && <div className="absolute left-0 top-0 bottom-0 w-2 bg-red-600"></div>}
 
-        <Weekly
-          schedule={schedule}
-          onDrop={handleDrop}
-          onRemoveEmployee={handleRemoveEmployee}
-          weekStart={currentWeekStart}
-          cinemaClusterId={cinemaClusterId}
-          showAllSchedules={showAllSchedules}
-        />
+                  <div className="p-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                      {/* Thông tin ca */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-4">
+                          <h3 className="text-2xl font-black text-white">
+                            {new Date(schedule.shift_date).toLocaleDateString('vi-VN', {
+                              weekday: 'long',
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric',
+                            }).replace('thứ ', '').toUpperCase()}
+                          </h3>
+                          {today && (
+                            <span className="px-4 py-2 bg-red-600 text-white font-bold rounded-full text-sm animate-pulse">
+                              HÔM NAY
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-6 text-gray-300 text-lg">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-red-500" />
+                            <span className="font-medium">Ca {getShiftLabel(schedule.shift_type)}</span>
+                          </div>
+                          {schedule.start_time && (
+                            <span className="text-white font-bold">{schedule.start_time} → {schedule.end_time || '...'} </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4">
+                          {getStatusBadge(schedule.status)}
+                        </div>
+                      </div>
+
+                      {/* Nút hành động */}
+                      <div className="flex flex-col gap-3">
+                        {canCheckin && (
+                          <button
+                            onClick={() => navigate(`/employee/face-checkin/${employeeId}/${schedule.id}/${cinemaClusterId}`)}
+                            className="px-8 py-4 bg-green-600 hover:bg-green-500 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-green-600/50 transition-all transform hover:scale-105"
+                          >
+                            CHECK-IN NGAY
+                          </button>
+                        )}
+
+                        {canCheckout && (
+                          <button
+                            onClick={() => navigate(`/employee/face-checkout/${employeeId}/${schedule.id}/${cinemaClusterId}`)}
+                            className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-red-600/50 transition-all transform hover:scale-105"
+                          >
+                            CHECK-OUT
+                          </button>
+                        )}
+
+                        {isPast && schedule.status === 'pending' && (
+                          <div className="text-center">
+                            <p className="text-red-400 font-bold text-lg">ĐÃ QUÁ GIỜ CHECK-IN</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
-};
-
-ScheduleEmployee.propTypes = {
-  cinemaClusterId: PropTypes.string.isRequired,
 };
 
 export default ScheduleEmployee;

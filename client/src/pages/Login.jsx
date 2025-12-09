@@ -5,17 +5,53 @@ import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
 import axios from 'axios';
 import useLogin from '../hooks/useLogin';
+import { toast } from 'react-toastify';
 
 const Login = () => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const { isPending, error, loginMutation } = useLogin();
+  const { isPending, loginMutation } = useLogin();
 
   const handleLogin = (e) => {
     e.preventDefault();
     loginMutation(loginData);
   };
 
- 
+  const handleGoogleLogin = async (credentialResponse) => {
+    const token = credentialResponse.credential;
+    const decoded = jwtDecode(token);
+
+    try {
+      const response = await axios.post(
+        "/api/auth/google",
+        { token },
+        { withCredentials: true }
+      );
+
+      localStorage.setItem("jwt", response.data.token);
+      
+      toast.success("Đăng nhập Google thành công!", {
+        position: "top-right",
+        autoClose: 2000,
+      });
+
+      // Chờ 500ms để user thấy toast rồi mới chuyển trang
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
+
+    } catch (error) {
+      console.error("Google login error:", error);
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        "Đăng nhập Google thất bại!";
+      
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 md:px-8 bg-gradient-to-br from-black via-gray-900 to-gray-800">
@@ -33,12 +69,6 @@ const Login = () => {
             Trở lại BAC Cinema để tận hưởng những bộ phim đỉnh cao
           </p>
 
-          {error && (
-            <div className="alert alert-error mb-4 text-red-600">
-              <span>{error.response?.data?.error || error.response?.data?.message || error.message}</span>
-            </div>
-          )}
-
           <form className="space-y-6" onSubmit={handleLogin}>
             {/* Email */}
             <div>
@@ -46,7 +76,7 @@ const Login = () => {
               <input
                 type="email"
                 placeholder="Địa chỉ email"
-                className="w-full p-3 border border-gray-600 rounded-lg text-black"
+                className="w-full p-3 border border-gray-600 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-red-600"
                 value={loginData.email}
                 onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                 required
@@ -59,7 +89,7 @@ const Login = () => {
               <input
                 type="password"
                 placeholder="••••••••"
-                className="w-full p-3 border border-gray-600 rounded-lg text-black"
+                className="w-full p-3 border border-gray-600 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-red-600"
                 value={loginData.password}
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 required
@@ -67,49 +97,37 @@ const Login = () => {
             </div>
 
             {/* Submit */}
-            <button type="submit" className="btn bg-red-600 w-full rounded-lg p-5" disabled={isPending}>
-              {isPending ? (
-                <>
-                  <span className="loading loading-spinner loading-xs"></span>
-                  Signing in...
-                </>
-              ) : (
-                "Sign in"
-              )}
+            <button 
+              type="submit" 
+              className="w-full py-3 bg-red-600 text-white font-semibold text-lg rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors" 
+              disabled={isPending}
+            >
+              {isPending ? "Đang xử lý..." : "Đăng nhập"}
             </button>
 
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-600">Hoặc đăng nhập với</span>
+              </div>
+            </div>
+
             {/* Google Login */}
-            <div className="w-full mt-3">
+            <div className="flex justify-center">
               <GoogleLogin
-                onSuccess={async (credentialResponse) => {
-                  const token = credentialResponse.credential;
-                  const decoded = jwtDecode(token);
-
-                  try {
-                    const response = await axios.post(
-                      "/api/auth/google",
-                      { token },
-                      { withCredentials: true }
-                    );
-
-                    localStorage.setItem("jwt", response.data.token);
-                    console.log("Google user:", decoded);
-                    console.log("Backend JWT:", response.data.token);
-
-                    window.location.href = "/";
-                  } catch (error) {
-                    console.error("Google login error:", error);
-                  }
-                }}
+                onSuccess={handleGoogleLogin}
                 onError={() => {
-                  console.log("Login Failed");
+                  toast.error("Đăng nhập Google thất bại!", {
+                    position: "top-right",
+                    autoClose: 3000,
+                  });
                 }}
                 useOneTap
               />
             </div>
-
-            {/* Facebook Login */}
-         
 
             <p className="text-base text-center text-gray-600 mt-4">
               Chưa có tài khoản?{" "}

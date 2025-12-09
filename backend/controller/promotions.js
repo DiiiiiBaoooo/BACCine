@@ -1,21 +1,22 @@
 import connection from "../config/mysqldb.js";
 
 const getStatistics = async (connection) => {
-  const [total] = await connection.query("SELECT COUNT(*) as count FROM promotions");
-  const [active] = await connection.query("SELECT COUNT(*) as count FROM promotions WHERE status='active'");
-  const [upcoming] = await connection.query("SELECT COUNT(*) as count FROM promotions WHERE status='upcoming'");
-  const [expired] = await connection.query("SELECT COUNT(*) as count FROM promotions WHERE status='expired'");
-  const [inactive] = await connection.query("SELECT COUNT(*) as count FROM promotions WHERE status='inactive'");
-  const [outOfStock] = await connection.query("SELECT COUNT(*) as count FROM promotions WHERE used_count >= quantity");
-
-  return {
-    total: total[0].count,
-    active: active[0].count,
-    upcoming: upcoming[0].count,
-    expired: expired[0].count,
-    inactive: inactive[0].count,
-    out_of_stock: outOfStock[0].count,
+  const queries = {
+    total: "SELECT COUNT(*) as count FROM promotions",
+    active: "SELECT COUNT(*) as count FROM promotions WHERE status = 'active'",
+    upcoming: "SELECT COUNT(*) as count FROM promotions WHERE status = 'upcoming'",
+    expired: "SELECT COUNT(*) as count FROM promotions WHERE status = 'expired'",
+    inactive: "SELECT COUNT(*) as count FROM promotions WHERE status = 'inactive'",
+    out_of_stock: "SELECT COUNT(*) as count FROM promotions WHERE quantity IS NOT NULL AND used_count >= quantity AND status != 'expired'"
   };
+
+  const results = {};
+  for (const [key, sql] of Object.entries(queries)) {
+    const [row] = await connection.query(sql);
+    results[key] = row[0].count;
+  }
+
+  return results;
 };
 
 export const getAllPromotions = async (req,res) =>{
@@ -26,7 +27,18 @@ export const getAllPromotions = async (req,res) =>{
     res.status(500).json({ error: error.message });
   }
 };
+const checkDuplicate = async (connection, code, name, excludeId = null) => {
+  let query = "SELECT id FROM promotions WHERE code = ? OR name = ?";
+  const params = [code, name];
 
+  if (excludeId) {
+    query += " AND id != ?";
+    params.push(excludeId);
+  }
+
+  const [rows] = await connection.query(query, params);
+  return rows.length > 0 ? rows[0] : null;
+};
 export const addPromotion = async (req, res) => {
   try {
     const {
@@ -35,6 +47,22 @@ export const addPromotion = async (req, res) => {
       start_date, end_date, quantity,
     } = req.body;
 
+    // Kiểm tra thiếu trường
+    if (!code || !name || !discount_type || !discount_value || !start_date || !end_date) {
+      return res.status(400).json({ success: false, message: "Vui lòng điền đầy đủ thông tin bắt buộc!" });
+    }
+
+    // Kiểm tra trùng code hoặc tên
+    const duplicate = await checkDuplicate(connection, code.trim(), name.trim());
+    if (duplicate) {
+      return res.status(400).json({
+        success: false,
+        message: duplicate.code === code.trim()
+          ? "Mã khuyến mãi đã tồn tại!"
+          : "Tên khuyến mãi đã được sử dụng!"
+      });
+    }
+
     const now = new Date();
     let status = "active";
     if (new Date(end_date) < now) status = "expired";
@@ -42,24 +70,40 @@ export const addPromotion = async (req, res) => {
 
     const [result] = await connection.execute(
       `INSERT INTO promotions 
-       (code, name, description, discount_type, discount_value, min_order, max_discount, start_date, end_date, quantity, status) 
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [ code, name, description, discount_type, discount_value,
-        min_order || 0, max_discount || null,
-        start_date, end_date, quantity, status ]
+       (code, name, description, discount_type, discount_value, min_order, max_discount, 
+        start_date, end_date, quantity, status, used_count) 
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,0)`,
+      [
+        code.trim(),
+        name.trim(),
+        description || null,
+        discount_type,
+        discount_value,
+        min_order || 0,
+        max_discount || null,
+        start_date,
+        end_date,
+        quantity || null,
+        status
+      ]
     );
 
-    // Lấy lại data mới nhất
-    const [rows] = await connection.query("SELECT * FROM promotions");
+    // Cập nhật lại danh sách + thống kê
+    const [all] = await connection.query("SELECT * FROM promotions");
     const statistics = await getStatistics(connection);
 
-    // Emit realtime
-    global._io.emit("promotions_update", { promotions: rows, stats: statistics });
+    global._io.emit("promotions_update", { promotions: all, stats: statistics });
 
-    res.json({ success: true, message: "Thêm khuyến mãi thành công", promotion_id: result.insertId, status });
+    res.json({
+      success: true,
+      message: "Thêm khuyến mãi thành công!",
+      promotion_id: result.insertId,
+      status
+    });
+
   } catch (error) {
     console.error("Lỗi addPromotion:", error.message);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Lỗi server: " + error.message });
   }
 };
 
@@ -83,46 +127,65 @@ export const deletePromotion = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 export const updatePromotion = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      code, name, description, discount_type,
-      discount_value, min_order, max_discount,
-      start_date, end_date, quantity, status,
-    } = req.body;
+        code, name, description, discount_type,
+        discount_value, min_order, max_discount,
+        start_date, end_date, quantity, status
+      } = req.body;
 
-    const [rows] = await connection.query("SELECT * FROM promotions WHERE id = ?", [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Khuyến mãi không tồn tại" });
+      if (!code || !name) {
+        return res.status(400).json({ success: false, message: "Mã và tên không được để trống!" });
+      }
+
+      // Kiểm tra tồn tại
+      const [existing] = await connection.query("SELECT * FROM promotions WHERE id = ?", [id]);
+      if (existing.length === 0) {
+        return res.status(404).json({ success: false, message: "Không tìm thấy khuyến mãi!" });
+      }
+
+  
+
+      let newStatus = status || "active";
+      if (!status) {
+        const now = new Date();
+        if (new Date(end_date) < now) newStatus = "expired";
+        else if (new Date(start_date) > now) newStatus = "upcoming";
+        else newStatus = "active";
+      }
+
+      await connection.execute(
+        `UPDATE promotions 
+         SET code=?, name=?, description=?, discount_type=?, discount_value=?, 
+             min_order=?, max_discount=?, start_date=?, end_date=?, quantity=?, status=? 
+         WHERE id=?` ,
+        [
+          code.trim(),
+          name.trim(),
+          description || null,
+          discount_type,
+          discount_value,
+          min_order || 0,
+          max_discount || null,
+          start_date,
+          end_date,
+          quantity || null,
+          newStatus,
+          id
+        ]
+      );
+
+      const [all] = await connection.query("SELECT * FROM promotions");
+      const statistics = await getStatistics(connection);
+
+      global._io.emit("promotions_update", { promotions: all, stats: statistics });
+
+      res.json({ success: true, message: "Cập nhật thành công!", status: newStatus });
     }
-
-    let newStatus = status;
-    if (!status) {
-      const now = new Date();
-      if (new Date(end_date) < now) newStatus = "expired";
-      else if (new Date(start_date) > now) newStatus = "upcoming";
-      else newStatus = "active";
-    }
-
-    await connection.execute(
-      `UPDATE promotions 
-       SET code=?, name=?, description=?, discount_type=?, discount_value=?, 
-           min_order=?, max_discount=?, start_date=?, end_date=?, quantity=?, status=? 
-       WHERE id=?`,
-      [ code, name, description, discount_type, discount_value,
-        min_order || 0, max_discount || null,
-        start_date, end_date, quantity, newStatus, id ]
-    );
-
-    const [all] = await connection.query("SELECT * FROM promotions");
-    const statistics = await getStatistics(connection);
-
-    global._io.emit("promotions_update", { promotions: all, stats: statistics });
-
-    res.json({ success: true, message: "Cập nhật khuyến mãi thành công", status: newStatus });
-  } catch (error) {
+  
+   catch (error) {
     console.error("Lỗi updatePromotion:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }

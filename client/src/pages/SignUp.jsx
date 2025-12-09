@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
 const SignUp = () => {
@@ -9,27 +10,50 @@ const SignUp = () => {
     email: '',
     password: '',
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     // Validate form
     if (signupData.password.length < 6) {
-      setError('Mật khẩu phải dài ít nhất 6 ký tự');
+      toast.error('Mật khẩu phải dài ít nhất 6 ký tự', {
+        position: "top-right",
+        autoClose: 3000,
+      });
       setLoading(false);
       return;
     }
 
     try {
-      await axios.post('/api/auth/signup', signupData);
-      alert('Đăng ký thành công!');
+      const response = await axios.post('/api/auth/signup', signupData);
+      
+      toast.success(response.data.message || 'Đăng ký thành công!', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+
       setSignupData({ fullName: '', email: '', password: '' });
+      
+      // Chuyển sang trang login sau 1 giây
+      setTimeout(() => {
+        navigate('/login');
+      }, 1000);
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi đăng ký');
+      console.log('Signup error:', err.response?.data);
+      
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Đăng ký thất bại, vui lòng thử lại.";
+
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 3000,
+      });
     } finally {
       setLoading(false);
     }
@@ -54,13 +78,6 @@ const SignUp = () => {
           <p className="text-base text-gray-600 mb-8">
             Tham gia BAC Cinema để tận hưởng những bộ phim đỉnh cao
           </p>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-6 text-base">
-              {error}
-            </div>
-          )}
 
           {/* Form */}
           <form className="space-y-6" onSubmit={handleSubmit}>
