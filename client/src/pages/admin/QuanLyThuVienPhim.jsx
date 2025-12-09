@@ -95,7 +95,7 @@ const QuanLyThuVienPhim = () => {
       uploadFormData.append("rentalDuration", formData.isFree ? "NULL" : (formData.rentalDuration || "NULL"))
 
       // Sử dụng fetch thay vì axios để xử lý SSE
-       const baseURL = axios.defaults.VITE_BASE_URL || "http://localhost:3000"
+       const baseURL = axios.defaults.VITE_BASE_URL || "https://movie-ticket-backend-517042119718.asia-southeast1.run.app"
       const response = await fetch(`${baseURL}/api/video`, {
         method: "POST",
         body: uploadFormData,
