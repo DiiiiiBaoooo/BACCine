@@ -73,6 +73,7 @@ import MyEvent from './pages/MyEvent';
 import EventQRPayment from './pages/EventQRPayment';
 import MyUuDai from './pages/MyUuDai';
 import OpenAIChatbot from './components/OpenAIChatbot';
+import ShiftGuard from './components/ShiftGuard';
 
 // ==================== PROTECTED ROUTES ====================
 
@@ -256,7 +257,12 @@ const App = () => {
           element={
             <ProtectedRoute requiredRole="employee">
               <RequireCinemaAccess role="employee">
+                 <ShiftGuard 
+                  employeeId={authUser?.id || authUser?.user_id}
+                  cinemaClusterId={cinemaId}
+                >
                 <EmployeeLayout />
+                </ShiftGuard>
               </RequireCinemaAccess>
             </ProtectedRoute>
           }

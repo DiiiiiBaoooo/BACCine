@@ -23,15 +23,18 @@ const ScheduleManager = ({ cinemaClusterId }) => {
 
   const API_BASE_URL = '/api';
 
-  const getDateString = (date) => {
-    if (!(date instanceof Date) || isNaN(date)) {
-      return new Date().toISOString().split('T')[0];
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+const getDateString = (date) => {
+  if (!(date instanceof Date) || isNaN(date)) {
+    return new Date().toISOString().split('T')[0];
+  }
+  
+  // ⭐ LẤY NGÀY THEO MÚI GIỜ LOCAL (Việt Nam)
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
 
   const parseDateString = (dateStr) => {
     if (!dateStr) return null;

@@ -30,6 +30,15 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
     return `${year}-${month}-${day}`;
   };
 
+  // ⭐ HÀM LẤY NGÀY HÔM NAY THEO MÚI GIỜ LOCAL (VIỆT NAM)
+  const getTodayLocalDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getEmployeesForShift = (date, shift) => {
     const entry = schedule.find((e) => e.date === date && e.shift === shift);
     return entry?.employees || [];
@@ -39,6 +48,9 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
     console.error('cinemaClusterId is undefined in WeeklySchedule');
     return null;
   }
+
+  // ⭐ LẤY NGÀY HÔM NAY 1 LẦN DUY NHẤT
+  const todayLocal = getTodayLocalDate();
 
   return (
     <div className="flex-1 overflow-auto bg-white">
@@ -50,7 +62,9 @@ const WeeklySchedule = ({ schedule, onDrop, onRemoveEmployee, weekStart, cinemaC
             {DAYS.map((day, i) => {
               const dateStr = getDateString(i);
               const dayNum = new Date(dateStr).getDate();
-              const isToday = dateStr === new Date().toISOString().split('T')[0];
+              // ⭐ SO SÁNH VỚI NGÀY LOCAL
+              const isToday = dateStr === todayLocal;
+              
               return (
                 <div
                   key={day}

@@ -137,6 +137,8 @@ export const AddWorkScheduleInCine = async (req, res) => {
     return res.status(400).json({ error: "Schedules must be a non-empty array" });
   }
 
+
+
   try {
     // Validate each schedule
     for (const s of schedules) {
@@ -178,6 +180,8 @@ export const AddWorkScheduleInCine = async (req, res) => {
     // Use transaction for consistency
     await dbPool.query("START TRANSACTION");
     try {
+          await dbPool.query("SET time_zone = '+07:00'");
+
       for (const s of schedules) {
         const { employee_id, cinema_cluster_id, shift_date, shift_type, status, start_time, end_time } = s;
 
@@ -866,6 +870,93 @@ export const exportAttendanceReport = async (req, res) => {
     res.send(bom + csvContent);
   } catch (error) {
     console.error("Error exporting attendance report:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+// Kiểm tra nhân viên có đang trong ca làm việc không
+// Kiểm tra nhân viên có đang trong ca làm việc không
+export const checkCurrentShift = async (req, res) => {
+  const { employeeId, cinemaClusterId } = req.params;
+
+  if (!employeeId || !cinemaClusterId) {
+    return res.status(400).json({ error: "employeeId và cinemaClusterId là bắt buộc" });
+  }
+
+  try {
+    // Lấy thời gian hiện tại theo múi giờ Việt Nam
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+
+    // ⭐ KIỂM TRA GIỜ ĐÓNG CỬA RẠP (0h-6h)
+    if (hour >= 0 && hour < 6) {
+      return res.status(200).json({
+        hasShift: false,
+        isClosed: true,
+        message: "Rạp phim ngoài giờ phục vụ",
+        currentTime: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        closedPeriod: "00:00 - 06:00",
+        reopenTime: "06:00"
+      });
+    }
+
+    // Xác định ca làm việc hiện tại dựa trên giờ
+    let currentShift = null;
+    
+    if (hour >= 6 && hour < 12) {
+      currentShift = 'morning';
+    } else if (hour >= 12 && hour < 18) {
+      currentShift = 'afternoon';
+    } else if (hour >= 18 && hour < 24) {
+      currentShift = 'evening';
+    }
+
+    // Kiểm tra xem nhân viên có lịch làm việc trong ca hiện tại không
+    const [schedules] = await dbPool.query(
+      `
+      SELECT 
+        s.id,
+        s.shift_type,
+        s.status,
+        s.shift_date,
+        s.start_time,
+        s.end_time
+      FROM schedule s
+      JOIN employee_cinema_cluster ecc ON s.employee_cinema_cluster_id = ecc.id
+      WHERE ecc.employee_id = ?
+        AND ecc.cinema_cluster_id = ?
+        AND s.shift_date = ?
+        AND s.shift_type = ?
+        AND s.status IN ('pending', 'confirmed')
+      LIMIT 1
+      `,
+      [employeeId, cinemaClusterId, currentDate, currentShift]
+    );
+
+    if (schedules.length === 0) {
+      return res.status(200).json({
+        hasShift: false,
+        isClosed: false,
+        message: "Chưa tới ca làm việc",
+        currentShift,
+        currentTime: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+      });
+    }
+
+    // Có ca làm việc
+    return res.status(200).json({
+      hasShift: true,
+      isClosed: false,
+      message: "Đang trong ca làm việc",
+      schedule: schedules[0],
+      currentShift,
+      currentTime: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+    });
+
+  } catch (error) {
+    console.error("Error checking current shift:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

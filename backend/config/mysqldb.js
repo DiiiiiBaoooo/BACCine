@@ -4,14 +4,14 @@ const isProduction = process.env.NODE_ENV === "production";
 const isCloudRun = process.env.K_SERVICE !== undefined;
 
 const pool = mysql.createPool({
-  ...(isCloudRun && process.env.INSTANCE_CONNECTION_NAME
-    ? {
-        socketPath: `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}`,
-      }
-    : {
-        host: process.env.DB_HOST || "localhost",
-        port: process.env.DB_PORT || 3306,
-      }),
+  // ...(isCloudRun && process.env.INSTANCE_CONNECTION_NAME
+  //   ? {
+  //       socketPath: `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}`,
+  //     }
+  //   : {
+  //       host: process.env.DB_HOST || "localhost",
+  //       port: process.env.DB_PORT || 3306,
+  //     }),
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "csdl_rapphim",

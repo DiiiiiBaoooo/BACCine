@@ -91,8 +91,8 @@ const Profile = () => {
   };
 
   const handleRandomAvatar = () => {
-    const seed = Math.floor(Math.random() * 99) + 1;
-    const randomAvatar = `https://avatar.iran.liara.run/public/${seed}`;
+  const seed = Math.random().toString(36).substring(2, 10);
+        const randomAvatar = `https://robohash.org/${seed}.png`;
     setFormState({ ...formState, profilePicture: randomAvatar });
     toast.success('Đã tạo avatar ngẫu nhiên!');
   };
