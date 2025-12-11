@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock, AlertCircle, Moon, Coffee } from 'lucide-react';
 import useCheckShift from '../hooks/useCheckShift';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const ShiftGuard = ({ employeeId, cinemaClusterId, children }) => {
   const { 
@@ -14,7 +14,21 @@ const ShiftGuard = ({ employeeId, cinemaClusterId, children }) => {
     closedPeriod,
     reopenTime 
   } = useCheckShift(employeeId, cinemaClusterId);
-const navigate = useNavigate();
+  
+  const navigate = useNavigate();
+  
+  // ⭐ FORMAT THỜI GIAN HIỆN TẠI THEO MÚI GIỜ VIỆT NAM
+  const getVietnamTime = () => {
+    const now = new Date();
+    const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    const hour = String(vietnamTime.getUTCHours()).padStart(2, '0');
+    const minute = String(vietnamTime.getUTCMinutes()).padStart(2, '0');
+    const second = String(vietnamTime.getUTCSeconds()).padStart(2, '0');
+    return `${hour}:${minute}:${second}`;
+  };
+
+  const currentTimeFormatted = getVietnamTime();
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50">
@@ -48,7 +62,10 @@ const navigate = useNavigate();
                 <Clock className="w-5 h-5" />
                 <span className="font-medium">Thời gian hiện tại:</span>
               </div>
-              <p className="text-3xl font-bold text-indigo-600">{currentTime}</p>
+              {/* ⭐ SỬ DỤNG currentTime TỪ API HOẶC FORMATTED TIME */}
+              <p className="text-3xl font-bold text-indigo-600">
+                {currentTime || currentTimeFormatted}
+              </p>
             </div>
 
             {/* Thông tin đóng cửa */}
@@ -78,18 +95,21 @@ const navigate = useNavigate();
             </div>
 
             {/* Nút hành động */}
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Kiểm Tra Lại
-            </button>
-               <button
-              onClick={() => navigate('/')}
-              className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Trở về trang chủ
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Kiểm Tra Lại
+              </button>
+              
+              <button
+                onClick={() => navigate('/')}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Trở Về Trang Chủ
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -124,7 +144,10 @@ const navigate = useNavigate();
                 <Clock className="w-5 h-5" />
                 <span className="font-medium">Thời gian hiện tại:</span>
               </div>
-              <p className="text-3xl font-bold text-red-600">{currentTime}</p>
+              {/* ⭐ SỬ DỤNG currentTime TỪ API HOẶC FORMATTED TIME */}
+              <p className="text-3xl font-bold text-red-600">
+                {currentTime || currentTimeFormatted}
+              </p>
               
               {currentShift && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
@@ -148,7 +171,7 @@ const navigate = useNavigate();
             {/* Nút hành động */}
             <div className="space-y-2">
               <button
-                onClick={() => window.location.href = '/employee/llv'}
+                onClick={() => navigate('/employee/llv')}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Xem Lịch Làm Việc
@@ -160,7 +183,13 @@ const navigate = useNavigate();
               >
                 Kiểm Tra Lại
               </button>
-           
+
+              <button
+                onClick={() => navigate('/')}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                Trở Về Trang Chủ
+              </button>
             </div>
           </div>
         </div>

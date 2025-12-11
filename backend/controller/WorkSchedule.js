@@ -288,7 +288,19 @@ export const registerFaceDescriptor = async (req, res) => {
 const computeEuclideanDistance = (desc1, desc2) => {
   return Math.sqrt(desc1.reduce((sum, val, i) => sum + Math.pow(val - desc2[i], 2), 0));
 };
+// ========== HÀM HELPER LẤY GIỜ VIỆT NAM ==========
+const getVietnamTime = () => {
+  const now = new Date();
+  const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  
+  const hour = vietnamTime.getUTCHours();
+  const minute = vietnamTime.getUTCMinutes();
+  const second = vietnamTime.getUTCSeconds();
+  
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
+};
 
+// ========== FACE CHECKIN - ĐÃ SỬA ==========
 export const faceCheckin = async (req, res) => {
   const { descriptor, cinema_cluster_id, schedule_id } = req.body;
 
@@ -299,7 +311,7 @@ export const faceCheckin = async (req, res) => {
   const THRESHOLD = 0.6;
 
   try {
-    // ⭐ 1. KIỂM TRA LỊCH TRÌNH CÓ TỒN TẠI VÀ PHẢI LÀ HÔM NAY
+    // 1. KIỂM TRA LỊCH TRÌNH
     const [scheduleCheck] = await dbPool.query(
       `
       SELECT 
@@ -317,22 +329,18 @@ export const faceCheckin = async (req, res) => {
     if (scheduleCheck.length === 0) {
       return res.status(404).json({ error: "Schedule not found" });
     }
-const getVietnamDate = (utcDateString) => {
-  const date = new Date(utcDateString);
-  // Chuyển sang giờ Việt Nam bằng cách +7 tiếng
-  const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-  return vietnamDate.toISOString().split('T')[0];
-};
+
+    const getVietnamDate = (utcDateString) => {
+      const date = new Date(utcDateString);
+      const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+      return vietnamDate.toISOString().split('T')[0];
+    };
+
     const schedule = scheduleCheck[0];
-const shiftDate = getVietnamDate(schedule.shift_date); // → "2025-12-09"
-const today= getVietnamDate(new Date().toISOString());
-console.log(shiftDate);
-console.log(today);
+    const shiftDate = getVietnamDate(schedule.shift_date);
+    const today = getVietnamDate(new Date().toISOString());
 
-
-
-
-    // ⭐ 2. CHỈ CHO PHÉP CHECKIN VÀO NGÀY HIỆN TẠI
+    // 2. KIỂM TRA NGÀY
     if (shiftDate !== today) {
       if (shiftDate < today) {
         return res.status(400).json({ 
@@ -345,7 +353,7 @@ console.log(today);
       }
     }
 
-    // ⭐ 3. KIỂM TRA TRẠNG THÁI CA
+    // 3. KIỂM TRA TRẠNG THÁI
     if (schedule.status === 'completed') {
       return res.status(400).json({ 
         error: "Ca làm việc đã hoàn thành" 
@@ -358,7 +366,7 @@ console.log(today);
       });
     }
 
-    // 4. Lấy tất cả active descriptors
+    // 4. Lấy descriptors
     const [descriptors] = await dbPool.query(
       `
       SELECT efd.id, efd.employee_id, efd.descriptor
@@ -386,25 +394,27 @@ console.log(today);
       return res.status(404).json({ error: "No matching employee found" });
     }
 
-    // 5. Kiểm tra nhân viên khớp với schedule
+    // 5. Kiểm tra nhân viên
     if (schedule.employee_id !== matchedEmployee) {
       return res.status(403).json({ 
         error: "Schedule does not belong to matched employee" 
       });
     }
 
-    // 6. Cập nhật checkin time
-    const now = new Date().toTimeString().slice(0, 8);
+    // 6. ⭐ CẬP NHẬT CHECKIN - SỬ DỤNG GIỜ VIỆT NAM
+    const vietnamTime = getVietnamTime();
+    
     await dbPool.query(
       `UPDATE schedule 
        SET start_time = ?, status = 'confirmed', updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [now, schedule_id]
+      [vietnamTime, schedule_id]
     );
 
     res.status(200).json({ 
       employee_id: matchedEmployee, 
-      distance: minDistance, 
+      distance: minDistance,
+      checkin_time: vietnamTime,
       message: "Check-in successful" 
     });
   } catch (error) {
@@ -413,7 +423,7 @@ console.log(today);
   }
 };
 
-// ========== TƯƠNG TỰ CHO FACE CHECKOUT ==========
+// ========== FACE CHECKOUT - ĐÃ SỬA ==========
 export const faceCheckout = async (req, res) => {
   const { descriptor, cinema_cluster_id, schedule_id } = req.body;
 
@@ -424,7 +434,7 @@ export const faceCheckout = async (req, res) => {
   const THRESHOLD = 0.6;
 
   try {
-    // ⭐ 1. KIỂM TRA LỊCH TRÌNH VÀ NGÀY
+    // 1. KIỂM TRA LỊCH TRÌNH
     const [scheduleCheck] = await dbPool.query(
       `
       SELECT 
@@ -444,24 +454,24 @@ export const faceCheckout = async (req, res) => {
       return res.status(404).json({ error: "Schedule not found" });
     }
 
-const getVietnamDate = (utcDateString) => {
-  const date = new Date(utcDateString);
-  // Chuyển sang giờ Việt Nam bằng cách +7 tiếng
-  const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-  return vietnamDate.toISOString().split('T')[0];
-};
-    const schedule = scheduleCheck[0];
-const shiftDate = getVietnamDate(schedule.shift_date); // → "2025-12-09"
-const today= getVietnamDate(new Date().toISOString());
+    const getVietnamDate = (utcDateString) => {
+      const date = new Date(utcDateString);
+      const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+      return vietnamDate.toISOString().split('T')[0];
+    };
 
-    // ⭐ 2. CHỈ CHO PHÉP CHECKOUT VÀO NGÀY HIỆN TẠI
+    const schedule = scheduleCheck[0];
+    const shiftDate = getVietnamDate(schedule.shift_date);
+    const today = getVietnamDate(new Date().toISOString());
+
+    // 2. KIỂM TRA NGÀY
     if (shiftDate !== today) {
       return res.status(400).json({ 
         error: "Chỉ có thể checkout vào ngày làm việc" 
       });
     }
 
-    // ⭐ 3. KIỂM TRA ĐÃ CHECKIN CHƯA
+    // 3. KIỂM TRA ĐÃ CHECKIN
     if (schedule.status !== 'confirmed') {
       return res.status(400).json({ 
         error: "Chưa check-in ca làm việc này" 
@@ -474,7 +484,7 @@ const today= getVietnamDate(new Date().toISOString());
       });
     }
 
-    // 4-6. Tương tự như checkin (matching face)
+    // 4. Lấy descriptors
     const [descriptors] = await dbPool.query(
       `
       SELECT efd.id, efd.employee_id, efd.descriptor
@@ -508,18 +518,20 @@ const today= getVietnamDate(new Date().toISOString());
       });
     }
 
-    // 7. Cập nhật checkout time
-    const now = new Date().toTimeString().slice(0, 8);
+    // 7. ⭐ CẬP NHẬT CHECKOUT - SỬ DỤNG GIỜ VIỆT NAM
+    const vietnamTime = getVietnamTime();
+    
     await dbPool.query(
       `UPDATE schedule 
        SET end_time = ?, status = 'completed', updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [now, schedule_id]
+      [vietnamTime, schedule_id]
     );
 
     res.status(200).json({ 
       employee_id: matchedEmployee, 
-      distance: minDistance, 
+      distance: minDistance,
+      checkout_time: vietnamTime,
       message: "Check-out successful" 
     });
   } catch (error) {
@@ -883,12 +895,29 @@ export const checkCurrentShift = async (req, res) => {
   }
 
   try {
-    // Lấy thời gian hiện tại theo múi giờ Việt Nam
+    // ⭐ LẤY THỜI GIAN HIỆN TẠI THEO MÚI GIỜ VIỆT NAM (UTC+7)
     const now = new Date();
-    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
-    const hour = now.getHours();
-    const minute = now.getMinutes();
+    
+    // Chuyển đổi sang giờ Việt Nam
+    const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    
+    // Lấy các thông tin thời gian từ vietnamTime
+    const year = vietnamTime.getUTCFullYear();
+    const month = String(vietnamTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(vietnamTime.getUTCDate()).padStart(2, '0');
+    const hour = vietnamTime.getUTCHours();
+    const minute = vietnamTime.getUTCMinutes();
+    const second = vietnamTime.getUTCSeconds();
+    
+    const currentDate = `${year}-${month}-${day}`; // YYYY-MM-DD
+    const currentTime = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`; // HH:MM:SS
+
+    console.log('🕐 Vietnam Time:', {
+      currentDate,
+      currentTime,
+      hour,
+      minute
+    });
 
     // ⭐ KIỂM TRA GIỜ ĐÓNG CỬA RẠP (0h-6h)
     if (hour >= 0 && hour < 6) {
