@@ -28,7 +28,75 @@ const QuanLyLichChieu = ({ cinemaId }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [updateData, setUpdateData] = useState({ start_time: '', end_time: '', status: '' });
   const currency = 'VND';
+const [suggestions, setSuggestions] = useState([]);
+const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
+// Thêm hàm gọi API gợi ý
+const handleGetSuggestions = async () => {
+  if (!selectedMovie) {
+    toast.error("Vui lòng chọn phim trước");
+    return;
+  }
+
+  setIsLoadingSuggestions(true);
+  try {
+    const response = await axios.post("/api/showtimes/suggest", {
+      movie_id: selectedMovie,
+      cinema_id: cinemaId
+    });
+
+    if (response.data.success) {
+      setSuggestions(response.data.suggestions);
+      toast.success(`Tìm thấy ${response.data.suggestions.length} gợi ý phù hợp`);
+    } else {
+      toast.error(response.data.message);
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Không thể tạo gợi ý");
+  } finally {
+    setIsLoadingSuggestions(false);
+  }
+};
+
+// Thêm hàm áp dụng gợi ý
+const handleApplySuggestion = (suggestion) => {
+  const [date, time] = suggestion.start_time.split(' ');
+  
+  setDateTimeSelection(prev => {
+    const times = prev[date] || [];
+    if (!times.includes(time)) {
+      return { ...prev, [date]: [...times, time] };
+    }
+    return prev;
+  });
+
+  setSelectedRoom(suggestion.room_id);
+  toast.success(`Đã thêm suất chiếu: ${date} ${time} - ${suggestion.room_name}`);
+};
+
+// Thêm hàm áp dụng tất cả gợi ý
+const handleApplyAllSuggestions = () => {
+  const newDateTimeSelection = {};
+  
+  suggestions.forEach(suggestion => {
+    const [date, time] = suggestion.start_time.split(' ');
+    if (!newDateTimeSelection[date]) {
+      newDateTimeSelection[date] = [];
+    }
+    if (!newDateTimeSelection[date].includes(time)) {
+      newDateTimeSelection[date].push(time);
+    }
+  });
+
+  setDateTimeSelection(newDateTimeSelection);
+  
+  // Chọn phòng của gợi ý đầu tiên
+  if (suggestions.length > 0) {
+    setSelectedRoom(suggestions[0].room_id);
+  }
+
+  toast.success(`Đã thêm ${suggestions.length} suất chiếu gợi ý`);
+};
   // Tính toán thống kê từ danh sách lịch chiếu
   const calculateStatistics = (showtimeList) => {
     const total_showtimes = showtimeList.length;
@@ -552,11 +620,122 @@ const handleAddShowtime = async (e) => {
                                 <p className="text-gray-300">{movie.vote_count || 0} Votes</p>
                               </div>
                             </div>
-                            {selectedMovie === movie.movie_id && (
-                              <div className="absolute top-2 right-2 flex items-center justify-center bg-blue-600 h-6 w-6 rounded">
-                                <CheckIcon className="w-4 h-4 text-white" strokeWidth={2.5} />
-                              </div>
-                            )}
+                          {selectedMovie && (
+  <div className="border-t border-gray-700 pt-4">
+    <div className="flex items-center justify-between mb-3">
+      <div>
+        <h3 className="text-white font-medium">Gợi ý lịch chiếu thông minh</h3>
+        <p className="text-sm text-gray-400">Hệ thống sẽ tự động tìm 5 khung giờ phù hợp nhất</p>
+      </div>
+      <button
+        type="button"
+        onClick={handleGetSuggestions}
+        disabled={isLoadingSuggestions}
+        className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+      >
+        {isLoadingSuggestions ? (
+          <>
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+            </svg>
+            Đang phân tích...
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Gợi ý tự động
+          </>
+        )}
+      </button>
+    </div>
+
+    {/* Hiển thị danh sách gợi ý */}
+    {suggestions.length > 0 && (
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-400">
+            Tìm thấy {suggestions.length} gợi ý phù hợp
+          </p>
+          <button
+            type="button"
+            onClick={handleApplyAllSuggestions}
+            className="text-sm px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Áp dụng tất cả
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+          {suggestions.map((suggestion, index) => (
+            <div
+              key={index}
+              className="bg-gray-900 border border-gray-700 rounded-lg p-3 hover:border-purple-500 transition duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    {/* Badge độ ưu tiên */}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      suggestion.priority === 'high' 
+                        ? 'bg-green-900 text-green-300' 
+                        : suggestion.priority === 'medium'
+                        ? 'bg-yellow-900 text-yellow-300'
+                        : 'bg-gray-600 text-gray-300'
+                    }`}>
+                      {suggestion.priority === 'high' ? 'Ưu tiên cao' : 
+                       suggestion.priority === 'medium' ? 'Ưu tiên trung bình' : 'Ưu tiên thấp'}
+                    </span>
+                    
+                    {/* Ngày */}
+                    <span className="text-white font-medium">
+                      {new Date(suggestion.date).toLocaleDateString('vi-VN', { 
+                        weekday: 'short', 
+                        day: '2-digit', 
+                        month: '2-digit' 
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="mt-1 flex items-center gap-4 text-sm text-gray-400">
+                    {/* Giờ chiếu */}
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>
+                        {suggestion.start_time.split(' ')[1].slice(0, 5)} - {suggestion.end_time.split(' ')[1].slice(0, 5)}
+                      </span>
+                    </div>
+
+                    {/* Phòng chiếu */}
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <span>{suggestion.room_name}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nút áp dụng */}
+                <button
+                  type="button"
+                  onClick={() => handleApplySuggestion(suggestion)}
+                  className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                >
+                  Thêm
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
                             <p className="font-medium truncate text-white">{movie.title}</p>
                             <p className="text-gray-400 text-sm">
                               {new Date(movie.release_date).toLocaleDateString('vi-VN')}
