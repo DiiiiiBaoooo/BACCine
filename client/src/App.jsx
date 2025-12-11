@@ -206,6 +206,7 @@ const App = () => {
         <Route path="/event-payment/:id/:amount" element={<EventQRPayment />} />
         <Route path="/uudai" element={<MyUuDai />} />
         <Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
+         <Route path="/llv" element={<LichLamViec cinemaClusterId={cinemaId} />} />
 
         {/* ADMIN ROUTES */}
         <Route
@@ -278,7 +279,6 @@ const App = () => {
           <Route path="face-checkout/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckOut cinemaClusterId={cinemaId} />} />
         </Route>
       </Routes>
-          <Route path="llv" element={<LichLamViec cinemaClusterId={cinemaId} />} />
 
       {/* Chat Widget */}
       {shouldShowChat && chatUserType === 'employee' && (
