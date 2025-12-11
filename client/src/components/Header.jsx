@@ -150,6 +150,14 @@ const Header = () => {
                         Trang Manager
                       </Link>
                     )}
+                     {authUser.role === "employee" && (
+                      <Link
+                        to="/employee"
+                        className="block px-6 py-3 text-white hover:bg-white/10 hover:text-red-400 transition-all duration-200 hover:pl-8"
+                      >
+                        Trang làm việc
+                      </Link>
+                    )}
                     <button
                       onClick={logoutMutation}
                       className="w-full text-left px-6 py-3 text-red-400 hover:bg-white/10 hover:text-red-300 transition-all duration-200 hover:pl-8"
