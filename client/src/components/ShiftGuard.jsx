@@ -171,7 +171,7 @@ const ShiftGuard = ({ employeeId, cinemaClusterId, children }) => {
             {/* Nút hành động */}
             <div className="space-y-2">
               <button
-                onClick={() => navigate('/employee/llv')}
+                onClick={() => navigate('/llv')}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
                 Xem Lịch Làm Việc

@@ -278,6 +278,7 @@ const App = () => {
           <Route path="face-checkout/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckOut cinemaClusterId={cinemaId} />} />
         </Route>
       </Routes>
+          <Route path="llv" element={<LichLamViec cinemaClusterId={cinemaId} />} />
 
       {/* Chat Widget */}
       {shouldShowChat && chatUserType === 'employee' && (
