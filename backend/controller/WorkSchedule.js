@@ -1,10 +1,11 @@
 import dbPool from "../config/mysqldb.js";
 const markAbsentForPastShifts = async (connection) => {
   try {
-    
     const now = new Date();
-    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const currentTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+    const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const currentDate = vnTime.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentTime = vnTime.toTimeString().split(' ')[0]; // HH:MM:SS
+console.log(vnTime);
 
     // Cập nhật status = 'absent' cho các ca đã qua mà chưa checkout
     // (hoặc chưa checkin nếu bạn muốn strict hơn)
@@ -52,6 +53,8 @@ export const getWorkScheduleInCine = async (req, res) => {
   }
 
   try {
+            await markAbsentForPastShifts(dbPool);
+
     const [rows] = await dbPool.query(
       `
       SELECT s.id, s.cinema_cluster_id, s.employee_cinema_cluster_id, ecc.employee_id, 
