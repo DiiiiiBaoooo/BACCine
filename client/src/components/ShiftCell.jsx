@@ -14,7 +14,31 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
   const [draggedEmployee, setDraggedEmployee] = useState(null);
 
   const API_BASE_URL = '/api';
-
+const getStatusStyle = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-100 border-green-600 text-green-800';
+      case 'completed':
+        return 'bg-blue-100 border-blue-600 text-blue-800';
+      case 'cancelled':
+        return 'bg-red-100 border-red-600 text-red-800';
+      case 'absent':
+        return 'bg-orange-100 border-orange-600 text-orange-800';
+      case 'pending':
+      default:
+        return 'bg-yellow-100 border-yellow-600 text-yellow-800';
+    }
+  };
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'confirmed': return 'Đã xác nhận';
+      case 'completed': return 'Hoàn thành';
+      case 'cancelled': return 'Đã hủy';
+      case 'absent': return 'Vắng';
+      case 'pending':
+      default: return 'Chờ xác nhận';
+    }
+  };
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -113,13 +137,15 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
           employees.map((emp) => (
             <div
               key={emp.id}
-              className="group relative bg-white border border-gray-200 rounded p-2 pr-8
-                       hover:border-red-500 hover:shadow-sm transition-all text-[11px]"
+            className={`relative group rounded-lg p-3 border-2 ${getStatusStyle(emp.status)} shadow-sm transition-all`}
             >
               <div className="font-semibold text-gray-900 truncate leading-tight">{emp.name}</div>
               <div className="text-[10px] text-gray-500 leading-tight">{emp.position}</div>
+              <div className="text-xs font-semibold mt-1">
+                {getStatusText(emp.status)}
+              </div>
               <div className="text-[10px] text-red-600 font-medium leading-tight mt-0.5">
-                {emp.startTime ? `${emp.startTime} - ${emp.endTime || '?'}` : 'Chưa chấm công'}
+                {emp.startTime ? `${emp.startTime} - ${emp.endTime || '?'}` : ''}
               </div>
 
               {/* Nút xóa + chấm công */}
