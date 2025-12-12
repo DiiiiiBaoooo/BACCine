@@ -313,6 +313,7 @@
 .openai-quick-actions {
   padding: 12px 20px;
   background: white;
+  color: black;
   border-top: 1px solid #e5e7eb;
   display: flex;
   flex-wrap: wrap;
