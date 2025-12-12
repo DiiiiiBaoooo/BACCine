@@ -15,85 +15,79 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
 
   const API_BASE_URL = '/api';
 
-  // === MÀU THEO TRẠNG THÁI ===
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 border-green-600 text-green-800';
-      case 'completed':
-        return 'bg-blue-100 border-blue-600 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 border-red-600 text-red-800';
-      case 'absent':
-        return 'bg-orange-100 border-orange-600 text-orange-800';
-      case 'pending':
-      default:
-        return 'bg-yellow-100 border-yellow-600 text-yellow-800';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'confirmed': return 'Đã xác nhận';
-      case 'completed': return 'Hoàn thành';
-      case 'cancelled': return 'Đã hủy';
-      case 'absent': return 'Vắng';
-      case 'pending':
-      default: return 'Chờ xác nhận';
-    }
-  };
-
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = () => setIsDragOver(false);
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-
     const employeeData = e.dataTransfer.getData('employee');
-    if (!employeeData) return;
-
-    try {
-      const employee = JSON.parse(employeeData);
-      setDraggedEmployee(employee);
-      setShowForm(true);
-    } catch (err) {
-      alert('Dữ liệu nhân viên không hợp lệ');
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      console.error(`Invalid date format in handleDrop: ${date}`);
+      alert('Ngày không hợp lệ. Vui lòng thử lại.');
+      return;
+    }
+    if (employeeData) {
+      try {
+        const employee = JSON.parse(employeeData);
+        if (!employee.id || !employee.name || !employee.position) {
+          alert('Dữ liệu nhân viên không hợp lệ');
+          return;
+        }
+        setDraggedEmployee(employee);
+        setShowForm(true);
+      } catch (error) {
+        console.error('Error parsing employee data:', error);
+        alert('Dữ liệu nhân viên không hợp lệ');
+      }
     }
   };
 
-  const handleSubmit = () => {
-    if (draggedEmployee) {
-      onDrop(date, shift, draggedEmployee, { status: 'pending' });
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (draggedEmployee?.id) {
+      const dateObj = new Date(date);
+      const weekStart = new Date(date);
+      weekStart.setDate(dateObj.getDate() - dateObj.getDay() + (dateObj.getDay() === 0 ? -6 : 1));
+      const dayIndex = Math.round((dateObj.getTime() - weekStart.getTime()) / (24 * 60 * 60 * 1000));
+      onDrop(date, shift, draggedEmployee, { status, cinemaClusterId: cinemaClusterId.toString(), dayIndex });
       setShowForm(false);
+      setStatus('pending');
       setDraggedEmployee(null);
+    } else {
+      alert('Không có dữ liệu nhân viên để xếp lịch');
     }
   };
 
   const handleAttendanceSubmit = async (e, scheduleId) => {
     e.preventDefault();
     if (!startTime || !endTime) {
-      alert('Vui lòng nhập giờ vào và giờ ra');
+      alert('Vui lòng nhập giờ bắt đầu và giờ kết thúc');
       return;
     }
-
-    setLoading(true);
     try {
-      await axios.patch(`${API_BASE_URL}/schedule/attendance/${scheduleId}`, {
+      setLoading(true);
+      const response = await axios.patch(`${API_BASE_URL}/schedule/attendance/${scheduleId}`, {
         start_time: startTime,
         end_time: endTime,
       });
-      alert('Chấm công thành công!');
-      setShowAttendanceForm(null);
-      setStartTime('');
-      setEndTime('');
-      onDrop(date, shift, null, { refresh: true });
-    } catch (err) {
-      alert(err.response?.data?.error || 'Lỗi chấm công');
+      if (response.status === 200) {
+        alert('Cập nhật chấm công thành công!');
+        setShowAttendanceForm(null);
+        setStartTime('');
+        setEndTime('');
+        onDrop(date, shift, null, { refresh: true });
+      }
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      alert(error.response?.data?.error || 'Có lỗi khi cập nhật chấm công!');
     } finally {
       setLoading(false);
     }
@@ -104,65 +98,47 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`border-l-4 border-transparent min-h-32 p-3 transition-all rounded-r-lg ${
-        isDragOver ? 'bg-red-50 border-l-red-500' : 'hover:bg-gray-50'
+      className={`border-l border-gray-700 min-h-32 p-2 transition-all ${
+        isDragOver 
+          ? 'bg-red-50 border-l-2 border-l-red-600' 
+          : 'hover:bg-gray-50'
       }`}
     >
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {employees.length === 0 ? (
-          <div className="text-center text-gray-400 text-xs pt-6">
-            Kéo nhân viên vào đây
+          <div className="text-center text-gray-400 text-[10px] pt-8">
+            Kéo nhân viên vào
           </div>
         ) : (
           employees.map((emp) => (
             <div
               key={emp.id}
-              className={`relative group rounded-lg p-3 border-2 ${getStatusStyle(emp.status)} shadow-sm transition-all`}
+              className="group relative bg-white border border-gray-200 rounded p-2 pr-8
+                       hover:border-red-500 hover:shadow-sm transition-all text-[11px]"
             >
-              {/* Tên & vị trí */}
-              <div className="font-bold text-sm leading-tight">{emp.name}</div>
-              <div className="text-xs opacity-90">{emp.position}</div>
-
-              {/* Trạng thái */}
-              <div className="text-xs font-semibold mt-1">
-                {getStatusText(emp.status)}
+              <div className="font-semibold text-gray-900 truncate leading-tight">{emp.name}</div>
+              <div className="text-[10px] text-gray-500 leading-tight">{emp.position}</div>
+              <div className="text-[10px] text-red-600 font-medium leading-tight mt-0.5">
+                {emp.startTime ? `${emp.startTime} - ${emp.endTime || '?'}` : 'Chưa chấm công'}
               </div>
 
-              {/* Giờ chấm công */}
-              {emp.startTime && emp.endTime ? (
-                <div className="text-xs mt-1 font-medium text-green-700">
-                  {emp.startTime} - {emp.endTime}
-                </div>
-              ) : (
-                <div className="text-xs text-gray-600 italic">Chưa chấm công</div>
-              )}
-
-            
+              {/* Nút xóa + chấm công */}
+             
+              
             </div>
           ))
         )}
       </div>
 
-      {/* Form xác nhận kéo thả */}
+      {/* Form khi kéo thả */}
       {showForm && draggedEmployee && (
-        <div className="mt-3 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-sm">
-          <p className="font-semibold">
-            Xếp <span className="text-red-600">{draggedEmployee.name}</span> vào ca này?
-          </p>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium"
-            >
-              Xác nhận
+        <div className="mt-2 p-2 bg-gray-50 border border-red-300 rounded text-[10px]">
+          <p className="mb-1.5">Xếp <span className="text-red-600 font-bold">{draggedEmployee.name}</span>?</p>
+          <div className="flex gap-1.5">
+            <button onClick={handleSubmit} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded font-bold">
+              OK
             </button>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setDraggedEmployee(null);
-              }}
-              className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-            >
+            <button onClick={() => { setShowForm(false); setDraggedEmployee(null); }} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded">
               Hủy
             </button>
           </div>
@@ -171,54 +147,40 @@ const ShiftCell = ({ date, shift, employees, onDrop, onRemoveEmployee, cinemaClu
 
       {/* Form chấm công */}
       {showAttendanceForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-5 w-96 shadow-xl">
-            <h3 className="text-lg font-bold mb-4">Chấm công</h3>
-            <form onSubmit={(e) => handleAttendanceSubmit(e, showAttendanceForm)}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Giờ vào</label>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Giờ ra</label>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAttendanceForm(null);
-                    setStartTime('');
-                    setEndTime('');
-                  }}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? 'Đang lưu...' : 'Lưu chấm công'}
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="mt-2 p-2 bg-gray-50 border border-gray-300 rounded text-[10px]">
+          <p className="font-semibold mb-1.5 text-gray-900">Chấm công</p>
+          <form onSubmit={(e) => handleAttendanceSubmit(e, showAttendanceForm)} className="space-y-1.5">
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-[10px]"
+              required
+            />
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-[10px]"
+              required
+            />
+            <div className="flex gap-1.5">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded font-bold disabled:opacity-50"
+              >
+                {loading ? 'Đang lưu...' : 'Lưu'}
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowAttendanceForm(null)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1 rounded"
+              >
+                Hủy
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
@@ -233,9 +195,9 @@ ShiftCell.propTypes = {
       id: PropTypes.string.isRequired,
       name: PropTypes.string.isRequired,
       position: PropTypes.string.isRequired,
-      status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled', 'absent', 'completed']).isRequired,
       startTime: PropTypes.string,
       endTime: PropTypes.string,
+      status: PropTypes.oneOf(['pending', 'confirmed', 'cancelled','absent','completed']).isRequired,
       scheduleId: PropTypes.string,
     })
   ).isRequired,
