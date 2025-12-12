@@ -41,6 +41,9 @@ export const createLeaveRequest = async (req, res) => {
     end_date, 
     reason 
   } = req.body;
+  console.log(employee_id);
+  console.log(cinema_cluster_id);
+  
 
   // Validate input
   if (!employee_id || !cinema_cluster_id || !leave_type || !start_date || !end_date) {
@@ -48,6 +51,7 @@ export const createLeaveRequest = async (req, res) => {
       error: "Thiếu thông tin bắt buộc" 
     });
   }
+  
 
   // Validate leave_type
   const validLeaveTypes = ['annual', 'sick', 'personal', 'unpaid'];
@@ -404,7 +408,7 @@ export const getLeaveRequestDetail = async (req, res) => {
        FROM leave_request lr
        JOIN employee_cinema_cluster ecc ON lr.employee_cinema_cluster_id = ecc.id
        JOIN users u ON ecc.employee_id = u.id
-       JOIN cinema_cluster cc ON lr.cinema_cluster_id = cc.id
+       JOIN cinema_clusters cc ON lr.cinema_cluster_id = cc.id
        LEFT JOIN employee_cinema_cluster approver_ecc ON lr.approver_id = approver_ecc.id
        LEFT JOIN users approver ON approver_ecc.employee_id = approver.id
        WHERE lr.id = ?`,
@@ -485,8 +489,8 @@ export const approveLeaveRequest = async (req, res) => {
 
     // 2. Lấy approver_id
     const [approverCheck] = await connection.query(
-      `SELECT id FROM employee_cinema_cluster 
-       WHERE employee_id = ? AND cinema_cluster_id = ?`,
+      `SELECT manager_id FROM cinema_clusters 
+       WHERE manager_id = ? AND id = ?`,
       [approver_employee_id, approver_cinema_cluster_id]
     );
 

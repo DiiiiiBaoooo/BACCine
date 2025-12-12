@@ -74,6 +74,9 @@ import EventQRPayment from './pages/EventQRPayment';
 import MyUuDai from './pages/MyUuDai';
 import OpenAIChatbot from './components/OpenAIChatbot';
 import ShiftGuard from './components/ShiftGuard';
+import LeaveRequestEmployee from './pages/Employee/LeaveRequestEmployee';
+import LeaveManagement from './pages/Employee/LeaveManagement';
+import QLNghiPhep from './pages/manager/QLNghiPhep';
 
 // ==================== PROTECTED ROUTES ====================
 
@@ -124,7 +127,8 @@ const App = () => {
   const navigate = useNavigate();
   const { isLoading, authUser } = useAuthUser();
   const cinemaId = authUser?.cinemaId;
-
+  const managerId = authUser?.id;
+  const employeeId= authUser?.employee_id || authUser?.user_id;
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isManagerRoute = location.pathname.startsWith('/manager');
   const isEmployeeRoute = location.pathname.startsWith('/employee');
@@ -206,7 +210,7 @@ const App = () => {
         <Route path="/event-payment/:id/:amount" element={<EventQRPayment />} />
         <Route path="/uudai" element={<MyUuDai />} />
         <Route path="/face-register/:employeeId/:cinemaClusterId" element={<FaceRegister />} />
-         <Route path="/llv" element={<LichLamViec cinemaClusterId={cinemaId} />} />
+         <Route path="/llv" element={<LichLamViec cinemaClusterId={cinemaId} employeeId={employeeId} />} />
 
         {/* ADMIN ROUTES */}
         <Route
@@ -249,7 +253,9 @@ const App = () => {
           <Route path="qlsk" element={<EventRequest cinemaId={cinemaId} />} />
           <Route path="qlpc" element={<QuanLyPhongChieu cinemaId={cinemaId} />} />
           <Route path="qllc" element={<QuanLyLichChieu cinemaId={cinemaId} />} />
-          <Route path="qlcc" element={<AttendanceHistory cinemaClusterId={cinemaId} />} />
+          <Route path="qlcc" element={<AttendanceHistory cinemaClusterId={cinemaId} managerId={managerId} />} />
+                    <Route path="qlnp" element={<QLNghiPhep cinemaClusterId={cinemaId} />} />
+
         </Route>
 
         {/* EMPLOYEE ROUTES - BẮT BUỘC CÓ CINEMA ID */}
@@ -274,7 +280,8 @@ const App = () => {
           <Route path="chon-dich-vu" element={<ChonDichVu />} />
           <Route path="thanh-toan" element={<ThanhToan />} />
           <Route path="inve" element={<InVe />} />
-          <Route path="llv" element={<LichLamViec cinemaClusterId={cinemaId} />} />
+          <Route path="xinnghi" element={<LeaveRequestEmployee />} />
+          <Route path="llv" element={<LichLamViec cinemaClusterId={cinemaId} employeeId={employeeId} />} />
           <Route path="face-checkin/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckin cinemaClusterId={cinemaId} />} />
           <Route path="face-checkout/:employeeId/:scheduleId/:cinemaClusterId" element={<FaceCheckOut cinemaClusterId={cinemaId} />} />
         </Route>

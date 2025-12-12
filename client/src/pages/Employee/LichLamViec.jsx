@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ScheduleEmployee from '../../components/SheduleEmployee';
 import useAuthUser from '../../hooks/useAuthUser';
+import LeaveManagement from './LeaveManagement';
 
-const LichLamViec = ({ cinemaClusterId }) => {
+const LichLamViec = ({ cinemaClusterId,employeeId }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [hasFaceDescriptor, setHasFaceDescriptor] = useState(null);
-  const { isLoading: isAuthLoading, authUser } = useAuthUser();
-  const employeeId= authUser.employee_id;
+  
+  
   // Giả sử employeeId lấy từ context hoặc localStorage
 
 
@@ -50,6 +51,10 @@ const LichLamViec = ({ cinemaClusterId }) => {
   return (
     <main className="min-h-screen bg-gray-50">
       <ScheduleEmployee cinemaClusterId={cinemaClusterId} />
+        <LeaveManagement 
+        employeeId={employeeId} 
+        cinemaClusterId={cinemaClusterId} 
+      />
     </main>
   );
 };
