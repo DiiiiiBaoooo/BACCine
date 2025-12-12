@@ -16,16 +16,16 @@ const EmployeeManagement = ({ cinemaId }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  
+
   const [newEmployee, setNewEmployee] = useState({
-    fullName: '', 
-    email: '', 
-    phone: '', 
-    province_code: '', 
+    fullName: '',
+    email: '',
+    phone: '',
+    province_code: '',
     district_code: '',
-    cinema_cluster_id: '', 
-    position: 'Staff', 
-    start_date: '', 
+    cinema_cluster_id: '',
+    position: 'Staff',
+    start_date: '',
     end_date: ''
   });
 
@@ -74,30 +74,35 @@ const EmployeeManagement = ({ cinemaId }) => {
   };
 
   // Fetch Tỉnh/Thành
+  // 1. Lấy danh sách tỉnh/thành phố
   const fetchProvinces = async () => {
     try {
-      const res = await axios.get('/api/location/provinces');
-      setProvinces(res.data); // [{ code: "01", name: "TP. Hồ Chí Minh" }, ...]
+      const res = await axios.get('https://provinces.open-api.vn/api/');
+      // res.data = [{ code: 1, name: "TP. Hồ Chí Minh", name_with_type: "...", ... }, ...]
+      setProvinces(res.data);
     } catch (err) {
       console.error("Lỗi tải tỉnh:", err);
-      setError("Không thể tải danh sách tỉnh/thành");
+      setError("Không thể tải danh sách tỉnh/thành phố");
     }
   };
 
-  // Fetch Huyện theo Tỉnh
+  // 2. Lấy quận/huyện theo tỉnh đã chọn (dùng depth=2 để lấy luôn danh sách district)
   const fetchDistricts = async (provinceCode) => {
     if (!provinceCode) {
       setDistricts([]);
       return;
     }
     try {
-      const res = await axios.get(`/api/location/districts/${provinceCode}`);
-      setDistricts(res.data); // [{ code: "001", name: "Quận 1" }, ...]
+      const res = await axios.get(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`);
+      // res.data.districts = danh sách quận/huyện
+      setDistricts(res.data.districts || []);
     } catch (err) {
-      console.error("Lỗi tải huyện:", err);
+      console.error("Lỗi tải quận/huyện:", err);
       setDistricts([]);
     }
   };
+
+
 
   // ==================== FILTER ====================
   const filterEmployees = () => {
@@ -326,11 +331,10 @@ const EmployeeManagement = ({ cinemaId }) => {
                       <td className="px-6 py-4 text-sm font-medium text-white">{employee.employee_name}</td>
                       <td className="px-6 py-4 text-sm text-gray-300">{employee.email || 'N/A'}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          employee.position === 'Manager' ? 'bg-blue-900 text-blue-300' :
-                          employee.position === 'Supervisor' ? 'bg-purple-900 text-purple-300' :
-                          'bg-gray-900 text-gray-300'
-                        }`}>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${employee.position === 'Manager' ? 'bg-blue-900 text-blue-300' :
+                            employee.position === 'Supervisor' ? 'bg-purple-900 text-purple-300' :
+                              'bg-gray-900 text-gray-300'
+                          }`}>
                           {employee.position || 'Staff'}
                         </span>
                       </td>
@@ -366,19 +370,37 @@ const EmployeeManagement = ({ cinemaId }) => {
                 <input type="tel" name="phone" placeholder="Số điện thoại *" required value={newEmployee.phone} onChange={handleNewEmployeeChange}
                   className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500" />
 
-                {/* TỈNH/THÀNH */}
-                <select name="province_code" value={newEmployee.province_code} onChange={handleProvinceChange} required
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500">
+                {/* CHỌN TỈNH/THÀNH */}
+                <select
+                  name="province_code"
+                  value={newEmployee.province_code}
+                  onChange={handleProvinceChange}
+                  required
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="">-- Chọn Tỉnh/Thành phố --</option>
-                  {provinces.map(p => <option key={p.code} value={p.code} className="bg-gray-900">{p.name}</option>)}
+                  {provinces.map((prov) => (
+                    <option key={prov.code} value={prov.code} className="bg-gray-900">
+                      {prov.name}
+                    </option>
+                  ))}
                 </select>
 
-                {/* QUẬN/HUYỆN */}
-                <select name="district_code" value={newEmployee.district_code} onChange={handleNewEmployeeChange} required
+                {/* CHỌN QUẬN/HUYỆN */}
+                <select
+                  name="district_code"
+                  value={newEmployee.district_code}
+                  onChange={handleNewEmployeeChange}
+                  required
                   disabled={!newEmployee.province_code}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                >
                   <option value="">-- Chọn Quận/Huyện --</option>
-                  {districts.map(d => <option key={d.code} value={d.code} className="bg-gray-900">{d.name}</option>)}
+                  {districts.map((dist) => (
+                    <option key={dist.code} value={dist.code} className="bg-gray-900">
+                      {dist.name}
+                    </option>
+                  ))}
                 </select>
 
                 <select name="position" value={newEmployee.position} onChange={handleNewEmployeeChange}
