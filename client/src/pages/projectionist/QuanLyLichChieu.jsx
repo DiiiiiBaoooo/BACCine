@@ -313,7 +313,7 @@ const handleAddShowtime = async (e) => {
 
   // Polling to refresh showtimes every 30 seconds
   useEffect(() => {
-    const interval = setInterval(fetchShowtimes, 30000);
+    const interval = setInterval(fetchShowtimes, 60000);
     return () => clearInterval(interval);
   }, [cinemaId]);
 
